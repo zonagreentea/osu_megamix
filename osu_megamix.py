@@ -1,107 +1,119 @@
 #!/usr/bin/env python3
-import os
-import random
+import os, platform, random, time, tarfile
+from pathlib import Path
+from datetime import datetime
 
-# ==============================
-# Paths
-# ==============================
-HOME = os.path.expanduser("~")
-BEATMAP_DIR = os.path.join(HOME, "osu_beatmaps")
-PLAYER_HISTORY_FILE = os.path.join(HOME, "playerbase_history.txt")
+# ---------------- Configuration ----------------
+SUPPORTED_EXTENSIONS = (".osu", ".mix")
+POOL_SIZE = 20  # Number of maps to queue for live MEGAMIX
+PLAYER_HISTORY = Path.home() / "playerbase_history.txt"
+BACKUP_DIR = Path.home() / "osu_megamix_backups"
+EXTRA_COLLECTION = Path.home() / "osu_extra_collection"
 
-# ==============================
-# Gamemodes (internal vs UI)
-# ==============================
-INTERNAL_MODES = ["Megamix", "osu", "taiko", "catch", "mania"]
-UI_MODES = ["osu!megamix", "osu!", "osu!taiko", "osu!catch", "osu!mania"]
+# Default beatmap locations per platform
+OSU_LOCATIONS = {
+    "windows": [
+        os.path.expandvars(r"%APPDATA%\osu\Songs"),
+        os.path.expandvars(r"%LOCALAPPDATA%\osu!\Songs")
+    ],
+    "darwin": [
+        Path.home() / "Library/Application Support/osu/Songs",
+        Path.home() / "Library/Application Support/osu!/Songs"
+    ],
+    "linux": [
+        Path.home() / ".local/share/osu/Songs",
+        Path.home() / ".local/share/osu!/Songs"
+    ]
+}
 
-MEGAMIX_INTERNAL = "Megamix"
-MEGAMIX_UI = "osu!megamix"
+# ---------------- Helper Functions ----------------
+def get_platform():
+    plat = platform.system().lower()
+    if "darwin" in plat: return "darwin"
+    if "windows" in plat: return "windows"
+    return "linux"
 
-# ==============================
-# Load beatmaps
-# ==============================
-def load_beatmaps():
+def scan_beatmaps():
     beatmaps = []
-    if os.path.exists(BEATMAP_DIR):
-        for root, _, files in os.walk(BEATMAP_DIR):
+    plat = get_platform()
+    locations = OSU_LOCATIONS.get(plat, []) + ([EXTRA_COLLECTION] if EXTRA_COLLECTION.exists() else [])
+    for loc in locations:
+        if not os.path.exists(loc): continue
+        for root, dirs, files in os.walk(loc):
             for f in files:
-                if f.endswith(".osu"):
-                    beatmaps.append(os.path.join(root, f))
-    print(f"[osu!megamix] Loaded {len(beatmaps)} beatmaps")
+                if f.endswith(SUPPORTED_EXTENSIONS):
+                    beatmaps.append(Path(root) / f)
     return beatmaps
 
-# ==============================
-# Player history
-# ==============================
-def load_player_history():
-    if os.path.exists(PLAYER_HISTORY_FILE):
-        with open(PLAYER_HISTORY_FILE, "r") as f:
-            return [line.strip() for line in f if line.strip()]
-    return []
+def backup_assets():
+    BACKUP_DIR.mkdir(exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_file = BACKUP_DIR / f"assets_backup_{timestamp}.tar.gz"
+    with tarfile.open(backup_file, "w:gz") as tar:
+        for map_file in scan_beatmaps():
+            tar.add(map_file, arcname=map_file.name)
+    print(f"[osu!megamix] Backup completed: {backup_file}")
 
-def save_player_history(history):
-    with open(PLAYER_HISTORY_FILE, "w") as f:
-        for entry in history:
-            f.write(entry + "\n")
+def watch_beatmaps(interval=5):
+    known = set()
+    while True:
+        current = set(scan_beatmaps())
+        new_maps = current - known
+        if new_maps:
+            print(f"[osu!megamix] {len(new_maps)} new maps detected!")
+        known = current
+        yield list(current)
+        time.sleep(interval)
 
-# ==============================
-# Select mode
-# ==============================
 def select_mode():
-    print("Select gamemode (press Enter for default: osu!megamix):")
-    for i, mode in enumerate(UI_MODES, 1):
-        print(f"{i}. {mode}")
+    print("Select gamemode (Enter for default: osu!megamix):")
+    print("1. osu!megamix")
+    print("2. osu!")
+    print("3. osu!taiko")
+    print("4. osu!catch")
+    print("5. osu!mania")
     choice = input("Enter number: ").strip()
-    if not choice:
-        selected_internal = MEGAMIX_INTERNAL
-        selected_ui = MEGAMIX_UI
-    else:
-        try:
-            idx = int(choice) - 1
-            if idx < 0 or idx >= len(UI_MODES):
-                raise ValueError
-            selected_internal = INTERNAL_MODES[idx]
-            selected_ui = UI_MODES[idx]
-        except:
-            print("Invalid choice, defaulting to osu!megamix")
-            selected_internal = MEGAMIX_INTERNAL
-            selected_ui = MEGAMIX_UI
-    print(f"[osu!megamix] Mode selected: {selected_ui}")
-    return selected_internal, selected_ui
+    return {
+        "": "osu!megamix",
+        "1": "osu!megamix",
+        "2": "osu",
+        "3": "taiko",
+        "4": "catch",
+        "5": "mania"
+    }.get(choice, "osu!megamix")
 
-# ==============================
-# Play mode
-# ==============================
-def play_mode(mode_internal, beatmaps):
-    if mode_internal == MEGAMIX_INTERNAL:
-        print("[osu!megamix] Starting MEGAMIX mode: real-time shuffled beatmaps")
-        if not beatmaps:
-            print("[osu!megamix] No beatmaps found!")
-            return
-        random.shuffle(beatmaps)
-        for bm in beatmaps:
-            print(f"[osu!megamix] Playing: {os.path.basename(bm)}")
-        print("[osu!megamix] MEGAMIX session complete!")
-    else:
-        print(f"[osu!megamix] Playing standard mode: {mode_internal}")
-        if beatmaps:
-            bm = random.choice(beatmaps)
-            print(f"[osu!megamix] Playing: {os.path.basename(bm)}")
-        else:
-            print("[osu!megamix] No beatmaps available!")
+# ---------------- Core Engine ----------------
+def run_megamix(interval=5):
+    mode = select_mode()
+    print(f"[osu!megamix] Mode selected: {mode}")
 
-# ==============================
-# Main
-# ==============================
-def main():
-    beatmaps = load_beatmaps()
-    history = load_player_history()
-    mode_internal, mode_ui = select_mode()
-    play_mode(mode_internal, beatmaps)
-    history.append(mode_ui)
-    save_player_history(history)
-    print("[osu!megamix] Session complete, history updated.")
+    pool_gen = watch_beatmaps(interval=interval)
+    try:
+        for beatmaps in pool_gen:
+            if not beatmaps:
+                print("[osu!megamix] No maps found, waiting for additions...")
+                continue
 
+            if mode == "osu!megamix":
+                random.shuffle(beatmaps)
+                play_queue = beatmaps[:POOL_SIZE] if POOL_SIZE else beatmaps
+            else:
+                # For non-megamix modes, filter by extension or metadata (placeholder)
+                play_queue = [bm for bm in beatmaps if bm.suffix == ".osu"]
+
+            print(f"[osu!megamix] Current queue: {len(play_queue)} maps")
+            for bm in play_queue:
+                print(f"[osu!megamix] Next: {bm.name}")
+            print("[osu!megamix] --- Refresh ---")
+    except KeyboardInterrupt:
+        print("[osu!megamix] Session interrupted!")
+    finally:
+        with open(PLAYER_HISTORY, "a") as f:
+            f.write(f"{mode}\n")
+        print("[osu!megamix] History updated!")
+        backup_assets()
+
+# ---------------- Entry ----------------
 if __name__ == "__main__":
-    main()
+    print("[osu!megamix] Live MEGAMIX engine starting...")
+    run_megamix()
