@@ -7,3 +7,6 @@ nohup.out
 /Release/
 __pycache__/
 
+
+# local logs
+/dryruns/
