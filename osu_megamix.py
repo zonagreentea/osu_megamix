@@ -1,5 +1,65 @@
 #!/usr/bin/env python3
 import os, time, random
+import subprocess, time, os, atexit
+# STUCK AT 1: one path, one truth
+SIM_HZ = 120
+SIM_DT_MS = 1000 / SIM_HZ
+
+def grade_hit(err_ms, w300=45, w100=90, w50=135):
+    a = abs(int(err_ms))
+    if a <= w300: return 300
+    if a <= w100: return 100
+    if a <= w50:  return 50
+    return 0
+
+class AudioPlayer:
+    def __init__(self, path):
+        self.path = path
+        self.proc = None
+        self.t0 = None
+
+    def start(self):
+        if not self.path:
+            return
+        p = os.path.abspath(self.path)
+        if not os.path.exists(p):
+            return
+        self.proc = subprocess.Popen(["/usr/bin/afplay", "-q", p])
+        self.t0 = time.perf_counter()
+
+    def stop(self):
+        if self.proc:
+            try:
+                self.proc.terminate()
+            except Exception:
+                pass
+            self.proc = None
+
+    def now_ms(self):
+        if self.t0 is None:
+            return int(time.perf_counter() * 1000)
+        return int((time.perf_counter() - self.t0) * 1000)
+
+class SimpleReplay:
+    def __init__(self, path="last_replay.omxr"):
+        self.path = path
+        self.f = open(self.path, "w", encoding="utf-8")
+        self.f.write("OMXR1\n")  # magic/version
+        self.last = None
+
+    def write(self, sim_t, mask, x, y):
+        cur = (sim_t, mask, x, y)
+        if cur == self.last:
+            return
+        self.f.write(f"{sim_t},{mask},{x},{y}\n")
+        self.last = cur
+
+    def close(self):
+        try:
+            self.f.close()
+        except Exception:
+            pass
+
 
 # ---------- RED-CHARIZARD EVERYWHERE ----------
 RC_COLOR = "\033[38;2;255;42;141m"  # reddest pink possible
@@ -11,12 +71,10 @@ def rc_log(msg):
 # ---------- BEATMAP LOADING ----------
 beatmap_dirs = ["osu_beatmaps", "osu_mix_beatmaps"]
 beatmaps = []
-
-for d in beatmap_dirs:
-    if os.path.exists(d):
-        for f in os.listdir(d):
-            if f.endswith(".osu") or f.endswith(".mix"):
-                beatmaps.append(os.path.join(d, f))
+for root, dirs, files in os.walk(beatmaps_dir):
+    for f in files:
+        if f.endswith(".osu") or f.endswith(".mix"):
+            beatmaps.append(os.path.join(root, f))
 
 rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
 
