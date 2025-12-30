@@ -1,12 +1,33 @@
+# OS/editor
 .DS_Store
-*.log
-nohup.out
-*.o
-*.exe
-/build/
-/Release/
+*.swp
+*.swo
+
+# Python
 __pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
 
+# Builds / artifacts
+build/
+builddir/
+dist/
+out/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
 
-# local logs
-/dryruns/
+# Logs
+*.log
+
+# Misc
+.cache/
