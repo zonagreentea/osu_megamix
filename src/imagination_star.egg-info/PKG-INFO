@@ -1,0 +1,17 @@
+Metadata-Version: 2.4
+Name: imagination-star
+Version: 0.1.0
+Summary: imagination* standalone runtime
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# imagination*
+
+Standalone runtime (no osu!megamix required).
+
+## Run (dev)
+python -m imagination
+
+## Install (editable)
+pip install -e .
+imagination

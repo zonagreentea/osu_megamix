@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+src/imagination/__init__.py
+src/imagination/__main__.py
+src/imagination/cli.py
+src/imagination/engine/core.py
+src/imagination_star.egg-info/PKG-INFO
+src/imagination_star.egg-info/SOURCES.txt
+src/imagination_star.egg-info/dependency_links.txt
+src/imagination_star.egg-info/entry_points.txt
+src/imagination_star.egg-info/top_level.txt
