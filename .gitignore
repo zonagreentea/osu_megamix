@@ -12,7 +12,6 @@ __pycache__/
 .ruff_cache/
 .venv/
 venv/
-
 # Builds / artifacts
 build/
 builddir/
@@ -25,9 +24,12 @@ out/
 *.so
 *.dylib
 *.a
-
 # Logs
 *.log
-
 # Misc
 .cache/
+# local backups / scratch
+src/*.bak_*
+release/*.zip
+*.zip
+*.tmp

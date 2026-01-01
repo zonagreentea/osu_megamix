@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
-import os, time, random
-import subprocess, time, os, atexit
+import os
+import time
+import random
+import subprocess
+import atexit
+
 # STUCK AT 1: one path, one truth
 SIM_HZ = 120
 SIM_DT_MS = 1000 / SIM_HZ
@@ -20,12 +24,19 @@ class AudioPlayer:
 
     def start(self):
         if not self.path:
-            return
+            return False
         p = os.path.abspath(self.path)
         if not os.path.exists(p):
-            return
-        self.proc = subprocess.Popen(["/usr/bin/afplay", "-q", p])
+            return False
+
+        # Hard truth: macOS afplay
+        self.proc = subprocess.Popen(
+            ["/usr/bin/afplay", "-q", p],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
         self.t0 = time.perf_counter()
+        return True
 
     def stop(self):
         if self.proc:
@@ -46,6 +57,7 @@ class SimpleReplay:
         self.f = open(self.path, "w", encoding="utf-8")
         self.f.write("OMXR1\n")  # magic/version
         self.last = None
+        atexit.register(self.close)
 
     def write(self, sim_t, mask, x, y):
         cur = (sim_t, mask, x, y)
@@ -56,10 +68,10 @@ class SimpleReplay:
 
     def close(self):
         try:
-            self.f.close()
+            if self.f:
+                self.f.close()
         except Exception:
             pass
-
 
 # ---------- RED-CHARIZARD EVERYWHERE ----------
 RC_COLOR = "\033[38;2;255;42;141m"  # reddest pink possible
@@ -69,17 +81,27 @@ def rc_log(msg):
     print(f"{RC_COLOR}[osu!megamix]{RESET} {msg}")
 
 # ---------- BEATMAP LOADING ----------
-beatmap_dirs = ["osu_beatmaps", "osu_mix_beatmaps"]
-beatmaps = []
-for root, dirs, files in os.walk(beatmaps_dir):
-    for f in files:
-        if f.endswith(".osu") or f.endswith(".mix"):
-            beatmaps.append(os.path.join(root, f))
+beatmap_dirs = ["osu_beatmaps", "osu_mix_beatmaps", "beatmaps"]  # include your repo default too
 
+def scan_beatmaps(dirs):
+    out = []
+    seen = set()
+    for d in dirs:
+        if not os.path.isdir(d):
+            continue
+        for root, _, files in os.walk(d):
+            for f in files:
+                if f.endswith(".osu") or f.endswith(".mix"):
+                    path = os.path.join(root, f)
+                    if path not in seen:
+                        seen.add(path)
+                        out.append(path)
+    return out
+
+beatmaps = scan_beatmaps(beatmap_dirs)
 rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
 
 # ---------- GAMEMODE SELECTION ----------
-# Player always sees 'osu!megamix', but internally everything is Red-Charizard
 modes_display = ["osu!megamix", "osu!", "osu!taiko", "osu!catch", "osu!mania"]
 modes_internal = ["red-charizard", "osu!", "taiko", "catch", "mania"]  # hidden everywhere
 
@@ -97,21 +119,24 @@ else:
 
 rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
 
-# ---------- RED-CHARIZARD / MEGAMIX SESSION ----------
+# ---------- SESSION ----------
 if selected_internal == "red-charizard":
     if beatmaps:
         rc_log("osu!megamix MEGAMIX starting: auto-preloading 50 shuffled beatmaps...")
         playlist = random.sample(beatmaps, min(50, len(beatmaps)))
 
-        # Auto-detect new beatmaps mid-session
         def refresh_beatmaps():
-            for d in beatmap_dirs:
-                if os.path.exists(d):
-                    for f in os.listdir(d):
-                        path = os.path.join(d, f)
-                        if (path.endswith(".osu") or path.endswith(".mix")) and path not in playlist:
-                            playlist.append(path)
-                            rc_log(f"New beatmap detected: {f} (Red-Charizard spotted!)")
+            nonlocal_beatmaps = scan_beatmaps(beatmap_dirs)
+            # add new ones to playlist (keep uniqueness)
+            have = set(playlist)
+            added = 0
+            for p in nonlocal_beatmaps:
+                if p not in have:
+                    playlist.append(p)
+                    have.add(p)
+                    added += 1
+                    rc_log(f"New beatmap detected: {os.path.basename(p)} (Red-Charizard spotted!)")
+            return added
 
         for i, bm in enumerate(playlist, start=1):
             rc_log(f"Cooking beatmap {i}/{len(playlist)}: {bm}")
@@ -134,7 +159,7 @@ else:
 
 # ---------- PLAYER HISTORY ----------
 history_file = os.path.expanduser("~/playerbase_history.txt")
-with open(history_file, "a") as f:
+with open(history_file, "a", encoding="utf-8") as f:
     f.write(f"{selected_display}\n")
 
 rc_log("Session complete. Player history updated. Red-Charizard approves.")

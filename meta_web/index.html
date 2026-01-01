@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>osu!megamix — meta</title>
+<style>
+html,body{margin:0;padding:0;background:#000;color:#fff;font-family:sans-serif}
+canvas{display:block;touch-action:none}
+#ui{position:fixed;top:8px;left:8px;z-index:10}
+button,input{font-size:16px}
+</style>
+</head>
+<body>
+<div id="ui">
+  <input type="file" id="mapfile" accept=".osu">
+  <button id="start">START</button>
+</div>
+<canvas id="c"></canvas>
+
+<script>
+/*
+ META MODE PRINCIPLES
+ - no installs
+ - no audio dependency
+ - one clock: performance.now()
+ - works on mouse, touch, keyboard
+*/
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+const DPR = window.devicePixelRatio || 1;
+
+function resize(){
+  canvas.width = innerWidth * DPR;
+  canvas.height = innerHeight * DPR;
+  canvas.style.width = innerWidth+"px";
+  canvas.style.height = innerHeight+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener("resize", resize);
+resize();
+
+let hitObjects = [];
+let started = false;
+let t0 = 0;
+let idx = 0;
+let score = 0;
+let combo = 0;
+
+function parseOSU(text){
+  const lines = text.split(/\r?\n/);
+  let inHit = false;
+  hitObjects = [];
+  for(const l of lines){
+    if(l === "[HitObjects]"){ inHit=true; continue; }
+    if(inHit && l.startsWith("[")) break;
+    if(inHit){
+      const p = l.split(",");
+      if(p.length >= 3){
+        hitObjects.push({ t: parseInt(p[2]) });
+      }
+    }
+  }
+}
+
+document.getElementById("mapfile").onchange = e=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = ()=>parseOSU(r.result);
+  r.readAsText(f);
+};
+
+document.getElementById("start").onclick = ()=>{
+  if(!hitObjects.length) return alert("load a .osu first");
+  started = true;
+  idx = 0;
+  score = 0;
+  combo = 0;
+  t0 = performance.now();
+};
+
+function judge(dt){
+  dt = Math.abs(dt);
+  if(dt <= 45) return 300;
+  if(dt <= 90) return 100;
+  if(dt <= 135) return 50;
+  return 0;
+}
+
+function hit(){
+  if(!started || idx >= hitObjects.length) return;
+  const now = performance.now() - t0;
+  const obj = hitObjects[idx];
+  const g = judge(now - obj.t);
+  if(g){
+    combo++;
+    score += g + combo*2;
+    idx++;
+  }else{
+    combo = 0;
+  }
+}
+
+addEventListener("keydown", e=>{
+  if(e.code === "Space") hit();
+});
+addEventListener("mousedown", hit);
+addEventListener("touchstart", e=>{
+  e.preventDefault();
+  hit();
+},{passive:false});
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(started){
+    const now = performance.now() - t0;
+    ctx.fillText(`time ${now|0}`,20,20);
+    ctx.fillText(`score ${score}`,20,40);
+    ctx.fillText(`combo ${combo}`,20,60);
+
+    if(idx < hitObjects.length){
+      const dt = hitObjects[idx].t - now;
+      ctx.fillText(`next ${dt|0}`,20,80);
+    }
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
