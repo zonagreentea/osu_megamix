@@ -38,3 +38,5 @@ release/*.zip
 archive/backups/
 backups/
 *.bak*
+osu_megamix_collect/logs/
+*.log
