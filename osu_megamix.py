@@ -5,6 +5,7 @@ import random
 import subprocess
 import atexit
 
+from runtime.audio.player import AudioPlayer
 # STUCK AT 1: one path, one truth
 SIM_HZ = 120
 SIM_DT_MS = 1000 / SIM_HZ
@@ -15,41 +16,6 @@ def grade_hit(err_ms, w300=45, w100=90, w50=135):
     if a <= w100: return 100
     if a <= w50:  return 50
     return 0
-
-class AudioPlayer:
-    def __init__(self, path):
-        self.path = path
-        self.proc = None
-        self.t0 = None
-
-    def start(self):
-        if not self.path:
-            return False
-        p = os.path.abspath(self.path)
-        if not os.path.exists(p):
-            return False
-
-        # Hard truth: macOS afplay
-        self.proc = subprocess.Popen(
-            ["/usr/bin/afplay", "-q", p],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        self.t0 = time.perf_counter()
-        return True
-
-    def stop(self):
-        if self.proc:
-            try:
-                self.proc.terminate()
-            except Exception:
-                pass
-            self.proc = None
-
-    def now_ms(self):
-        if self.t0 is None:
-            return int(time.perf_counter() * 1000)
-        return int((time.perf_counter() - self.t0) * 1000)
 
 class SimpleReplay:
     def __init__(self, path="last_replay.omxr"):
