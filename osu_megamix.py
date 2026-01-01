@@ -5,6 +5,7 @@ import random
 import subprocess
 import atexit
 
+from stream.sampling.beatmaps import DEFAULT_BEATMAP_DIRS, scan_beatmaps
 from tools.megamix.cook import run_megamix_session, run_basic_session
 from runtime.state.history import append_player_history
 from runtime.audio.player import AudioPlayer
@@ -48,33 +49,15 @@ RESET = "\033[0m"
 def rc_log(msg):
     print(f"{RC_COLOR}[osu!megamix]{RESET} {msg}")
 
-# ---------- BEATMAP LOADING ----------
-beatmap_dirs = ["osu_beatmaps", "osu_mix_beatmaps", "beatmaps"]  # include your repo default too
-
-def scan_beatmaps(dirs):
-    out = []
-    seen = set()
-    for d in dirs:
-        if not os.path.isdir(d):
-            continue
-        for root, _, files in os.walk(d):
-            for f in files:
-                if f.endswith(".osu") or f.endswith(".mix"):
-                    path = os.path.join(root, f)
-                    if path not in seen:
-                        seen.add(path)
-                        out.append(path)
-    return out
-
-beatmaps = scan_beatmaps(beatmap_dirs)
-rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
-
 # ---------- GAMEMODE SELECTION ----------
 modes_display = ["osu!megamix", "osu!", "osu!taiko", "osu!catch", "osu!mania"]
 modes_internal = ["red-charizard", "osu!", "taiko", "catch", "mania"]  # hidden everywhere
 
 
 def main():
+    beatmap_dirs = list(DEFAULT_BEATMAP_DIRS)
+    beatmaps = scan_beatmaps(beatmap_dirs)
+    rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
     print("Select gamemode (press Enter for default: osu!megamix):")
     for i, name in enumerate(modes_display, start=1):
         print(f"{i}. {name}")
