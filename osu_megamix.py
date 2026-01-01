@@ -79,7 +79,10 @@ def main():
     for i, name in enumerate(modes_display, start=1):
         print(f"{i}. {name}")
 
-    choice = input("Enter number: ").strip()
+    try:
+        choice = input("Enter number: ").strip()
+    except EOFError:
+        choice = ""
     if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
         selected_display = modes_display[int(choice)-1]
         selected_internal = modes_internal[int(choice)-1]
