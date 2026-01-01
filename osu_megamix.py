@@ -58,31 +58,49 @@ def main():
     beatmap_dirs = list(DEFAULT_BEATMAP_DIRS)
     beatmaps = scan_beatmaps(beatmap_dirs)
     rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
-    print("Select gamemode (press Enter for default: osu!megamix):")
-    for i, name in enumerate(modes_display, start=1):
-        print(f"{i}. {name}")
+    import sys, re
+    argv_tokens = [a for a in sys.argv[1:] if a.strip()]
 
-    try:
-        choice = input("Enter number: ").strip()
-    except EOFError:
-        choice = ""
-    if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
-        selected_display = modes_display[int(choice)-1]
-        selected_internal = modes_internal[int(choice)-1]
+    # menu only when interactive (no argv + tty)
+    if (not argv_tokens) and sys.stdin.isatty():
+        print("Select gamemode (press Enter for default: osu!megamix):")
+        for i, name in enumerate(modes_display, start=1):
+            print(f"{i}. {name}")
+
+    if argv_tokens:
+        tokens = argv_tokens
     else:
-        selected_display = "osu!megamix"
-        selected_internal = "red-charizard"
+        raw = ""
+        if sys.stdin.isatty():
+            try:
+                raw = input("Enter number (or list like '1 2 5'): ").strip()
+            except EOFError:
+                raw = ""
+        tokens = [t for t in re.split(r"[\s,]+", raw) if t]
+    if not tokens:
+        tokens = ["1"]
 
-    rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
+    # run each requested mode in order
+    for choice in tokens:
+        if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
+            selected_display = modes_display[int(choice)-1]
+            selected_internal = modes_internal[int(choice)-1]
+        else:
+            selected_display = "osu!megamix"
+            selected_internal = "red-charizard"
 
-    # ---------- SESSION ----------
-    if selected_internal == "red-charizard":
-        run_megamix_session(beatmaps, beatmap_dirs, scan_beatmaps, rc_log)
-    else:
-        run_basic_session(selected_display, beatmaps, rc_log)
-    # ---------- PLAYER HISTORY ----------
-    append_player_history(selected_display)
-    rc_log("Session complete. Player history updated. Red-Charizard approves.")
+        rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
+
+        # ---------- SESSION ----------
+        if selected_internal == "red-charizard":
+            run_megamix_session(beatmaps, beatmap_dirs, scan_beatmaps, rc_log)
+        else:
+            run_basic_session(selected_display, beatmaps, rc_log)
+
+        append_player_history(selected_display)
+
+    rc_log("Batch complete. Red-Charizard approves.")
+    return
 
 if __name__ == "__main__":
     main()
