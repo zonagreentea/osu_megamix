@@ -71,61 +71,66 @@ rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
 modes_display = ["osu!megamix", "osu!", "osu!taiko", "osu!catch", "osu!mania"]
 modes_internal = ["red-charizard", "osu!", "taiko", "catch", "mania"]  # hidden everywhere
 
-print("Select gamemode (press Enter for default: osu!megamix):")
-for i, name in enumerate(modes_display, start=1):
-    print(f"{i}. {name}")
 
-choice = input("Enter number: ").strip()
-if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
-    selected_display = modes_display[int(choice)-1]
-    selected_internal = modes_internal[int(choice)-1]
-else:
-    selected_display = "osu!megamix"
-    selected_internal = "red-charizard"
+def main():
+    print("Select gamemode (press Enter for default: osu!megamix):")
+    for i, name in enumerate(modes_display, start=1):
+        print(f"{i}. {name}")
 
-rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
-
-# ---------- SESSION ----------
-if selected_internal == "red-charizard":
-    if beatmaps:
-        rc_log("osu!megamix MEGAMIX starting: auto-preloading 50 shuffled beatmaps...")
-        playlist = random.sample(beatmaps, min(50, len(beatmaps)))
-
-        def refresh_beatmaps():
-            nonlocal_beatmaps = scan_beatmaps(beatmap_dirs)
-            # add new ones to playlist (keep uniqueness)
-            have = set(playlist)
-            added = 0
-            for p in nonlocal_beatmaps:
-                if p not in have:
-                    playlist.append(p)
-                    have.add(p)
-                    added += 1
-                    rc_log(f"New beatmap detected: {os.path.basename(p)} (Red-Charizard spotted!)")
-            return added
-
-        for i, bm in enumerate(playlist, start=1):
-            rc_log(f"Cooking beatmap {i}/{len(playlist)}: {bm}")
-            time.sleep(0.1)
-            if i % 10 == 0:
-                refresh_beatmaps()
-
-        rc_log("osu!megamix session complete! Red-Charizard lurks everywhere.")
+    choice = input("Enter number: ").strip()
+    if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
+        selected_display = modes_display[int(choice)-1]
+        selected_internal = modes_internal[int(choice)-1]
     else:
-        rc_log("No beatmaps found for osu!megamix (Red-Charizard sad).")
-else:
-    rc_log(f"Starting {selected_display} session...")
-    if beatmaps:
-        for i, bm in enumerate(beatmaps, start=1):
-            rc_log(f"Playing beatmap {i}/{len(beatmaps)}: {bm}")
-            time.sleep(0.1)
-        rc_log(f"{selected_display} session complete! Red-Charizard smiles.")
+        selected_display = "osu!megamix"
+        selected_internal = "red-charizard"
+
+    rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
+
+    # ---------- SESSION ----------
+    if selected_internal == "red-charizard":
+        if beatmaps:
+            rc_log("osu!megamix MEGAMIX starting: auto-preloading 50 shuffled beatmaps...")
+            playlist = random.sample(beatmaps, min(50, len(beatmaps)))
+
+            def refresh_beatmaps():
+                nonlocal_beatmaps = scan_beatmaps(beatmap_dirs)
+                # add new ones to playlist (keep uniqueness)
+                have = set(playlist)
+                added = 0
+                for p in nonlocal_beatmaps:
+                    if p not in have:
+                        playlist.append(p)
+                        have.add(p)
+                        added += 1
+                        rc_log(f"New beatmap detected: {os.path.basename(p)} (Red-Charizard spotted!)")
+                return added
+
+            for i, bm in enumerate(playlist, start=1):
+                rc_log(f"Cooking beatmap {i}/{len(playlist)}: {bm}")
+                time.sleep(0.1)
+                if i % 10 == 0:
+                    refresh_beatmaps()
+
+            rc_log("osu!megamix session complete! Red-Charizard lurks everywhere.")
+        else:
+            rc_log("No beatmaps found for osu!megamix (Red-Charizard sad).")
     else:
-        rc_log(f"No beatmaps available for {selected_display}!")
+        rc_log(f"Starting {selected_display} session...")
+        if beatmaps:
+            for i, bm in enumerate(beatmaps, start=1):
+                rc_log(f"Playing beatmap {i}/{len(beatmaps)}: {bm}")
+                time.sleep(0.1)
+            rc_log(f"{selected_display} session complete! Red-Charizard smiles.")
+        else:
+            rc_log(f"No beatmaps available for {selected_display}!")
 
-# ---------- PLAYER HISTORY ----------
-history_file = os.path.expanduser("~/playerbase_history.txt")
-with open(history_file, "a", encoding="utf-8") as f:
-    f.write(f"{selected_display}\n")
+    # ---------- PLAYER HISTORY ----------
+    history_file = os.path.expanduser("~/playerbase_history.txt")
+    with open(history_file, "a", encoding="utf-8") as f:
+        f.write(f"{selected_display}\n")
 
-rc_log("Session complete. Player history updated. Red-Charizard approves.")
+    rc_log("Session complete. Player history updated. Red-Charizard approves.")
+
+if __name__ == "__main__":
+    main()
