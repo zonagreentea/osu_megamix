@@ -5,6 +5,8 @@ import random
 import subprocess
 import atexit
 
+from tools.megamix.cook import run_megamix_session, run_basic_session
+from runtime.state.history import append_player_history
 from runtime.audio.player import AudioPlayer
 # STUCK AT 1: one path, one truth
 SIM_HZ = 120
@@ -89,47 +91,11 @@ def main():
 
     # ---------- SESSION ----------
     if selected_internal == "red-charizard":
-        if beatmaps:
-            rc_log("osu!megamix MEGAMIX starting: auto-preloading 50 shuffled beatmaps...")
-            playlist = random.sample(beatmaps, min(50, len(beatmaps)))
-
-            def refresh_beatmaps():
-                nonlocal_beatmaps = scan_beatmaps(beatmap_dirs)
-                # add new ones to playlist (keep uniqueness)
-                have = set(playlist)
-                added = 0
-                for p in nonlocal_beatmaps:
-                    if p not in have:
-                        playlist.append(p)
-                        have.add(p)
-                        added += 1
-                        rc_log(f"New beatmap detected: {os.path.basename(p)} (Red-Charizard spotted!)")
-                return added
-
-            for i, bm in enumerate(playlist, start=1):
-                rc_log(f"Cooking beatmap {i}/{len(playlist)}: {bm}")
-                time.sleep(0.1)
-                if i % 10 == 0:
-                    refresh_beatmaps()
-
-            rc_log("osu!megamix session complete! Red-Charizard lurks everywhere.")
-        else:
-            rc_log("No beatmaps found for osu!megamix (Red-Charizard sad).")
+        run_megamix_session(beatmaps, beatmap_dirs, scan_beatmaps, rc_log)
     else:
-        rc_log(f"Starting {selected_display} session...")
-        if beatmaps:
-            for i, bm in enumerate(beatmaps, start=1):
-                rc_log(f"Playing beatmap {i}/{len(beatmaps)}: {bm}")
-                time.sleep(0.1)
-            rc_log(f"{selected_display} session complete! Red-Charizard smiles.")
-        else:
-            rc_log(f"No beatmaps available for {selected_display}!")
-
+        run_basic_session(selected_display, beatmaps, rc_log)
     # ---------- PLAYER HISTORY ----------
-    history_file = os.path.expanduser("~/playerbase_history.txt")
-    with open(history_file, "a", encoding="utf-8") as f:
-        f.write(f"{selected_display}\n")
-
+    append_player_history(selected_display)
     rc_log("Session complete. Player history updated. Red-Charizard approves.")
 
 if __name__ == "__main__":
