@@ -1,13 +1,17 @@
-.DS_Store
-*.log
-nohup.out
-*.o
-*.exe
+# builds
 /build/
-/Release/
-__pycache__/
-
-
-# local logs
-/dryruns/
 /ultra/build/
+
+# scratch / temp
+/scratch/
+
+# OS
+.DS_Store
+
+# editors
+*.swp
+*.swo
+*~
+
+# logs
+*.log
