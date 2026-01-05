@@ -1,1 +1,456 @@
-<!doctype html><html><head><meta charset="utf-8"><title>osu!megamix</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;height:100%;background:#000;color:#fff;font-family:system-ui;overflow:hidden}body{display:flex;align-items:center;justify-content:center}.w{text-align:center;width:100%;padding:0 8vw}.t{font-size:clamp(2.5rem,6vw,4rem);letter-spacing:.08em}.p{margin-top:2rem;letter-spacing:.35em;opacity:.2;animation:pulse 1.6s ease-in-out infinite}@keyframes pulse{0%,100%{opacity:.2}50%{opacity:1}}.l{margin-top:3rem;width:100%;height:4px;background:#111;overflow:hidden;opacity:0}.l.on{opacity:1}.b{height:100%;width:0;background:#fff;animation:load 4.2s linear forwards}@keyframes load{to{width:100%}}.n{margin-top:1.5rem;font-size:.9rem;color:#666}</style></head><body><div class="w" id="g"><div class="t">osu!megamix</div><div class="p" id="p">PRESS ENTER</div><div class="l" id="l"><div class="b"></div></div><div class="n">Preparing environment · syncing mix · validating reality</div></div><script>let d=0;addEventListener('keydown',e=>{if(e.key!=='Enter'||d)return;d=1;document.getElementById('p').textContent='FIXING THE GAME';document.getElementById('l').classList.add('on');setTimeout(()=>location.href='https://github.com/zonagreentea/osu_megamix/releases',4200);});</script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>cat ultra — no deps JS</title>
+  <style>
+    html,body{margin:0;height:100%;background:#0b0b10;color:#eee;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+    canvas{display:block;width:100vw;height:100vh;}
+    #bar{
+      position:fixed;top:12px;left:12px;right:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+      background:rgba(20,20,30,.72);border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;padding:10px 12px;backdrop-filter:blur(10px);
+    }
+    button{border-radius:12px;border:1px solid rgba(255,255,255,.12);background:#151522;color:#fff;padding:8px 12px;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .pill{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
+    #hint{
+      position:fixed;bottom:12px;left:12px;right:12px;
+      display:flex;gap:10px;flex-wrap:wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="bar">
+    <button id="start">Start (audio + 3-2-1)</button>
+    <button id="reset" disabled>Reset (timeline only)</button>
+    <span class="pill" id="mode">mode: —</span>
+    <span class="pill" id="hp">hp: —</span>
+    <span class="pill" id="combo">combo: —</span>
+    <span class="pill" id="score">score: —</span>
+    <span class="pill" id="t">t: —</span>
+    <span class="pill" id="cd">—</span>
+  </div>
+  <div id="hint">
+    <span class="pill">Move mouse. Click circles. Misses drain HP. HP=0 → BUST → MIX (freeplay). Audio/timeline keep going.</span>
+    <span class="pill">No deps. Single file. Deterministic spawns.</span>
+  </div>
+  <canvas id="c"></canvas>
+
+<script>
+(() => {
+  const COUNTDOWN_MS = 3000;
+  const GO_FLASH_MS  = 500;
+
+  const SEED = 1337;
+  const N_PER_SEC = 4;
+  const HIT_WINDOW_MS = 90;
+  const RADIUS = 42;
+  const APPROACH_MS = 700;
+
+  const HP_GAIN_HIT = 0.04;
+  const HP_DRAIN_MISS = 0.10;
+
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+
+  function resize(){
+    const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  const $ = (id) => document.getElementById(id);
+  const startBtn = $('start');
+  const resetBtn = $('reset');
+  const modeP = $('mode');
+  const hpP = $('hp');
+  const comboP = $('combo');
+  const scoreP = $('score');
+  const tP = $('t');
+  const cdP = $('cd');
+
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp = (a,b,t)=>a+(b-a)*t;
+
+  function mix32(x){
+    x >>>= 0;
+    x ^= (x << 13) >>> 0;
+    x ^= (x >>> 17) >>> 0;
+    x ^= (x << 5) >>> 0;
+    return x >>> 0;
+  }
+  function hashUnit(seed, a, b){
+    let x = (seed ^ ((a * 374761393)>>>0) ^ ((b * 668265263)>>>0)) >>> 0;
+    x = mix32(x);
+    return x / 4294967296;
+  }
+
+  let audioCtx = null;
+  let masterGain = null;
+  let schedulerTimer = null;
+
+  function ensureAudio(){
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.18;
+      masterGain.connect(audioCtx.destination);
+    }
+  }
+
+  function scheduleMixBed(){
+    const bpm = 120;
+    const beat = 60 / bpm;
+    const now = audioCtx.currentTime;
+    const t0 = now + 0.05;
+
+    for (let i=0;i<16;i++){
+      const t = t0 + i * (beat/2);
+
+      if (i % 2 === 0){
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(120, t);
+        o.frequency.exponentialRampToValueAtTime(45, t + 0.08);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.9, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.13);
+      }
+
+      {
+        const n = audioCtx.createBufferSource();
+        const g = audioCtx.createGain();
+        const len = Math.floor(audioCtx.sampleRate * 0.03);
+        const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let j=0;j<len;j++){
+          data[j] = (Math.random()*2-1) * (1 - j/len);
+        }
+        n.buffer = buf;
+        g.gain.setValueAtTime(0.12, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+        n.connect(g); g.connect(masterGain);
+        n.start(t); n.stop(t + 0.031);
+      }
+
+      if (i % 4 === 0){
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(55, t);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(0.25, t + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.connect(g); g.connect(masterGain);
+        o.start(t); o.stop(t + 0.2);
+      }
+    }
+  }
+
+  async function startAudio(){
+    ensureAudio();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    if (!schedulerTimer){
+      scheduleMixBed();
+      schedulerTimer = setInterval(scheduleMixBed, 1800);
+    }
+  }
+
+  const cat = {
+    running: false,
+    t0_audio: 0,
+    t0_perf: 0,
+    events: [],
+    markers: [],
+    inputs: [],
+    spawns: [],
+    busts: [],
+    lastBin: -1,
+    t_go: COUNTDOWN_MS
+  };
+
+  function nowMs(){
+    if (!cat.running) return 0;
+    if (audioCtx){
+      return (audioCtx.currentTime - cat.t0_audio) * 1000;
+    }
+    return performance.now() - cat.t0_perf;
+  }
+
+  function emit(ev){
+    cat.events.push(ev);
+    if (ev.type === 'marker') cat.markers.push(ev);
+    if (ev.type === 'input') cat.inputs.push(ev);
+    if (ev.type === 'spawn') cat.spawns.push(ev);
+    if (ev.type === 'bust') cat.busts.push(ev);
+  }
+
+  const state = {
+    mode: 'osu',
+    busted: false,
+    hp: 1.0,
+    combo: 0,
+    score: 0,
+    judged: new Set()
+  };
+
+  function startSession(){
+    cat.running = true;
+    cat.events.length = 0;
+    cat.markers.length = 0;
+    cat.inputs.length = 0;
+    cat.spawns.length = 0;
+    cat.busts.length = 0;
+    cat.lastBin = -1;
+    cat.t_go = COUNTDOWN_MS;
+
+    cat.t0_perf = performance.now();
+    cat.t0_audio = audioCtx ? audioCtx.currentTime : 0;
+
+    emit({type:'marker', t:0, label:'countdown', n:3});
+    emit({type:'marker', t:1000, label:'countdown', n:2});
+    emit({type:'marker', t:2000, label:'countdown', n:1});
+    emit({type:'marker', t:3000, label:'go'});
+
+    state.mode = 'osu';
+    state.busted = false;
+    state.hp = 1.0;
+    state.combo = 0;
+    state.score = 0;
+    state.judged.clear();
+
+    startBtn.disabled = true;
+    resetBtn.disabled = false;
+  }
+
+  function resetTimelineOnly(){
+    startSession();
+  }
+
+  const input = { x: innerWidth/2, y: innerHeight/2 };
+
+  addEventListener('mousemove', (e)=>{
+    input.x = e.clientX;
+    input.y = e.clientY;
+  });
+
+  addEventListener('mousedown', (e)=>{
+    if (!cat.running) return;
+    emit({type:'input', t: nowMs(), kind:'down', button:e.button, x:input.x, y:input.y});
+  });
+
+  addEventListener('mouseup', (e)=>{
+    if (!cat.running) return;
+    emit({type:'input', t: nowMs(), kind:'up', button:e.button, x:input.x, y:input.y});
+  });
+
+  function genBin(binIdx){
+    const w = innerWidth, h = innerHeight;
+    const margin = 70;
+    for (let i=0;i<N_PER_SEC;i++){
+      const uT = hashUnit(SEED, binIdx, i);
+      const tHit = cat.t_go + binIdx*1000 + Math.floor(uT*1000);
+
+      const uX = hashUnit(SEED+17, binIdx, i);
+      const uY = hashUnit(SEED+29, binIdx, i);
+
+      const x = lerp(margin, w - margin, uX);
+      const y = lerp(margin + 60, h - margin, uY);
+
+      const id = `tap:${binIdx}:${i}`;
+      emit({type:'spawn', spawnType:'tap', t:tHit, x, y, r:RADIUS, approachMs:APPROACH_MS, id});
+    }
+  }
+
+  function generatorTick(t){
+    if (t < cat.t_go) return;
+    const bin = Math.floor((t - cat.t_go)/1000);
+    for (let b=cat.lastBin+1; b<=bin; b++){
+      genBin(b);
+      cat.lastBin = b;
+    }
+  }
+
+  function findClickDownNear(tTarget){
+    const lo = tTarget - HIT_WINDOW_MS;
+    const hi = tTarget + HIT_WINDOW_MS;
+    for (let i=cat.inputs.length-1; i>=0; i--){
+      const ev = cat.inputs[i];
+      if (ev.kind !== 'down') continue;
+      if (ev.t < lo) break;
+      if (ev.t >= lo && ev.t <= hi) return ev;
+    }
+    return null;
+  }
+
+  function osuTick(t){
+    if (t < cat.t_go) return;
+    if (state.busted) return;
+
+    for (const sp of cat.spawns){
+      if (sp.spawnType !== 'tap') continue;
+      if (state.judged.has(sp.id)) continue;
+
+      if (t < sp.t + HIT_WINDOW_MS) continue;
+
+      const click = findClickDownNear(sp.t);
+      let hit = false;
+      if (click){
+        const dx = click.x - sp.x;
+        const dy = click.y - sp.y;
+        hit = (dx*dx + dy*dy) <= sp.r*sp.r;
+      }
+
+      state.judged.add(sp.id);
+
+      if (hit){
+        state.combo++;
+        state.score += 300 + Math.min(200, state.combo);
+        state.hp = clamp(state.hp + HP_GAIN_HIT, 0, 1);
+      } else {
+        state.combo = 0;
+        state.hp = clamp(state.hp - HP_DRAIN_MISS, 0, 1);
+
+        if (state.hp <= 0 && !state.busted){
+          emit({type:'bust', t, reason:'osu_fail', player:'local'});
+          state.busted = true;
+          state.mode = 'mix';
+        }
+      }
+    }
+  }
+
+  function mixTick(t){
+    // test mix = freeplay
+  }
+
+  function routingTick(t){
+    if (state.mode === 'osu') osuTick(t);
+    else mixTick(t);
+  }
+
+  function countdownText(t){
+    if (!cat.running) return '';
+    if (t < 1000) return '3';
+    if (t < 2000) return '2';
+    if (t < 3000) return '1';
+    if (t < 3000 + GO_FLASH_MS) return 'GO';
+    return '';
+  }
+
+  function draw(t){
+    const w = innerWidth, h = innerHeight;
+    ctx.clearRect(0,0,w,h);
+
+    ctx.globalAlpha = 0.16;
+    ctx.beginPath();
+    for (let x=0;x<w;x+=40){ ctx.moveTo(x,0); ctx.lineTo(x,h); }
+    for (let y=0;y<h;y+=40){ ctx.moveTo(0,y); ctx.lineTo(w,y); }
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    for (const sp of cat.spawns){
+      if (sp.spawnType !== 'tap') continue;
+      const dt = sp.t - t;
+      if (dt < -500) continue;
+      if (dt > sp.approachMs) continue;
+
+      const life = clamp(1 - (dt / sp.approachMs), 0, 1);
+      const ringR = sp.r + (1 - life) * 90;
+
+      ctx.globalAlpha = 0.25;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, ringR, 0, Math.PI*2);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.globalAlpha = state.judged.has(sp.id) ? 0.10 : 0.85;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI*2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, 3, 0, Math.PI*2);
+      ctx.fillStyle = '#0b0b10';
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(input.x, input.y, 6, 0, Math.PI*2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    if (state.mode === 'mix'){
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#0b0b10';
+      ctx.font = '800 44px system-ui';
+      ctx.fillText('BUST → MIX', 20, 110);
+      ctx.font = '500 18px system-ui';
+      ctx.fillText('Freeplay. Audio + timeline continue. Nobody ends.', 20, 140);
+    }
+
+    const cd = countdownText(t);
+    if (cd){
+      ctx.globalAlpha = 0.95;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '900 110px system-ui';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(cd, w/2, h/2);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function loop(){
+    if (cat.running){
+      const t = nowMs();
+      generatorTick(t);
+      routingTick(t);
+
+      modeP.textContent = `mode: ${state.mode}`;
+      hpP.textContent = `hp: ${state.hp.toFixed(2)}`;
+      comboP.textContent = `combo: ${state.combo}`;
+      scoreP.textContent = `score: ${state.score}`;
+      tP.textContent = `t: ${Math.floor(t)}ms`;
+      const cd = countdownText(t);
+      cdP.textContent = cd ? `countdown: ${cd}` : (t < cat.t_go ? 'countdown: …' : 'countdown: done');
+
+      draw(t);
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  startBtn.addEventListener('click', async () => {
+    await startAudio();
+    startSession();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    resetTimelineOnly();
+  });
+})();
+</script>
+</body>
+</html>
