@@ -6,11 +6,10 @@ struct UltraTiming {
   using clock = std::chrono::steady_clock;
 
   clock::time_point last = clock::now();
-  double dt_sec = 0.0;        // delta time (seconds), clamped
-  double raw_dt_sec = 0.0;    // raw delta (seconds), unclamped
+  double dt_sec = 0.0;
+  double raw_dt_sec = 0.0;
   uint64_t frame = 0;
 
-  // clamp dt to avoid huge jumps (sleep/background)
   double clamp_max_sec = 0.050; // 50ms
 
   void tick() {
