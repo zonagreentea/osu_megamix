@@ -6,6 +6,13 @@
 #include <string>
 #include <algorithm>
 
+#include <cstdlib>
+#include <cstdio>
+static bool ultra_builder_mode() {
+  const char* v = std::getenv("OSU_MEGAMIX_BUILDER");
+  return v && v[0] && v[0] != '0';
+}
+
 static constexpr int   WIN_W = 960;
 static constexpr int   WIN_H = 540;
 static constexpr int   COUNTDOWN_MS = 3000;
