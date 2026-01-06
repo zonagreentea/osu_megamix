@@ -4,7 +4,7 @@ import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse
 
-LOG_PATH = "freeze_frames.jsonl"
+LOG_PATH = "logs/freeze_frames.jsonl"
 
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code=200, body=b"OK"):
