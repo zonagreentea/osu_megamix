@@ -73,6 +73,37 @@ JS
     exec ./tools/builder_on.sh ./ultra/build/cat_ultra
     ;;
 
+  upkeep)
+    need_repo
+    say "✋ The Hand: upkeep (observe-only)"
+    say ""
+
+    lain "checking skins/"
+    [ -d skins ] || mkdir -p skins
+    [ -d skins/lain-tan ] && lain "lain-tan present" || lain "lain-tan missing (ok)"
+
+    bosu "checking ultra/"
+    if [ -d ultra ] && [ -f ultra/CMakeLists.txt ]; then
+      peppy "ultra present"
+      if [ -x ultra/build/cat_ultra ]; then
+        peppy "ultra/build/cat_ultra present"
+      else
+        peppy "ultra/build/cat_ultra missing (build when ready)"
+      fi
+    else
+      peppy "ultra missing (skipping)"
+    fi
+
+    peppy "freeze tag:"
+    if git tag --list | grep -q '^jit-2\.2\.2\.2\.2\.2\.2\.2\.2$'; then
+      say "  jit-2.2.2.2.2.2.2.2.2 ✓"
+    else
+      say "  (none)"
+    fi
+
+    say ""
+    say "✓ upkeep pass complete"
+    ;;
   share)
     need_repo
     say "📦 Send this build to your friends!"
