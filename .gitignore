@@ -30,3 +30,11 @@ osu_megamix_r4/
 
 # cat: local notes
 ios_README.txt
+
+# --- cat: Xcode / iOS junk (never commit) ---
+**/*.xcuserstate
+**/xcuserdata/
+**/*.xccheckout
+**/*.xcscmblueprint
+**/DerivedData/
+**/.swiftpm/xcode/package.xcworkspace/
