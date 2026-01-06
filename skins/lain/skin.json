@@ -1,0 +1,15 @@
+{
+  "name": "lain",
+  "version": 1,
+  "entry": {
+    "theme": "assets/ui/theme.css",
+    "layout": "assets/ui/layout.json"
+  },
+  "images": {},
+  "fonts": {},
+  "sfx": {},
+  "vars": {
+    "accent": "#7bf",
+    "bg": "#05060a"
+  }
+}
