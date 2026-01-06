@@ -1,8 +1,20 @@
 # JIT Freeze: 2.2.2.2.2.2.2.2.2
 
-Builders are free. We freeze the JIT surface.
+Status: FROZEN
+
+Scope:
+- JIT execution surface only
+- Timing, input, and UI projection must remain deterministic
+
+Builders are free:
+- ultra
+- cat
+- skins
+- docs
 
 Rules:
-- No new moving parts in the JIT path unless explicitly unfrozen.
-- Determinism + compatibility > cleverness.
-- Changes require a new freeze tag (never mutate a freeze).
+- Do not mutate frozen paths
+- Any change requires a new freeze version
+- Stability > cleverness
+
+This freeze protects the mix.
