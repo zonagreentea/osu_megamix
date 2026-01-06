@@ -452,5 +452,72 @@
   });
 })();
 </script>
+<script>
+(function FreezeDetector(){
+  const cfg = {
+    endpoint: "http://127.0.0.1:8787/freeze",
+    K: 12,
+    w: 64,
+    h: 60,
+    spamGuardFrames: 30,
+  };
+
+  const canvas = document.querySelector("#game") || document.querySelector("canvas");
+  if (!canvas) return;
+
+  const off = document.createElement("canvas");
+  off.width = cfg.w; off.height = cfg.h;
+  const octx = off.getContext("2d", { willReadFrequently: true });
+
+  let lastHash = null, run = 0, frameNo = 0, lastLoggedAt = -1;
+
+  function fnv1a(bytes){
+    let h = 0x811c9dc5;
+    for (let i=0;i<bytes.length;i++){
+      h ^= bytes[i];
+      h = Math.imul(h, 0x01000193);
+    }
+    return (h>>>0).toString(16).padStart(8,"0");
+  }
+
+  function hashCanvas(){
+    octx.clearRect(0,0,cfg.w,cfg.h);
+    octx.drawImage(canvas,0,0,cfg.w,cfg.h);
+    const img = octx.getImageData(0,0,cfg.w,cfg.h).data;
+    const out = new Uint8Array(cfg.w*cfg.h);
+    for (let p=0,j=0;p<img.length;p+=4,j++){
+      const y=(img[p]*3+img[p+1]*6+img[p+2])/10;
+      out[j]=(y/16)|0;
+    }
+    return fnv1a(out);
+  }
+
+  function post(ev){
+    fetch(cfg.endpoint,{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(ev),
+      keepalive:true
+    }).catch(()=>{});
+  }
+
+  window.__freeze_tick=function(){
+    frameNo++;
+    const h=hashCanvas();
+    if (h===lastHash) run++;
+    else { run=0; lastHash=h; }
+
+    if (run>=cfg.K){
+      if (lastLoggedAt<0 || frameNo-lastLoggedAt>=cfg.spamGuardFrames){
+        lastLoggedAt=frameNo;
+        post({type:"freeze_frame",frameNo,run,K:cfg.K,hash:h,ts:Date.now()});
+      }
+    }
+  };
+
+  function raf(){ try{ window.__freeze_tick(); }catch(e){} requestAnimationFrame(raf); }
+  requestAnimationFrame(raf);
+})();
+</script>
 </body>
 </html>
