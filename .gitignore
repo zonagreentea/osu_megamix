@@ -18,3 +18,12 @@
 
 # ultra scratch
 /ultra/scratch/
+
+# --- cat: do not commit Xcode/user state or local build junk ---
+**/*.xcuserstate
+**/*.xcuserdata/
+**/xcuserdata/
+build_ios/
+dist_ball/
+ios/
+osu_megamix_r4/
