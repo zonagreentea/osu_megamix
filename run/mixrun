@@ -2,9 +2,13 @@
 set -eu
 
 FILE="${1:-}"
-[ -n "$FILE" ] || { echo "usage: ./run/mixrun <file.mix>" >&2; exit 1; }
+[ -n "$FILE" ] || { echo "usage: ./mixrun <file.mix>" >&2; exit 1; }
 
-FILE="${FILE/#\~/$HOME}"
+# expand ~ safely
+case "$FILE" in
+  "~"*) FILE="$HOME${FILE#\~}" ;;
+esac
+
 [ -e "$FILE" ] || { echo "mixrun: file not found: $FILE" >&2; exit 1; }
 
 FILE="$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")"
@@ -17,18 +21,16 @@ while lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; do
   PORT=$((PORT+1))
 done
 
-ENCODED="$(printf '%s' "$FILE" | python3 - <<'PY'
-import sys, urllib.parse
-print(urllib.parse.quote(sys.stdin.read()))
-PY
-)"
-
+ENCODED="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$FILE")"
 URL="http://127.0.0.1:$PORT/index.html?mix=$ENCODED"
 
 echo "[mixrun] $FILE"
 echo "[mixrun] $URL"
 
 python3 -m http.server "$PORT" >/dev/null 2>&1 &
+SRV_PID=$!
+trap 'kill "$SRV_PID" 2>/dev/null || true' EXIT INT TERM
+
 sleep 0.4
 open "$URL"
-wait
+wait "$SRV_PID"
