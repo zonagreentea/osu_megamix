@@ -41,8 +41,10 @@ class Handler(BaseHTTPRequestHandler):
         self._send()
 
 def main():
+    import os
+    os.makedirs(os.path.dirname(LOG_PATH) or ".", exist_ok=True)
     print("[freeze_logger] listening on http://127.0.0.1:8787/freeze")
-    print("[freeze_logger] writing -> freeze_frames.jsonl")
+    print("[freeze_logger] writing -> " + LOG_PATH)
     HTTPServer(("127.0.0.1", 8787), Handler).serve_forever()
 
 if __name__ == "__main__":
