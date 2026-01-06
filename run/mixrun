@@ -1,36 +1,55 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env bash
+set -euo pipefail
 
-FILE="${1:-}"
-[ -n "$FILE" ] || { echo "usage: ./mixrun <file.mix>" >&2; exit 1; }
-
-# expand ~ safely
-case "$FILE" in
-  "~"*) FILE="$HOME${FILE#\~}" ;;
-esac
-
+FILE="${1:?usage: ./mixrun <file.mix>}"
+case "$FILE" in "~"*) FILE="$HOME${FILE#\~}" ;; esac
 [ -e "$FILE" ] || { echo "mixrun: file not found: $FILE" >&2; exit 1; }
-
 FILE="$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")"
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# resolve symlinks so ./mixrun -> run/mixrun still finds repo root
+SCRIPT="$0"
+while [ -L "$SCRIPT" ]; do
+  LINK="$(readlink "$SCRIPT")"
+  case "$LINK" in
+    /*) SCRIPT="$LINK" ;;
+    *)  SCRIPT="$(cd "$(dirname "$SCRIPT")" && pwd)/$LINK" ;;
+  esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT")" && pwd)"
+ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$ROOT"
 
 PORT="${PORT:-8000}"
-while lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; do
-  PORT=$((PORT+1))
-done
+while lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; do PORT=$((PORT+1)); done
 
-ENCODED="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1]))' "$FILE")"
+# URL-encode full path (escape / as %2F)
+ENCODED="$(python3 - <<'PY' "$FILE"
+import urllib.parse, sys
+print(urllib.parse.quote(sys.argv[1], safe=""))
+PY
+)"
 URL="http://127.0.0.1:$PORT/index.html?mix=$ENCODED"
 
-echo "[mixrun] $FILE"
+# redact HOME in printed path (don’t leak username)
+SAFE_FILE="$FILE"
+case "$SAFE_FILE" in "$HOME"/*) SAFE_FILE="<HOME>${SAFE_FILE#$HOME}" ;; esac
+
+echo "[mixrun] cwd=$(pwd)"
+echo "[mixrun] $SAFE_FILE"
 echo "[mixrun] $URL"
+echo "[mixrun] Ctrl-C to stop"
 
-python3 -m http.server "$PORT" >/dev/null 2>&1 &
+python3 -u -m http.server "$PORT" &
 SRV_PID=$!
-trap 'kill "$SRV_PID" 2>/dev/null || true' EXIT INT TERM
+trap 'kill "$SRV_PID" 2>/dev/null || true' INT TERM EXIT
 
-sleep 0.4
+# wait until server responds (prevents race)
+for _ in $(seq 1 100); do
+  curl -fs "http://127.0.0.1:$PORT/index.html" >/dev/null 2>&1 && break
+  sleep 0.05
+done
+
 open "$URL"
-wait "$SRV_PID"
+
+# keep launcher alive (don’t exit and kill server)
+while kill -0 "$SRV_PID" 2>/dev/null; do sleep 1; done
