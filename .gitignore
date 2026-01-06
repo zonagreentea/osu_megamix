@@ -27,3 +27,6 @@ build_ios/
 dist_ball/
 ios/
 osu_megamix_r4/
+
+# cat: local notes
+ios_README.txt
