@@ -1,5 +1,0 @@
-{"type": "sanity", "frameNo": 0, "run": 1, "_server_ts": 1767717672.504622}
-{"type": "freeze_frame", "frameNo": 13, "run": 12, "K": 12, "hash": "bdbaa9c5", "ts": 1767717734011, "_server_ts": 1767717734.020597}
-{"type": "freeze_frame", "frameNo": 43, "run": 42, "K": 12, "hash": "bdbaa9c5", "ts": 1767717734513, "_server_ts": 1767717734.517355}
-{"type": "freeze_frame", "frameNo": 73, "run": 72, "K": 12, "hash": "bdbaa9c5", "ts": 1767717735016, "_server_ts": 1767717735.021127}
-{"type": "freeze_frame", "frameNo": 103, "run": 102, "K": 12, "hash": "bdbaa9c5", "ts": 1767717735513, "_server_ts": 1767717735.5171}
