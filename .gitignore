@@ -38,3 +38,9 @@ ios_README.txt
 **/*.xcscmblueprint
 **/DerivedData/
 **/.swiftpm/xcode/package.xcworkspace/
+
+# --- cat: build outputs ---
+build_ios/
+dist_ball/
+ultra/build/
+ultra/scratch/
