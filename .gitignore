@@ -47,3 +47,5 @@ ultra/scratch/
 
 # runtime logs
 logs/
+
+*.bak
