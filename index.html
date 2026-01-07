@@ -452,5 +452,20 @@
   });
 })();
 </script>
+
+<!-- Background layers (optional) -->
+<div id="bgRoot">
+  <img id="bgImage" alt="" style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-3" />
+  <video id="bgVideo" playsinline muted loop style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2"></video>
+  <div id="bgDim" style="position:fixed;inset:0;background:black;opacity:1;display:none;z-index:-1"></div>
+</div>
+
+
+<!-- quick test buttons (remove later) -->
+<div style="position:fixed;right:12px;bottom:12px;display:flex;gap:8px;z-index:9999">
+  <button onclick="MEGAMIX.toggleBgImage()">BG</button>
+  <button onclick="MEGAMIX.toggleBgVideo()">VID</button>
+</div>
+<script type="module" src="./web/js/main.js"></script>
 </body>
 </html>
