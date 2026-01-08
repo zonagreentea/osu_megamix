@@ -1,4 +1,4 @@
-# imagination*
+### imagination*
 
 Standalone runtime (no osu!megamix required).
 
