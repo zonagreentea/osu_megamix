@@ -202,6 +202,67 @@
     judged: new Set()
   };
 
+  // --- MEGAMIX LAYER ACTOR (view-only): Pikachu owns the GameCube ---
+  function mountPikachu(){
+    if (document.getElementById("mm-pika")) return;
+
+    const style = document.createElement("style");
+    style.textContent = `
+#mm-pika{position:fixed;right:18px;bottom:18px;z-index:9999;user-select:none;pointer-events:none;transform-origin:100% 100%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.35));opacity:.92}
+#mm-pika .card{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:end;padding:12px 14px;border-radius:18px;background:rgba(20,20,28,.72);border:1px solid rgba(255,255,255,.10);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#mm-pika .title{font:800 14px/1.1 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:rgba(255,255,255,.92);margin:0 0 6px 0}
+#mm-pika .sub{font:600 12px/1.2 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:rgba(255,255,255,.70);margin:0}
+#mm-pika[data-state="idle"]{transform:translateY(0) scale(1)}
+#mm-pika[data-state="showoff"]{animation:mmPikaShowoff 900ms ease-in-out infinite;opacity:1}
+#mm-pika[data-state="cheer"]{animation:mmPikaCheer 420ms ease-in-out infinite;opacity:1}
+@keyframes mmPikaShowoff{0%{transform:translateY(0) rotate(0deg) scale(1)}50%{transform:translateY(-4px) rotate(-1.2deg) scale(1.02)}100%{transform:translateY(0) rotate(0deg) scale(1)}}
+@keyframes mmPikaCheer{0%{transform:translateY(0) rotate(0deg) scale(1)}50%{transform:translateY(-2px) rotate(1.6deg) scale(1.03)}100%{transform:translateY(0) rotate(0deg) scale(1)}}
+`;
+    document.head.appendChild(style);
+
+    const el = document.createElement("div");
+    el.id = "mm-pika"; el.dataset.state = "idle";
+    el.innerHTML = `
+  <div class="card">
+    <svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 18 C12 6, 20 4, 26 14" stroke="rgba(255,214,0,.95)" stroke-width="10" stroke-linecap="round"/>
+      <path d="M56 14 C62 4, 70 6, 64 18" stroke="rgba(255,214,0,.95)" stroke-width="10" stroke-linecap="round"/>
+      <path d="M17 16 C14 10, 18 8, 22 13" stroke="#2b2b2b" stroke-width="6" stroke-linecap="round"/>
+      <path d="M57 13 C61 8, 65 10, 63 16" stroke="#2b2b2b" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="40" cy="44" r="22" fill="rgba(255,214,0,.98)"/>
+      <circle cx="26" cy="48" r="6" fill="rgba(255,80,80,.95)"/>
+      <circle cx="54" cy="48" r="6" fill="rgba(255,80,80,.95)"/>
+      <circle cx="32" cy="40" r="4.5" fill="#1c1c1c"/>
+      <circle cx="48" cy="40" r="4.5" fill="#1c1c1c"/>
+      <path d="M34 50 C38 54, 42 54, 46 50" stroke="#1c1c1c" stroke-width="3" stroke-linecap="round"/>
+      <path d="M22 72 C26 58, 54 58, 58 72 C60 79, 49 86, 40 86 C31 86, 20 79, 22 72Z" fill="rgba(255,214,0,.98)"/>
+      <g transform="translate(44,58) rotate(-8)">
+        <rect x="0" y="0" width="34" height="24" rx="6" fill="rgba(128,96,255,.85)" stroke="rgba(255,255,255,.18)"/>
+        <rect x="6" y="6" width="10" height="10" rx="2" fill="rgba(255,255,255,.22)"/>
+        <circle cx="25" cy="12" r="3" fill="rgba(255,214,0,.85)"/>
+        <circle cx="25" cy="18" r="3" fill="rgba(255,80,80,.85)"/>
+      </g>
+      <path d="M72 30 L66 44 L74 44 L68 60" stroke="rgba(255,214,0,.95)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <p class="title">Pikachu’s GameCube ⚡</p>
+      <p class="sub" id="mm-pika-line">standing by.</p>
+    </div>
+  </div>`;
+    document.body.appendChild(el);
+
+    const line = document.getElementById("mm-pika-line");
+    function set(st, txt){ el.dataset.state = st; if (txt) line.textContent = txt; }
+
+    window.mmPika = {
+      showoff: (msg="it’s Pikachu’s GameCube.") => set("showoff", msg),
+      cheer:   (msg="we’re live.") => set("cheer", msg),
+      idle:    (msg="standing by.") => set("idle", msg),
+      hide:    () => { el.style.display = "none"; },
+      show:    () => { el.style.display = "block"; },
+    };
+  }
+
   function startSession(){
     cat.running = true;
     cat.events.length = 0;
@@ -226,6 +287,9 @@
     state.combo = 0;
     state.score = 0;
     state.judged.clear();
+
+    mountPikachu();
+    window.mmPika && window.mmPika.showoff("Pikachu\'s showing it off.");
 
     startBtn.disabled = true;
     resetBtn.disabled = false;
@@ -323,6 +387,7 @@
           emit({type:'bust', t, reason:'osu_fail', player:'local'});
           state.busted = true;
           state.mode = 'mix';
+          window.mmPika && window.mmPika.cheer(\"BUST → MIX. Nobody ends.\");
         }
       }
     }
