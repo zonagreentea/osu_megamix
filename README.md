@@ -1,28 +1,39 @@
-### imagination*
+# osu!megamix
 
-Standalone runtime (no osu!megamix required).
+## Canon
 
-## Run (dev)
-python -m imagination
-
-## Install (editable)
-pip install -e .
-imagination
-
-- [ASH Layer](docs/ASH.md)
+This project is governed by explicit, written invariants.
+If it is not written, it does not exist.
 
 ---
 
-## Canon Themes
+## Canon: Ball & Tertiation (Authoritative)
 
-Canon themes for osu!megamix and related projects are defined **exclusively** by the following Spotify playlist:
+**Invariant:**
+> **No ball, no rules.**
 
-https://open.spotify.com/playlist/5jGjn5PQo1b0M7daKOw21I
+Ball is **not** a rule, a feature flag, or a safety check.
 
-**This playlist is authoritative.**
+**Ball is the tertiation.**
 
-- Order is canon  
-- Changes to the playlist are canon changes  
-- If a theme is not present in the playlist, it is not canon  
+### Meaning
+- Ball decides whether *authority exists at all*.
+- Rules do not fail when ball is absent — they **do not exist**.
+- Enforcement is conditional and opt-in.
 
-Documentation exists to record canon — not to interpret it.
+### Execution Semantics
+- **Ball present** → authority granted → rules may execute.
+- **Ball absent** → **tertiation** → immediate refusal; rulespace is never entered.
+
+This is implemented via an explicit guard (`tools/require_ball.zsh`) which exits:
+- `0` when ball is present (authority granted)
+- `121` when ball is absent (tertiated)
+
+### Log Semantics
+- `BALL OK` → authority granted
+- `BALL DENY` → tertiated (not an error)
+
+### Canon Statement
+> **Ball is the tertiation that decides whether rules exist at all.**
+
+This invariant is foundational. Any script, check, or safety mechanism that enforces rules **must** be ball-gated. Anything enforcing rules without ball is non-canon.
