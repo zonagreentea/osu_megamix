@@ -1,0 +1,19 @@
+#!/bin/zsh
+set -u
+ROOT="${OSU_MEGAMIX_HOME:-}"
+if [ -z "$ROOT" ] && command -v git >/dev/null 2>&1; then
+  ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+if [ -z "$ROOT" ]; then
+  for d in "$HOME/osu_megamix" "$HOME/src/osu_megamix" "$HOME/dev/osu_megamix"; do
+    [ -d "$d" ] && ROOT="$d" && break
+  done
+fi
+[ -n "$ROOT" ] && [ -d "$ROOT" ] || { print -r -- "[mix] repo not found — set OSU_MEGAMIX_HOME"; exit 0; }
+BIN="$ROOT/builddir/osu_megamix"
+RUN="$ROOT/tools/run.zsh"
+if [ -x "$BIN" ]; then exec "$BIN" "$@"
+elif [ -f "$RUN" ]; then exec zsh "$RUN" "$@"
+elif [ -f "$ROOT/pyproject.toml" ] && command -v python3 >/dev/null 2>&1; then exec python3 -m osu_megamix "$@"
+else print -r -- "[mix] no runnable entrypoint found"; exit 0
+fi
