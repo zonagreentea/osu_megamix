@@ -59,3 +59,9 @@ dist/
 /dist/
 *.pyc
 
+
+# build artifacts
+/build/
+/dist/
+*.pyc
+.DS_Store
