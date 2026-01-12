@@ -52,3 +52,10 @@ logs/
 mixes/*.mix
 __pycache__/
 dist/
+
+# build artifacts
+/build/
+/build/**
+/dist/
+*.pyc
+
