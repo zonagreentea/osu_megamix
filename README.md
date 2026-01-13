@@ -1,80 +1,187 @@
-# osu!megamix — Gameplay Consistency & Device Policy
+# osu!megamix — Canonical README
 
-## Core Principle
+osu!megamix is a **continuous-play system** built on top of osu! rulesets.
+Its identity is not songs, devices, progression, or hardware — it is **flow through rule changes without stopping time**.
 
-**osu!megamix gameplay is identical across all devices and platforms.**
+This document defines how the game is meant to be played and how it must be implemented.
 
-There are **no platform-specific mechanics**, no device-based advantages, and no progression systems tied to hardware. Every player plays the same game, regardless of what they are using.
-
-If gameplay differs, it is a bug.
-
----
-
-## What “Consistency” Means
-
-Across all devices, osu!megamix guarantees:
-
-- Identical timing windows  
-- Identical scoring behavior  
-- Identical hit detection  
-- Identical fail / bust behavior  
-- Identical difficulty and density  
-- Identical rulesets and logic  
-
-There are **no level-ups**, perks, bonuses, or unlocks based on device, platform, or input method.
-
-Gameplay outcomes must be reproducible on any supported device.
+If behavior contradicts this document, the behavior is wrong.
 
 ---
 
-## Device Acknowledgement (Allowed, Non-Gameplay Only)
+## Core Idea (One Sentence)
 
-osu!megamix may acknowledge the player’s device **only through subtle, non-mechanical nods**.
+**osu!megamix is a game where the player remains in continuous play while the gameplay ruleset switches over time.**
 
-These nods are strictly cosmetic or informational.
-
-### Examples of allowed nods
-
-- Small UI indicators or icons showing device type  
-- Cosmetic framing or layout accents  
-- Subtle animations with no timing impact  
-- Informational text or glyphs  
-
-### Requirements for nods
-
-- Must not affect gameplay, timing, scoring, or difficulty  
-- Must live **outside the osu!layer**  
-- Must be removable without changing gameplay behavior  
-
-If removing a nod changes how the game plays, it is not allowed.
+Everything else is secondary.
 
 ---
 
-## osu!layer Invariant (Hard Rule)
+## Fundamental Abstractions
 
-**The osu!layer is device-agnostic and must never branch on hardware or platform.**
+### 1. Timeline (Authoritative)
 
-The osu!layer must not:
+- There is exactly **one global timeline**
+- The timeline **never stops once play begins**
+- Audio is bound to the timeline
+- Gameplay events are evaluated against the timeline
 
-- Check device type  
-- Check platform or OS  
-- Change behavior based on input method  
-- Contain hardware-conditional logic  
-
-The osu!layer operates as if all players are running on the same abstract machine.
-
-All device-specific handling must exist *around* the layer, never *inside* it.
+Time is not owned by modes, devices, or players.  
+Time is owned by the **Megamix layer**.
 
 ---
 
-## Enforcement Test
+### 2. Megamix Layer (Continuity Layer)
 
-When reviewing changes, ask:
+The Megamix layer is the **authoritative system**.
 
-> **“Would this play the same on another device?”**
+It guarantees:
+- Continuous audio playback
+- No pauses, resets, or restarts
+- No hard failures or eliminations
+- A single, uninterrupted play session
 
-- If **yes** → allowed  
-- If **no** → do not merge  
+The Megamix layer does **not** define gameplay rules.
+It defines **continuity**.
+
+---
+
+### 3. Modes (Rulesets)
+
+Modes (osu!, taiko, catch, mania, etc.) are **rulesets**, not game states.
+
+- Modes may change at any time
+- Mode switches do not reset the timeline
+- Mode switches do not restart music
+- Mode switches do not reinitialize the session
+
+Modes answer the question:
+> “How do inputs map to scoring *right now*?”
+
+They do not answer:
+> “Is the game still running?”
+
+---
+
+## Mix Mode (Playable Definition)
+
+**Mix is a playable mode whose identity is mode switching.**
+
+In Mix:
+- Music provides continuity and atmosphere
+- The defining mechanic is **switching rulesets**
+- The player is always playing
+- There are no breaks between modes
+
+If mode switching is removed, Mix does not exist — even if music continues.
+
+---
+
+## Fail Handling — Burst Invariant
+
+**There are no hard failures in Mix or Megamix.**
+
+Instead:
+
+- All failures resolve as a **burst**
+- On burst:
+  - Gameplay collapses back into the mix
+  - Audio continues uninterrupted
+  - The timeline does not reset
+- Bursts are **per-player**
+- Bursts never pause or affect other players
+
+Classic osu! modes outside Megamix may retain traditional fail screens.  
+Mix and Megamix never do.
+
+---
+
+## Gameplay Consistency (All Devices)
+
+**Gameplay behavior is identical on all devices and platforms.**
+
+This includes:
+- Timing windows
+- Hit detection
+- Scoring
+- Density
+- Difficulty
+- Fail / burst behavior
+- Mode switching behavior
+
+There are:
+- No platform-specific mechanics
+- No device-based advantages
+- No hardware-bound progression
+- No “level-ups” or perks
+
+If gameplay differs between devices, it is a bug.
+
+---
+
+## Device Acknowledgement (Strictly Limited)
+
+Devices may be acknowledged **only through non-mechanical nods**.
+
+Allowed:
+- Cosmetic UI accents
+- Informational icons or text
+- Visual flourishes with zero timing impact
+
+Requirements:
+- Must not affect gameplay outcomes
+- Must live outside the osu!layer
+- Must be removable without changing play
+
+Devices are acknowledged, never obeyed.
+
+---
+
+## osu!layer (Protected Core)
+
+The osu!layer is **sacred and device-agnostic**.
+
+It must not:
+- Branch on hardware
+- Branch on platform or OS
+- Branch on input method
+- Contain device-conditional logic
+
+The osu!layer operates as if:
+> All players are running on the same abstract machine.
+
+---
+
+## Player Mental Model (How to Play Correctly)
+
+When you play osu!megamix:
+
+- Do not wait for songs to change
+- Do not expect resets or breaks
+- Do not expect failure to end the run
+- Treat mode switches as terrain changes, not scene changes
+- Stay present in the timeline
+
+You are not clearing stages.
+You are **riding the mix**.
+
+---
+
+## Technical Enforcement Tests
+
+Any implementation must pass all of the following:
+
+### Timeline Test
+> If anything stops the audio or resets time, the implementation is invalid.
+
+### Mix Test
+> If mode switching is removed and Mix still exists, the implementation is invalid.
+
+### Fail Test
+> If failure stops play instead of bursting back into the mix, the implementation is invalid.
+
+### Device Test
+> If the same run plays differently on another device, the implementation is invalid.
 
 There are no exceptions.
 
@@ -82,5 +189,19 @@ There are no exceptions.
 
 ## Canon Summary
 
-> **osu!megamix plays the same everywhere.**  
-> **Devices are acknowledged, never obeyed.**
+> **Time never stops.**  
+> **Modes change, not music.**  
+> **Failures burst, never end.**  
+> **Gameplay is the same everywhere.**
+
+---
+
+## Status
+
+This document is **authoritative**.
+
+- It defines intended play
+- It defines correct implementation
+- It supersedes informal explanations
+
+If it isn’t written here, it isn’t canon.
