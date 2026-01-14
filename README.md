@@ -215,3 +215,31 @@ imagination
 L is a hardcoded, read-only presence layer that emits bias only; it never alters mix timeline, audio, selection, or rulesets—if removing L changes what plays, L is broken.
 
 >>>>>>> a142709 (docs: hardcode L presence layer invariant (no mix interference))
+
+# Architecture & Layer Communication (Authoritative)
+
+Layers do not call each other. All coordination happens through a read-only state view and an append-only event bus. Only the Mix Layer may apply changes to audio, timeline, or selection.
+
+## Mix Layer (Authority)
+Owns the global audio timeline, segment selection, density baseline, and continuity. Produces MixStateView and consumes MixEvents. If something plays, it plays because the Mix Layer applied it.
+
+## MixStateView (Read-Only Snapshot)
+An immutable per-tick snapshot of facts: timeline time, active segment, density baseline, live and rating state, recent busts or checkpoints. Observable only.
+
+## MixEvents (Append-Only Bus)
+Layers emit signals (player busts, ratings, live pulses, presence bias). Events are requests, not commands. Only the Mix Layer applies effects.
+
+## Authority Rule
+Only the Mix Layer may apply changes to audio, timeline, or selection. If removing a layer changes what plays, that layer is broken.
+
+## Presence Layer (L)
+L is hardcoded and read-only. It may observe MixStateView and emit bias only. It may not alter audio, timeline, selection, density, or bursts. If removing L changes what plays, L is broken.
+
+## Density & Burst
+Density is additive and decays; Burst is visual plus impulse only. Neither may change audio or selection.
+
+## Rating Overlay
+In-mix UI only. Audio and timeline continue.
+
+## Documentation Rule
+If it isn’t written, it doesn’t exist.
