@@ -243,3 +243,21 @@ In-mix UI only. Audio and timeline continue.
 
 ## Documentation Rule
 If it isn’t written, it doesn’t exist.
+
+## *Dr. Crygor’'s Constant*
+
+**Hard invariant — locked**
+
+*Dr. Crygor’s Constant* states that the **Hyborgian heartbeat is conserved across observation**.
+
+- **Live play** emits state.
+- **Replay** is read-only verification and **never advances** the heartbeat.
+
+> *Replay does not flip the heart; it proves that the heart once flipped.*
+
+**Layer binding:** Mix emits · Replay verifies · Presence (L) biases only.
+
+**Forbids:** observer mutation, hardware clocks, re-simulation.
+
+**Guarantees:** deterministic replays, ethical observation, timeline integrity.
+
