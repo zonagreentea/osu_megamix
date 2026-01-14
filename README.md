@@ -5,6 +5,7 @@ Its identity is not songs, devices, progression, or hardware — it is **flow th
 
 This document defines how the game is meant to be played and how it must be implemented.
 
+<<<<<<< HEAD
 If behavior contradicts this document, the behavior is wrong.
 
 ---
@@ -205,3 +206,12 @@ This document is **authoritative**.
 - It supersedes informal explanations
 
 If it isn’t written here, it isn’t canon.
+=======
+## Install (editable)
+pip install -e .
+imagination
+
+## Presence Layer (L)
+L is a hardcoded, read-only presence layer that emits bias only; it never alters mix timeline, audio, selection, or rulesets—if removing L changes what plays, L is broken.
+
+>>>>>>> a142709 (docs: hardcode L presence layer invariant (no mix interference))
