@@ -12,9 +12,17 @@ concurrency:
   group: mix-release
   cancel-in-progress: true
 
+env:
+  TAG: osu-megamix-mix
+  TITLE: osu!megamix.mix
+
 jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,14 +31,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install system deps
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y zsh tar
-
-      - name: Build artifacts
+      - name: Build (repo packager)
         shell: bash
         run: |
           set -euo pipefail
@@ -42,29 +43,60 @@ jobs:
             echo "No packager found (tools/release_full.zsh or full_megamix_pkg.sh)"; exit 1
           fi
 
+      - name: Prepare artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
           test -d dist/osu\!megamix.mix || { echo "dist/osu!megamix.mix missing"; ls -lah dist || true; exit 1; }
-          tar -czf dist/osu_megamix_universal.tar.gz -C dist osu\!megamix.mix
 
-      - name: Publish (stable tag)
+          # universal .mix payload
+          tar -czf dist/osu_megamix_universal_${{ runner.os }}.tar.gz -C dist osu\!megamix.mix
+
+          # include platform archives if packager created them
+          ls -lah dist || true
+
+      - name: Upload build artifacts (for release job)
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ runner.os }}
+          path: |
+            dist/osu_megamix_universal_*.tar.gz
+            dist/osu_megamix_mac.zip
+            dist/osu_megamix_windows.zip
+            dist/osu_megamix_linux.tar.gz
+
+  release:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install GitHub CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: out
+
+      - name: Create/update stable release + upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          TAG="osu-megamix-mix"
-          TITLE="osu!megamix.mix"
 
-          # create or update release
+          # Create release if missing (stable tag)
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release exists: $TAG"
           else
             gh release create "$TAG" --title "$TITLE" --notes "auto: main -> mix release"
           fi
 
-          # upload assets (clobber = replace)
-          gh release upload "$TAG" dist/osu_megamix_universal.tar.gz --clobber
+          # Upload everything we downloaded (clobber replaces)
+          find out -type f -maxdepth 3 -print -exec gh release upload "$TAG" "{}" --clobber \;
 
-          # upload platform archives if your packager produced them
-          for f in dist/osu_megamix_mac.zip dist/osu_megamix_windows.zip dist/osu_megamix_linux.tar.gz; do
-            if [ -f "$f" ]; then gh release upload "$TAG" "$f" --clobber; fi
-          done
+          # Print final asset list
+          gh release view "$TAG" --json assets -q ".assets[].name"
