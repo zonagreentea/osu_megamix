@@ -1,0 +1,80 @@
+name: osu!megamix.mix (clickable anywhere)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: "osu!megamix.mix"
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Windows exe
+        shell: pwsh
+        run: |
+          # TODO: replace with your real Windows build command that outputs osu_megamix.exe
+          # Example placeholder:
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Set-Content -Path dist\osu_megamix.exe -Value "TODO: build windows exe"
+      - name: Package Windows double-click (.mix association)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out\win | Out-Null
+          Copy-Item dist\osu_megamix.exe out\win\osu_megamix.exe
+          Copy-Item "osu!megamix.mix" "out\win\osu!megamix.mix"
+          @'
+          $ErrorActionPreference = "Stop"
+          $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+          $Exe  = Join-Path $Here "osu_megamix.exe"
+          if (!(Test-Path $Exe)) { throw "Missing osu_megamix.exe next to this script." }
+          $ProgId = "osu.megamix.mix"
+          New-Item -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Force | Out-Null
+          Set-ItemProperty -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Name "(Default)" -Value "`"$Exe`" `"%1`"" -Force
+          New-Item -Path "HKCU:\Software\Classes\.mix" -Force | Out-Null
+          Set-ItemProperty -Path "HKCU:\Software\Classes\.mix" -Name "(Default)" -Value $ProgId -Force
+          Stop-Process -Name explorer -Force
+          Start-Process explorer
+          Write-Host "OK: double-click .mix now opens osu!megamix for this user."
+          '@ | Out-File -Encoding UTF8 out\win\install-mix-association.ps1
+          @'
+          WINDOWS — osu!megamix
+          1) Unzip
+          2) Right-click install-mix-association.ps1 → Run with PowerShell
+          3) Double-click osu!megamix.mix
+          '@ | Out-File -Encoding UTF8 out\win\README.txt
+          Compress-Archive -Path out\win\* -DestinationPath out\osu!megamix.mix-win.zip -Force
+      - name: Upload to single release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          body: |
+            THE ONLY RELEASE.
+            mac/linux: double-click osu!megamix.mix.
+            windows: download osu!megamix.mix-win.zip, run install-mix-association.ps1 once, then double-click osu!megamix.mix.
+          files: |
+            out/osu!megamix.mix-win.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Linux AppImage
+        shell: bash
+        run: |
+          set -e
+          # TODO: replace with your real Linux build command that outputs an AppImage
+          mkdir -p out
+          printf '#!/bin/sh\necho TODO: linux appimage\n' > out/osu\!megamix.mix-linux.AppImage
+          chmod +x out/osu\!megamix.mix-linux.AppImage
+      - name: Upload to single release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: |
+            out/osu!megamix.mix-linux.AppImage
