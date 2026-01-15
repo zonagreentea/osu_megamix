@@ -1,3 +1,7 @@
-PLAY=1
-ENGINE=osu!mix
-MODE=mix
+#!/bin/sh
+set -e
+DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+# Prefer local exe/binary shipped alongside the mix
+if [ -x "$DIR/osu_megamix" ]; then exec "$DIR/osu_megamix" "$@"; fi
+if [ -x "$DIR/osu_megamix.exe" ]; then exec "$DIR/osu_megamix.exe" "$@"; fi
+echo "Missing runtime next to osu!megamix.mix"; exit 1
