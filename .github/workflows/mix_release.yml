@@ -1,0 +1,70 @@
+name: mix-release
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mix-release
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install system deps
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zsh tar
+
+      - name: Build artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -x tools/release_full.zsh ]; then
+            zsh -f tools/release_full.zsh
+          elif [ -x full_megamix_pkg.sh ]; then
+            bash ./full_megamix_pkg.sh
+          else
+            echo "No packager found (tools/release_full.zsh or full_megamix_pkg.sh)"; exit 1
+          fi
+
+          test -d dist/osu\!megamix.mix || { echo "dist/osu!megamix.mix missing"; ls -lah dist || true; exit 1; }
+          tar -czf dist/osu_megamix_universal.tar.gz -C dist osu\!megamix.mix
+
+      - name: Publish (stable tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="osu-megamix-mix"
+          TITLE="osu!megamix.mix"
+
+          # create or update release
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release exists: $TAG"
+          else
+            gh release create "$TAG" --title "$TITLE" --notes "auto: main -> mix release"
+          fi
+
+          # upload assets (clobber = replace)
+          gh release upload "$TAG" dist/osu_megamix_universal.tar.gz --clobber
+
+          # upload platform archives if your packager produced them
+          for f in dist/osu_megamix_mac.zip dist/osu_megamix_windows.zip dist/osu_megamix_linux.tar.gz; do
+            if [ -f "$f" ]; then gh release upload "$TAG" "$f" --clobber; fi
+          done
