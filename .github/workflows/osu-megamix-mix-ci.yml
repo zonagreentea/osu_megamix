@@ -1,0 +1,97 @@
+name: osu!megamix.mix (clickable anywhere)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: "osu!megamix.mix"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ultra (CMake)
+        shell: bash
+        run: |
+          set -e
+          cmake -S ultra -B ultra_build -DCMAKE_BUILD_TYPE=Release
+          cmake --build ultra_build --config Release
+
+      - name: Package artifact
+        shell: bash
+        run: |
+          set -e
+          mkdir -p out
+
+          # Find a runnable produced file (best-effort, but strict: must exist)
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            BIN="$(ls -1 ultra_build/Release/*.exe 2>/dev/null | head -n 1 || true)"
+            [[ -n "$BIN" ]] || { echo "No .exe produced in ultra_build/Release"; exit 2; }
+            cp "$BIN" out/osu_megamix.exe
+
+            # Windows association bundle: exe + .mix + PS1
+            mkdir -p out/win
+            cp out/osu_megamix.exe out/win/osu_megamix.exe
+            cp "osu!megamix.mix" "out/win/osu!megamix.mix"
+            cat > out/win/install-mix-association.ps1 <<'PS1'
+$ErrorActionPreference = "Stop"
+$Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Exe  = Join-Path $Here "osu_megamix.exe"
+if (!(Test-Path $Exe)) { throw "Missing osu_megamix.exe next to this script." }
+$ProgId = "osu.megamix.mix"
+New-Item -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Force | Out-Null
+Set-ItemProperty -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Name "(Default)" -Value "`"$Exe`" `"%1`"" -Force
+New-Item -Path "HKCU:\Software\Classes\.mix" -Force | Out-Null
+Set-ItemProperty -Path "HKCU:\Software\Classes\.mix" -Name "(Default)" -Value $ProgId -Force
+Stop-Process -Name explorer -Force
+Start-Process explorer
+Write-Host "OK: double-click .mix now opens osu!megamix for this user."
+PS1
+            cat > out/win/README.txt <<'TXT'
+WINDOWS — osu!megamix
+1) Unzip
+2) Right-click install-mix-association.ps1 → Run with PowerShell
+3) Double-click osu!megamix.mix
+TXT
+            (cd out && zip -r "osu!megamix.mix-win.zip" win >/dev/null)
+
+          else
+            # macOS/Linux: ship the built binary + the .mix wrapper
+            # Look for an executable file produced by the build
+            BIN="$(find ultra_build -maxdepth 4 -type f -perm -111 2>/dev/null | head -n 1 || true)"
+            [[ -n "$BIN" ]] || { echo "No executable produced by ultra build"; exit 2; }
+            cp "$BIN" out/osu_megamix
+            chmod +x out/osu_megamix
+            cp "osu!megamix.mix" "out/osu!megamix.mix"
+            chmod +x "out/osu!megamix.mix" || true
+
+            if [[ "${{ runner.os }}" == "macOS" ]]; then
+              (cd out && zip -r "osu!megamix.mix-mac.zip" osu_megamix "osu!megamix.mix" >/dev/null)
+            else
+              (cd out && tar -czf "osu!megamix.mix-linux.tgz" osu_megamix "osu!megamix.mix")
+            fi
+          fi
+
+      - name: Upload to single release (osu!megamix.mix)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          body: |
+            THE ONLY RELEASE.
+
+            mac: download osu!megamix.mix-mac.zip → unzip → double-click osu!megamix.mix
+            win: download osu!megamix.mix-win.zip → unzip → run install-mix-association.ps1 once → double-click osu!megamix.mix
+            linux: download osu!megamix.mix-linux.tgz → unzip → run ./osu!megamix.mix
+          files: |
+            out/osu!megamix.mix-win.zip
+            out/osu!megamix.mix-mac.zip
+            out/osu!megamix.mix-linux.tgz
