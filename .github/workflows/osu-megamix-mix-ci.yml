@@ -1,4 +1,4 @@
-name: osu!megamix.mix (clickable anywhere)
+name: osu!megamix.mix (final)
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ permissions:
 
 env:
   RELEASE_TAG: "osu!megamix.mix"
+  TARGET_NAME: "cat_ultra"
 
 jobs:
   build:
@@ -38,12 +39,12 @@ jobs:
           python -m pip install -U pip
           pip install . || true
 
-      - name: Build ultra (CMake)
+      - name: Build ultra (CMake cat_ultra)
         shell: bash
         run: |
           set -e
           cmake -S ultra -B ultra_build -DCMAKE_BUILD_TYPE=Release
-          cmake --build ultra_build --config Release
+          cmake --build ultra_build --config Release --target "${TARGET_NAME}"
 
       - name: Package (mac/linux)
         if: runner.os != 'Windows'
@@ -51,8 +52,8 @@ jobs:
         run: |
           set -e
           mkdir -p out
-          BIN="$(find ultra_build -maxdepth 4 -type f -perm -111 2>/dev/null | head -n 1 || true)"
-          [ -n "$BIN" ] || { echo "No executable produced by ultra build"; exit 2; }
+          BIN="ultra_build/${TARGET_NAME}"
+          [ -x "$BIN" ] || { echo "missing executable: $BIN"; exit 2; }
           cp "$BIN" out/osu_megamix
           chmod +x out/osu_megamix
           cp "osu!megamix.mix" "out/osu!megamix.mix"
@@ -70,10 +71,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Force -Path out | Out-Null
 
-          $exe = Get-ChildItem -Path ultra_build -Recurse -Filter *.exe | Select-Object -First 1
-          if (-not $exe) { throw "No .exe produced by ultra build" }
+          $bin = Join-Path "ultra_build" "${{ env.TARGET_NAME }}.exe"
+          if (!(Test-Path $bin)) { throw "missing executable: $bin" }
 
-          Copy-Item $exe.FullName out\osu_megamix.exe
+          Copy-Item $bin out\osu_megamix.exe
           New-Item -ItemType Directory -Force -Path out\win | Out-Null
           Copy-Item out\osu_megamix.exe out\win\osu_megamix.exe
           Copy-Item "osu!megamix.mix" "out\win\osu!megamix.mix"
@@ -102,7 +103,7 @@ jobs:
 
           Compress-Archive -Path out\win\* -DestinationPath out\osu!megamix.mix-win.zip -Force
 
-      - name: Upload build artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: out-${{ runner.os }}
