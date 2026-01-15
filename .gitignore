@@ -1,67 +1,32 @@
-# builds
-/build/
-/ultra/build/
-
-# scratch / temp
-/scratch/
-
-# OS
-.DS_Store
-
-# editors
-*.swp
-*.swo
-*~
-
-# logs
-*.log
-
-# ultra scratch
-/ultra/scratch/
-
-# --- cat: do not commit Xcode/user state or local build junk ---
-**/*.xcuserstate
-**/*.xcuserdata/
-**/xcuserdata/
-build_ios/
-dist_ball/
-ios/
-osu_megamix_r4/
-
-# cat: local notes
-ios_README.txt
-
-# --- cat: Xcode / iOS junk (never commit) ---
-**/*.xcuserstate
-**/xcuserdata/
-**/*.xccheckout
-**/*.xcscmblueprint
-**/DerivedData/
-**/.swiftpm/xcode/package.xcworkspace/
-
-# --- cat: build outputs ---
-build_ios/
-dist_ball/
-ultra/build/
-ultra/scratch/
-
-# runtime logs
-logs/
-
-*.bak
-mixes/*.mix
+# Python
 __pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Derived build/release outputs
+build/
+builddir/
 dist/
+*.egg-info/
 
-# build artifacts
-/build/
-/build/**
-/dist/
-*.pyc
+# Native derived outputs
+ultra_build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+compile_commands.json
 
+# Node derived outputs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# build artifacts
-/build/
-/dist/
-*.pyc
+# Logs / temp
+dryruns/
+logs/
+*.log
 .DS_Store
