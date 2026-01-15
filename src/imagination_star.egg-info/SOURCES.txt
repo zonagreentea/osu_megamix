@@ -1,8 +1,13 @@
+LICENSES.md
 README.md
 pyproject.toml
+src/osu_megamix.py
 src/imagination/__init__.py
 src/imagination/__main__.py
 src/imagination/cli.py
+src/imagination/client.py
+src/imagination/protocol.py
+src/imagination/server.py
 src/imagination/engine/core.py
 src/imagination_star.egg-info/PKG-INFO
 src/imagination_star.egg-info/SOURCES.txt
