@@ -1,15 +1,80 @@
 # osu!megamix
 
-**Download `osu!megamix.mix` from Releases and double-click it.**
+**osu!megamix** is a canon-governed mix runner where the **.mix** artifact is the product.
+Gameplay is continuity-first: the mix timeline is authoritative, and rulesets can change without breaking audio flow.
 
-If macOS blocks it once: right-click → **Open**.
+## What you run
 
-What happens:
-- Music starts immediately
-- The mix never stops
-- If you fail, you keep playing
+- **Universal pack:** `osu!megamix.mix` (portable payload layout)
+- **Platform binaries:** mac / windows / linux archives in `dist/`
 
-Canon (short):
-- Only release: `osu!megamix.mix`
-- Continuous mix timeline
-- No elimination
+## Quickstart
+
+- Download the latest Release asset **osu_megamix_universal.tar.gz**
+- Extract it
+- Run the platform launcher inside:
+  - `mac/` (macOS)
+  - `win/` (Windows)
+  - `linux/` (Linux)
+
+> If you only have the repo: run the packaging script(s) below to generate `dist/`.
+
+## Gameplay
+
+- **Continuity:** once play starts, the mix timeline and audio do not pause/reset.
+- **Always playable:** failing is not “game over” — it collapses you back to the mix layer (bust-to-mix behavior) without stopping the timeline.
+- **Modes:** rulesets can switch (osu/taiko/catch/mania/megamix) while the mix audio remains continuous.
+- **Difficulty:** scales by additive density (“the mix doubles”) with continuous diffs:
+  - Mix Easy ⊂ Mix Normal ⊂ Mix Insane ⊂ Mix Another ⊂ Mix Extra
+
+### Controls / Input
+
+- Input is handled by the core runner; timing is locked by invariants and the timing layer.
+- The project prioritizes “feels like osu!” over strict formalism when edge cases occur.
+
+## Implementation overview
+
+### Repository layout (what matters)
+
+- `src/` — canonical Python packages (engine + CLI)
+- `tools/` — **zsh-only** operator scripts (build/release/router)
+- `dist/` — build outputs (archives + .mix payloads)
+- `cat/` — mode contracts + UI share surfaces
+- `ultra/` — optional native timing/input experiments (quarantined)
+
+### Engine & orchestration
+
+- **Control plane:** Python (`osu_megamix.py`, `src/osu_megamix.py`)
+- **Transport / orchestration:** `src/imagination/` (client/server/protocol + engine core)
+- **Payload plane:** `.mix` directory pack (portable layout)
+
+### Invariants (non-negotiable)
+
+See:
+- `docs/INVARIANTS.md`
+- `docs/CANON.md`
+- `docs/JIT_FREEZE.md`
+- `docs/TIMING_LOCK.md` (and `ultra/TIMING_LOCK.md` if present)
+
+If an invariant isn’t written down, it doesn’t exist.
+
+## Build & release
+
+### One-command release builders
+
+Prefer the zsh tools:
+
+- `tools/release_full.zsh` — full packaging (recommended)
+- `full_megamix_pkg.sh` — legacy/alternate full packager
+- `tools/build_onefile.zsh` — onefile/pyinstaller-style builds (if used)
+
+Outputs land in `dist/`.
+
+## Documentation index
+
+- `docs/INVARIANTS.md` — core laws
+- `docs/CANON.md` / `docs/CANON_THEMES.md` — canon definitions
+- `docs/SHARE.md` — share surfaces and distribution intent
+- `docs/WORK_CYCLE.md` — operator workflow
+- `docs/RELEASE_*.md` — historical release notes
+
