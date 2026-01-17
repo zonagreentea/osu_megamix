@@ -332,7 +332,7 @@
   const audDot = $("audDot");
   const audTxt = $("audTxt");
   audDot.className = "dot warn";
-  audTxt.textContent = "audio: hub can source mix audio (opt-in, no-conflict)";
+  audTxt.textContent = "audio: hub does not source audio (no-conflict)";
 
   // boot mix = unlock audio + fetch mix (hub functionality)
   $("btnBoot").onclick = async ()=>{
@@ -347,73 +347,6 @@
 
   log("Hub ready. mix=" + (mix ? mix : "(none)"));
 })();
-</script>
-<script type="module">
-import { createMixAudio } from "./src/mix_audio.js";
-
-// Hub-owned mix audio (opt-in). Does not touch other audio engines.
-const mixAudio = (window.MEGAMIX_MIX_AUDIO ||= createMixAudio());
-
-// UI: add a floating control strip
-function mountMixAudioUI(){
-  const wrap = document.createElement("div");
-  wrap.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:8px;align-items:center;background:#0f1319;border:1px solid #2a3442;border-radius:12px;padding:10px 12px;opacity:.92;font:12px ui-monospace,Menlo,monospace;color:#e9eef7";
-
-  const st = document.createElement("span");
-  st.textContent = "MIX AUDIO: OFF";
-
-  const btn = document.createElement("button");
-  btn.textContent = "TOGGLE";
-  btn.style.cssText = "border:1px solid #2a3442;background:#11151b;color:#e9eef7;border-radius:10px;padding:8px 10px;cursor:pointer";
-
-  const vol = document.createElement("input");
-  vol.type = "range";
-  vol.min = "0";
-  vol.max = "1";
-  vol.step = "0.01";
-  vol.value = "1";
-  vol.style.cssText = "width:120px";
-
-  function mixParam(){
-    const u = new URL(location.href);
-    return u.searchParams.get("mix") || "";
-  }
-
-  async function refreshSource(){
-    const m = mixParam();
-    if (!m) return false;
-    await mixAudio.setSource(m);
-    return true;
-  }
-
-  btn.onclick = async ()=>{
-    // must be a click: Safari audio unlock lives here
-    if (mixAudio.playing()) {
-      await mixAudio.stop();
-      st.textContent = "MIX AUDIO: OFF";
-      return;
-    }
-    const ok = await refreshSource();
-    if (!ok) { st.textContent = "MIX AUDIO: NO MIX"; return; }
-    const started = await mixAudio.start();
-    st.textContent = started ? "MIX AUDIO: ON" : "MIX AUDIO: BLOCKED";
-    if (!started && mixAudio.error) console.warn("mix audio error:", mixAudio.error);
-  };
-
-  vol.oninput = ()=> mixAudio.setVolume(vol.value);
-
-  wrap.appendChild(st);
-  wrap.appendChild(btn);
-  wrap.appendChild(document.createTextNode("VOL"));
-  wrap.appendChild(vol);
-  document.body.appendChild(wrap);
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", mountMixAudioUI, { once:true });
-} else {
-  mountMixAudioUI();
-}
 </script>
 </body>
 </html>
