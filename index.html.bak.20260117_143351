@@ -415,24 +415,5 @@ if (document.readyState === "loading") {
   mountMixAudioUI();
 }
 </script>
-<script type="module">
-import { createMegamixAPI } from "./src/api.js";
-
-// Construct (single stable surface)
-const API = (window.MEGAMIX_API ||= createMegamixAPI());
-
-// expose aliases (optional)
-window.MEGAMIX = API;
-
-// keep metrics alive for skins/engine
-(function raf(){
-  try { API.tick(); } catch (e) {}
-  requestAnimationFrame(raf);
-})();
-requestAnimationFrame(raf);
-
-// log invariants once (debug)
-try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
-</script>
 </body>
 </html>
