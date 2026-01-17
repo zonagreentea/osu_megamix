@@ -79,4 +79,4 @@ history_file = os.path.expanduser("~/playerbase_history.txt")
 with open(history_file, "a") as f:
     f.write(f"{selected_display}\n")
 
-rc_log("Session complete. Player history updated. Red-Charizard approves.")
+

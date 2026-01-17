@@ -1,17 +1,15 @@
-#!/bin/sh
-set -eu
-cd "$(dirname "$0")"
+#!/usr/bin/env zsh
+set -euo pipefail
+unsetopt BANG_HIST
+set +H
+cd "${0:a:h}"
 
-PORT="${1:-8000}"
+if [[ -x dist/imagination ]]; then
+  exec ./dist/imagination "$@"
+fi
 
-# find a free port starting at PORT
-p="$PORT"
-while :; do
-  if ! lsof -nP -iTCP:"$p" -sTCP:LISTEN >/dev/null 2>&1; then
-    break
-  fi
-  p=$((p+1))
-done
+if [[ -x run/megamix ]]; then
+  exec ./run/megamix "$@"
+fi
 
-echo "[mm] serving on http://127.0.0.1:${p}/index.html"
-exec python3 -m http.server "$p"
+exec python3 ./osu_megamix.py "$@"
