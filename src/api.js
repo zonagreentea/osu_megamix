@@ -11,6 +11,15 @@ If it isn't written, it doesn't exist.
 import { createMic } from "./mic.js";
 import { createMixAudio } from "./mix_audio.js";
 
+function _resolve_mix_url(u){
+  const s = String(u||"");
+  // keep absolute as the construct truth; translate for browser via gateway
+  if (s.startsWith("/")) return "/__file?path=" + encodeURIComponent(s);
+  if (s.startsWith("file://")) return "/__file?path=" + encodeURIComponent(s.replace(/^file:///,""));
+  return s;
+}
+
+
 function createBus(){
   const map = new Map();
   return {
@@ -95,7 +104,7 @@ export function createMegamixAPI(){
   // public: mix audio control (opt-in, separate owner)
   async function mixAudioSetSource(url){
     const a = ensureMixAudio();
-    await a.setSource(String(url || ""));
+    await a.setSource(_resolve_mix_url(String(url || "")));
     bus.emit("mixaudio:src", String(url || ""));
     return true;
   }
@@ -103,7 +112,7 @@ export function createMegamixAPI(){
     const a = ensureMixAudio();
     const src = st.mixUrl || mixUrlFromLocation();
     if (!src) { bus.emit("mixaudio:state", { enabled:false, err:"no mix url" }); return false; }
-    await a.setSource(src);
+    await a.setSource(_resolve_mix_url(src));
     const ok = await a.start(); // must be called from user gesture
     bus.emit("mixaudio:state", { enabled: ok, err: ok ? null : (a.error ? String(a.error) : "blocked") });
     return ok;

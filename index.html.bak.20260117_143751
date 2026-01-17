@@ -492,52 +492,5 @@ try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
   window.addEventListener("touchstart", unlockOnce, true);
 })();
 </script>
-<script>
-(function(){
-  let done = false;
-
-  function getMixParam(){
-    try{
-      const u = new URL(location.href);
-      return u.searchParams.get("mix") || "";
-    }catch(e){ return ""; }
-  }
-
-  async function unlockOnce(){
-    if (done) return;
-    done = true;
-
-    // Safari gesture unlock (harmless)
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        const tmp = new AC();
-        try { await tmp.resume(); } catch(e){}
-        try { await tmp.suspend(); } catch(e){}
-        try { await tmp.close(); } catch(e){}
-      }
-    }catch(e){}
-
-    try{
-      const API = window.MEGAMIX_API || window.MEGAMIX;
-      if (!API) return;
-
-      const mix = getMixParam();
-      if (mix) API.setMixUrl(mix);
-
-      // starts hub-owned mix audio (no-conflict, opt-in via gesture)
-      await API.mixAudioOn();
-    }catch(e){}
-
-    window.removeEventListener("pointerdown", unlockOnce, true);
-    window.removeEventListener("keydown", unlockOnce, true);
-    window.removeEventListener("touchstart", unlockOnce, true);
-  }
-
-  window.addEventListener("pointerdown", unlockOnce, true);
-  window.addEventListener("keydown", unlockOnce, true);
-  window.addEventListener("touchstart", unlockOnce, true);
-})();
-</script>
 </body>
 </html>
