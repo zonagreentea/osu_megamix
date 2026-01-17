@@ -25,16 +25,26 @@ case "$CMD" in
   venv-off) _venv_off; _venv_status ;;
   venv-status) _venv_status ;;
 
-  megamix)
+
+  ops:serve)
+    cd "$HUB" || die "missing hub at $HUB"
+    # gateway/static server (not playing)
+    if [[ -x tools/mix_server.py ]]; then
+      exec python3 tools/mix_server.py "${1:-8000}" 127.0.0.1
+    fi
+    exec python3 -m http.server "${1:-8000}" --bind 127.0.0.1
+    ;;
+
+  play:megamix)
     cd "$HUB" || die "missing hub at $HUB"
     [[ -x ./mixrun ]] || die "missing ./mixrun"
     exec ./mixrun "$@"
     ;;
-  megamix-bg)
+  play:megamix-bg)
     cd "$HUB" || die "missing hub at $HUB"
     exec ./mixrun --background "$@"
     ;;
-  megamix-stop)
+  play:megamix-stop)
     cd "$HUB" || die "missing hub at $HUB"
     exec ./mixrun --stop "$@"
     ;;
@@ -52,6 +62,11 @@ case "$CMD" in
     git add -A
     git commit -m "ball" || true
     BALL_PUSH_OK=1 git push
+    ;;
+
+
+  megamix|megamix-bg|megamix-stop)
+    die "refused: playing commands must be explicit. use: mech play:megamix | play:megamix-bg | play:megamix-stop"
     ;;
 
   *)
