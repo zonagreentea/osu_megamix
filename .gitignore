@@ -30,3 +30,4 @@ dryruns/
 logs/
 *.log
 .DS_Store
+.venv/

@@ -1,19 +1,30 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+unsetopt BANG_HIST 2>/dev/null || true
+set +H 2>/dev/null || true
 
-ROOT="${IMAGINATION_ROOT:-$PWD/.mech}"
-HUB="${OSU_MEGAMIX_DIR:-$HOME/osu_megamix}"
-BALL_DIR="${BALL_DIR:-$HOME/Work/ball}"
+# Always operate from repo root
+SCRIPT_DIR=${0:A:h}
+OPS_DIR="${SCRIPT_DIR:h}/ops"
+
+source "$OPS_DIR/env.zsh"
+source "$OPS_DIR/venv.zsh"
 
 CMD="${1:-}"; shift || true
 die(){ echo "mech: $*" >&2; exit 1; }
 
 case "$CMD" in
   status)
-    echo "MECH_ROOT=$ROOT"
     echo "HUB=$HUB"
+    echo "MECH_ROOT=$MECH_ROOT"
     echo "BALL_DIR=$BALL_DIR"
+    _venv_status
     ;;
+
+  venv-on) _venv_on; _venv_status ;;
+  venv-off) _venv_off; _venv_status ;;
+  venv-status) _venv_status ;;
+
   megamix)
     cd "$HUB" || die "missing hub at $HUB"
     [[ -x ./mixrun ]] || die "missing ./mixrun"
@@ -27,12 +38,14 @@ case "$CMD" in
     cd "$HUB" || die "missing hub at $HUB"
     exec ./mixrun --stop "$@"
     ;;
+
   ball)
     cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
     if [[ -x ./RUN ]]; then exec ./RUN "$@"; fi
     if [[ -x ./ball ]]; then exec ./ball "$@"; fi
     echo "mech: ball present, no launcher found"
     ;;
+
   ball-push)
     cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
     git status
@@ -40,10 +53,12 @@ case "$CMD" in
     git commit -m "ball" || true
     BALL_PUSH_OK=1 git push
     ;;
+
   *)
     cat <<'HELP'
 mech:
   mech status
+  mech venv-on | venv-off | venv-status
   mech megamix | megamix-bg | megamix-stop
   mech ball
   mech ball-push   (guarded)
