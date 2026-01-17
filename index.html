@@ -475,8 +475,8 @@ try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
       if (mix) API.setMixUrl(mix);
 
       // Start hub-owned mix audio (requires this gesture)
-      const ok = await API.mixAudioOn();
-      if (!ok) console.warn("[UNLOCK MIX] mixAudioOn failed (blocked or bad mix URL).");
+      const ok = /* gated: real play only (no auto-start) */
+if (!ok) console.warn("[UNLOCK MIX] mixAudioOn failed (blocked or bad mix URL).");
       else console.log("[UNLOCK MIX] mix audio ON");
     }catch(e){
       console.warn("[UNLOCK MIX] error:", e);
@@ -506,17 +506,7 @@ try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
   async function unlockOnce(){
     if (done) return;
     done = true;
-
-    // Safari gesture unlock (harmless)
-    try{
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) {
-        const tmp = new AC();
-        try { await tmp.resume(); } catch(e){}
-        try { await tmp.suspend(); } catch(e){}
-        try { await tmp.close(); } catch(e){}
-      }
-    }catch(e){}
+    // (de-pop) no temp AudioContext unlock; audio unlock happens via mix audio play()
 
     try{
       const API = window.MEGAMIX_API || window.MEGAMIX;
@@ -526,8 +516,8 @@ try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
       if (mix) API.setMixUrl(mix);
 
       // starts hub-owned mix audio (no-conflict, opt-in via gesture)
-      await API.mixAudioOn();
-    }catch(e){}
+      /* gated: real play only (no auto-start) */
+}catch(e){}
 
     window.removeEventListener("pointerdown", unlockOnce, true);
     window.removeEventListener("keydown", unlockOnce, true);
@@ -537,6 +527,69 @@ try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
   window.addEventListener("pointerdown", unlockOnce, true);
   window.addEventListener("keydown", unlockOnce, true);
   window.addEventListener("touchstart", unlockOnce, true);
+})();
+</script>
+<script>
+(function(){
+  // KEEP OUT OF THE MIX UNTIL REAL PLAY
+  // - gesture only arms permission
+  // - start only on explicit play button click
+  window.MEGAMIX_GESTURE_OK = 0;
+
+  function armOnce(){
+    if (window.MEGAMIX_GESTURE_OK) return;
+    window.MEGAMIX_GESTURE_OK = 1;
+    try { console.log("[MEGAMIX] gesture armed (real play required)"); } catch(e){}
+    window.removeEventListener("pointerdown", armOnce, true);
+    window.removeEventListener("keydown", armOnce, true);
+    window.removeEventListener("touchstart", armOnce, true);
+  }
+
+  window.addEventListener("pointerdown", armOnce, true);
+  window.addEventListener("keydown", armOnce, true);
+  window.addEventListener("touchstart", armOnce, true);
+
+  async function startOnRealPlay(){
+    // require user has actually performed a gesture
+    if (!window.MEGAMIX_GESTURE_OK) return;
+
+    try{
+      const API = window.MEGAMIX_API || window.MEGAMIX;
+      if (!API) return;
+
+      // ensure mix url is read from current page (?mix= absolute stays truth)
+      try{
+        const u = new URL(location.href);
+        const mix = u.searchParams.get("mix") || "";
+        if (mix) API.setMixUrl(mix);
+      }catch(e){}
+
+      await API.mixAudioOn(); // de-pop happens inside mix_audio soft-start
+      console.log("[MEGAMIX] real play -> mix audio ON");
+    }catch(e){
+      try { console.warn("[MEGAMIX] real play start failed:", e); } catch(_){}
+    }
+  }
+
+  // bind to common real-play buttons if present
+  function bind(){
+    const boot = document.getElementById("btnBoot");
+    if (boot && !boot.__megamix_bound) {
+      boot.__megamix_bound = 1;
+      boot.addEventListener("click", startOnRealPlay, true);
+    }
+    const play = document.getElementById("btnPlay");
+    if (play && !play.__megamix_bound) {
+      play.__megamix_bound = 1;
+      play.addEventListener("click", startOnRealPlay, true);
+    }
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bind, { once:true });
+  } else {
+    bind();
+  }
 })();
 </script>
 </body>
