@@ -536,5 +536,24 @@ if (window.MEGAMIX_OFFLINE) {
   requestAnimationFrame(raf);
 })();
 </script>
+<script>
+(function(){
+  let done = false;
+  function unlock(){
+    if (done) return;
+    done = true;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      // If your game creates audioCtx globally, try to resume it too.
+      if (window.audioCtx && typeof window.audioCtx.resume === "function") window.audioCtx.resume().catch(()=>{});
+    } catch (e) {}
+    window.removeEventListener("pointerdown", unlock, true);
+    window.removeEventListener("keydown", unlock, true);
+  }
+  window.addEventListener("pointerdown", unlock, true);
+  window.addEventListener("keydown", unlock, true);
+})();
+</script>
 </body>
 </html>

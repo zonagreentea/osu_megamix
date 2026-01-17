@@ -1,5 +1,12 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+unsetopt BANG_HIST || true
+set +H || true
+
+# HARD HUB LOCK: always run from repo root (script directory)
+SCRIPT_DIR=${0:A:h}
+cd "$SCRIPT_DIR"
+set -euo pipefail
 
 HERE="${0:A:h}"
 
