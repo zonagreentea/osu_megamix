@@ -3,66 +3,6 @@ set -euo pipefail
 
 HERE="${0:A:h}"
 
-# --- venv hook: "playful cloud" ----------------------------------------------
-VENV_DIR="${MEGAMIX_VENV_DIR:-$HERE/.venv}"
-if [[ -f "$VENV_DIR/bin/activate" ]]; then
-  # shellcheck disable=SC1090
-  source "$VENV_DIR/bin/activate"
-fi
-
-PY() {
-  if [[ -n "${VIRTUAL_ENV:-}" ]] && command -v python >/dev/null 2>&1; then
-    python "$@"
-  else
-    python3 "$@"
-  fi
-}
-# -----------------------------------------------------------------------------
-
-pick_mix() {
-  find "$HERE" -type f -name '*.mix' 2>/dev/null | LC_ALL=C sort | head -n 1
-}
-
-heartbeat_audio() {
-  local state="$HERE/.playful-cloud"
-  mkdir -p "$state"
-  local wav="$state/heartbeat.wav"
-
-  if command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
-    PY - <<'PY' "$wav"
-import math, struct, wave, sys
-p=sys.argv[1]
-sr=44100; dur=1.0; f=220.0; a=0.2
-n=int(sr*dur)
-with wave.open(p,'w') as w:
-    w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
-    for i in range(n):
-        s=int(a*32767*math.sin(2*math.pi*f*i/sr))
-        w.writeframes(struct.pack('<h', s))
-PY
-  fi
-
-  if [[ -f "$wav" ]] && command -v afplay >/dev/null 2>&1; then
-    ( while true; do afplay "$wav"; done ) &!; disown
-  elif [[ -f "$wav" ]] && command -v ffplay >/dev/null 2>&1; then
-    ( while true; do ffplay -nodisp -autoexit -loglevel quiet "$wav"; done ) &!; disown
-  fi
-}
-
-# no-arg boot
-if [[ $# -lt 1 || "${1:-}" != *.mix ]]; then
-  MIX="$(pick_mix || true)"
-  if [[ -n "${MIX:-}" ]]; then
-    set -- "$MIX" "$@"
-  else
-    heartbeat_audio || true
-    echo "mixrun: no .mix found, audio heartbeat active"
-  fi
-fi
-set -euo pipefail
-
-HERE="${0:A:h}"
-
 pick_mix() {
   find "$HERE" -type f -name '*.mix' 2>/dev/null | LC_ALL=C sort | head -n 1
 }

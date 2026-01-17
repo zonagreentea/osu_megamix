@@ -2,14 +2,6 @@
 set -euo pipefail
 unsetopt BANG_HIST
 set +H
-cd "${0:a:h}"
 
-if [[ -x dist/imagination ]]; then
-  exec ./dist/imagination "$@"
-fi
-
-if [[ -x run/megamix ]]; then
-  exec ./run/megamix "$@"
-fi
-
-exec python3 ./osu_megamix.py "$@"
+cd ~/osu_megamix || exit 1
+exec python3 -m http.server 8080

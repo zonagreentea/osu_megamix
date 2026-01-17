@@ -1,0 +1,13 @@
+#!/usr/bin/env zsh
+set -euo pipefail
+
+HERE="${0:A:h}"
+STATE_DIR="$HERE/.playful-cloud"
+
+# stop if present
+"$HERE/RUN" --stop >/dev/null 2>&1 || true
+
+# wipe only playful-cloud state
+rm -rf "$STATE_DIR" 2>/dev/null || true
+
+echo "0 runback reset: clean."

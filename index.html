@@ -1,7 +1,23 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  
+<script>window.MEGAMIX_OFFLINE=1;window.MEGAMIX_SILENT_OK=1;</script>
+<script>
+// OFFLINE GUARANTEE: never block play, never burst on net failures
+if (window.MEGAMIX_OFFLINE) {
+  const _fetch = window.fetch ? window.fetch.bind(window) : null;
+  window.fetch = async function(url, opts){
+    // Allow same-origin file loads if you need them; block http(s) network
+    const s = String(url);
+    if (/^https?:\/\//i.test(s)) {
+      return new Response("{}", {status: 200, headers: {"Content-Type":"application/json"}});
+    }
+    return _fetch ? _fetch(url, opts) : new Response("", {status: 200});
+  };
+}
+</script>
+<meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>cat ultra — no deps JS</title>
   <style>
@@ -96,7 +112,8 @@
 
   function ensureAudio(){
     if (!audioCtx){
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = megamixAudioInit();
+      if (!audioCtx) { window.MEGAMIX_AUDIO_DISABLED = 1; return; }
       masterGain = audioCtx.createGain();
       masterGain.gain.value = 0.18;
       masterGain.connect(audioCtx.destination);
