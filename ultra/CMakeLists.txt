@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(SDL2 REQUIRED)
 
-add_executable(cat_ultra 
-  
+add_executable(cat_ultra
+
   cat_ultra.cpp
   timing.cpp
   input_raw.cpp

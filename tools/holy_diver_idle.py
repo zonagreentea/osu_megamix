@@ -25,11 +25,11 @@ class Idle:
     s.v=min(s.v+2.2,70.0); s.ht=max(s.ht,0.35); s.htm=max(s.htm,0.18)
   def tick(s,r):
     t=s.now(); s.d+=s.v*s.dt; s.v+=(18.0-s.v)*0.015
-    if s.htm>0: s.htm-=s.dt; 
+    if s.htm>0: s.htm-=s.dt;
     if s.htm<=0: s.ht=1.0
     s.ha=clamp(s.ha+(s.ht-s.ha)*0.09,0.0,1.0)
     nw=[]
-    for w in s.w: w["t"]+=s.dt; w["r"]+=w["dr"]*s.dt; 
+    for w in s.w: w["t"]+=s.dt; w["r"]+=w["dr"]*s.dt;
     for w in s.w:
       if w["t"]<w["life"]: nw.append(w)
     s.w=nw

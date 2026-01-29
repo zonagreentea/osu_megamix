@@ -1,5 +1,10 @@
 #!/usr/bin/env zsh
 set -euo pipefail
+unsetopt BANG_HIST 2>/dev/null || true
+set +H 2>/dev/null || true
+SCRIPT_DIR=${0:A:h}
+cd "$SCRIPT_DIR"
+set -euo pipefail
 unsetopt BANG_HIST || true
 set +H || true
 

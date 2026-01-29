@@ -1,43 +1,44 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 set -euo pipefail
-unsetopt BANG_HIST 2>/dev/null || true
-set +H 2>/dev/null || true
 
-# Always operate from repo root
-SCRIPT_DIR=${0:A:h}
-OPS_DIR="${SCRIPT_DIR:h}/ops"
+# Always anchor to repo hub
+HUB="${HUB:-$HOME/osu_megamix}"
+OPS_DIR="$HUB/.mech/ops"
 
-source "$OPS_DIR/env.zsh"
-source "$OPS_DIR/venv.zsh"
+# shellcheck disable=SC1091
+. "$OPS_DIR/env.sh"
+# shellcheck disable=SC1091
+. "$OPS_DIR/venv.sh"
 
-CMD="${1:-}"; shift || true
 die(){ echo "mech: $*" >&2; exit 1; }
 
-case "$CMD" in
+cmd="${1:-}"; shift || true
+
+case "$cmd" in
   status)
     echo "HUB=$HUB"
     echo "MECH_ROOT=$MECH_ROOT"
     echo "BALL_DIR=$BALL_DIR"
-    _venv_status
+    venv_status
     ;;
 
-  venv-on) _venv_on; _venv_status ;;
-  venv-off) _venv_off; _venv_status ;;
-  venv-status) _venv_status ;;
-
-
+  # NOT PLAYING
   ops:serve)
     cd "$HUB" || die "missing hub at $HUB"
-    # gateway/static server (not playing)
-    if [[ -x tools/mix_server.py ]]; then
+    if [ -x tools/mix_server.py ]; then
       exec python3 tools/mix_server.py "${1:-8000}" 127.0.0.1
     fi
     exec python3 -m http.server "${1:-8000}" --bind 127.0.0.1
     ;;
 
+  venv-on) venv_on; venv_status ;;
+  venv-off) venv_off; venv_status ;;
+  venv-status) venv_status ;;
+
+  # PLAYING (explicit)
   play:megamix)
     cd "$HUB" || die "missing hub at $HUB"
-    [[ -x ./mixrun ]] || die "missing ./mixrun"
+    [ -x ./mixrun ] || die "missing ./mixrun"
     exec ./mixrun "$@"
     ;;
   play:megamix-bg)
@@ -49,13 +50,17 @@ case "$CMD" in
     exec ./mixrun --stop "$@"
     ;;
 
-  ball)
-    cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
-    if [[ -x ./RUN ]]; then exec ./RUN "$@"; fi
-    if [[ -x ./ball ]]; then exec ./ball "$@"; fi
-    echo "mech: ball present, no launcher found"
+  # refuse accidental play
+  megamix|megamix-bg|megamix-stop)
+    die "refused: use explicit play:* -> mech play:megamix | play:megamix-bg | play:megamix-stop"
     ;;
 
+  ball)
+    cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
+    if [ -x ./RUN ]; then exec ./RUN "$@"; fi
+    if [ -x ./ball ]; then exec ./ball "$@"; fi
+    echo "mech: ball present, no launcher found"
+    ;;
   ball-push)
     cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
     git status
@@ -64,19 +69,17 @@ case "$CMD" in
     BALL_PUSH_OK=1 git push
     ;;
 
-
-  megamix|megamix-bg|megamix-stop)
-    die "refused: playing commands must be explicit. use: mech play:megamix | play:megamix-bg | play:megamix-stop"
-    ;;
-
   *)
     cat <<'HELP'
 mech:
   mech status
+  mech ops:serve [port]
   mech venv-on | venv-off | venv-status
-  mech megamix | megamix-bg | megamix-stop
+
+  mech play:megamix | play:megamix-bg | play:megamix-stop
+
   mech ball
-  mech ball-push   (guarded)
+  mech ball-push (guarded)
 HELP
     exit 2
     ;;
