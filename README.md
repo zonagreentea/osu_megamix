@@ -1,80 +1,73 @@
 # osu!megamix
 
-**osu!megamix** is a canon-governed mix runner where the **.mix** artifact is the product.
-Gameplay is continuity-first: the mix timeline is authoritative, and rulesets can change without breaking audio flow.
+This project may be called **osu!megamix**, **megamix**, or **the mix**.
 
-## What you run
+**Players just call it: osu!**
 
-- **Universal pack:** `osu!megamix.mix` (portable payload layout)
-- **Platform binaries:** mac / windows / linux archives in `dist/`
+---
 
-## Quickstart
+## What this is
 
-- Download the latest Release asset **osu_megamix_universal.tar.gz**
-- Extract it
-- Run the platform launcher inside:
-  - `mac/` (macOS)
-  - `win/` (Windows)
-  - `linux/` (Linux)
+osu!megamix is a continuous-play interpretation of osu! built around a living audio timeline called a `.mix`.
 
-> If you only have the repo: run the packaging script(s) below to generate `dist/`.
+A `.mix` starts once and keeps running.
+Players join and leave.
+Builders build around it.
+The music does not stop.
 
-## Gameplay
+---
 
-- **Continuity:** once play starts, the mix timeline and audio do not pause/reset.
-- **Always playable:** failing is not “game over” — it collapses you back to the mix layer (bust-to-mix behavior) without stopping the timeline.
-- **Modes:** rulesets can switch (osu/taiko/catch/mania/megamix) while the mix audio remains continuous.
-- **Difficulty:** scales by additive density (“the mix doubles”) with continuous diffs:
-  - Mix Easy ⊂ Mix Normal ⊂ Mix Insane ⊂ Mix Another ⊂ Mix Extra
+## Core ideas
 
-### Controls / Input
+- A **`.mix`** is real audio (mp3, wav, flac, etc.) declared alive.
+- Once a season starts, its `.mix` runs indefinitely.
+- Gameplay adapts to the current moment in the mix.
+- Failing or leaving never stops the music.
+- Aux ending is a gentle goodbye, not an error.
 
-- Input is handled by the core runner; timing is locked by invariants and the timing layer.
-- The project prioritizes “feels like osu!” over strict formalism when edge cases occur.
+> Players come and go.
+> The mix persists.
 
-## Implementation overview
+---
 
-### Repository layout (what matters)
+## Builders
 
-- `src/` — canonical Python packages (engine + CLI)
-- `tools/` — **zsh-only** operator scripts (build/release/router)
-- `dist/` — build outputs (archives + .mix payloads)
-- `cat/` — mode contracts + UI share surfaces
-- `ultra/` — optional native timing/input experiments (quarantined)
+Builders are free to experiment.
 
-### Engine & orchestration
+- You do not need to start or stop the mix.
+- You do not need to reset time.
+- You do not need to supervise a running season.
 
-- **Control plane:** Python (`osu_megamix.py`, `src/osu_megamix.py`)
-- **Transport / orchestration:** `src/imagination/` (client/server/protocol + engine core)
-- **Payload plane:** `.mix` directory pack (portable layout)
+If it requires stopping the music, reconsider it.
 
-### Invariants (non-negotiable)
+---
 
-See:
-- `docs/INVARIANTS.md`
-- `docs/CANON.md`
-- `docs/JIT_FREEZE.md`
-- `docs/TIMING_LOCK.md` (and `ultra/TIMING_LOCK.md` if present)
+## Branches
 
-If an invariant isn’t written down, it doesn’t exist.
+- `main` — the running mix
+- `builders/*` — experimentation and exploration
 
-## Build & release
+Pull requests flow **toward** `main`.
 
-### One-command release builders
+---
 
-Prefer the zsh tools:
+## Running locally
 
-- `tools/release_full.zsh` — full packaging (recommended)
-- `full_megamix_pkg.sh` — legacy/alternate full packager
-- `tools/build_onefile.zsh` — onefile/pyinstaller-style builds (if used)
+This is a Python project.
 
-Outputs land in `dist/`.
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
 
-## Documentation index
+If it imports and runs, it’s working.
 
-- `docs/INVARIANTS.md` — core laws
-- `docs/CANON.md` / `docs/CANON_THEMES.md` — canon definitions
-- `docs/SHARE.md` — share surfaces and distribution intent
-- `docs/WORK_CYCLE.md` — operator workflow
-- `docs/RELEASE_*.md` — historical release notes
+---
 
+## One rule that matters
+
+**The mix is running.
+Build anything that doesn’t require stopping it.**
+
+See you next time.
