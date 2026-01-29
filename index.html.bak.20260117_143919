@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="color-scheme" content="dark light"/>
+  <title>osu!megamix — MIX HUB</title>
+  <style>
+    :root{ --bg:#0b0d10; --fg:#e9eef7; --mut:#9aa7b6; --bd:#2a3442; --card:#11151b; --ok:#63f2b3; --warn:#ffd166; --bad:#ff5c7a; }
+    *{ box-sizing:border-box }
+    html,body{ height:100% }
+    body{
+      margin:0;
+      font:14px ui-monospace, Menlo, Monaco, Consolas, "SF Mono", "Liberation Mono", monospace;
+      background:radial-gradient(1200px 800px at 20% 10%, #121a24 0%, var(--bg) 55%);
+      color:var(--fg);
+    }
+    a{ color:inherit; text-decoration:none }
+    .wrap{ max-width:1040px; margin:0 auto; padding:24px; display:flex; flex-direction:column; gap:16px; }
+    .top{
+      display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
+      padding:16px; border:1px solid var(--bd); border-radius:16px; background:rgba(17,21,27,.75); backdrop-filter: blur(8px);
+    }
+    .title{ display:flex; flex-direction:column; gap:6px; }
+    .title h1{ margin:0; font-size:18px; letter-spacing:.4px }
+    .title .sub{ color:var(--mut); max-width:70ch; line-height:1.35 }
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end }
+    .btn{
+      border:1px solid var(--bd);
+      background:#0f1319;
+      color:var(--fg);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition: transform .06s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color:#3b4b61 }
+    .btn:active{ transform: translateY(0px) scale(.99) }
+    .btn.primary{ background:#121a24; border-color:#3b4b61 }
+    .btn.good{ border-color:rgba(99,242,179,.35) }
+    .btn.warn{ border-color:rgba(255,209,102,.35) }
+    .btn.bad{ border-color:rgba(255,92,122,.35) }
+    .grid{ display:grid; grid-template-columns: 1fr; gap:14px; }
+    @media (min-width: 920px){ .grid{ grid-template-columns: 1.1fr .9fr; } }
+    .card{
+      border:1px solid var(--bd);
+      border-radius:16px;
+      background:rgba(17,21,27,.75);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height: 120px;
+    }
+    .card h2{ margin:0; font-size:14px; letter-spacing:.3px; color:#d7e3f3 }
+    .kv{ display:grid; grid-template-columns: 140px 1fr; gap:6px 10px; align-items:center; }
+    .k{ color:var(--mut) }
+    .v{ overflow-wrap:anywhere }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border:1px solid var(--bd); border-radius:999px; background:#0f1319; }
+    .dot{ width:10px; height:10px; border-radius:999px; background:var(--mut) }
+    .dot.ok{ background:var(--ok) }
+    .dot.warn{ background:var(--warn) }
+    .dot.bad{ background:var(--bad) }
+    textarea{
+      width:100%;
+      min-height:120px;
+      border:1px solid var(--bd);
+      border-radius:12px;
+      background:#0f1319;
+      color:var(--fg);
+      padding:10px;
+      resize:vertical;
+      line-height:1.35;
+    }
+    .mono{ white-space:pre-wrap; word-break:break-word; background:#0f1319; border:1px solid var(--bd); border-radius:12px; padding:10px; }
+    .small{ color:var(--mut); font-size:12px; line-height:1.35 }
+    .split{ display:flex; gap:10px; flex-wrap:wrap; align-items:center }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="title">
+        <h1>osu!megamix — MIX HUB</h1>
+        <div class="sub">
+          No games. No more. This page is the <b>hub</b>: it loads a mix file, enforces audio sourcing invariants, and exposes opt-in microphone metrics for visuals/aux only.
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="btnFull">FULLSCREEN</button>
+        <button class="btn good" id="btnBoot">BOOT MIX</button>
+        <button class="btn" id="btnReload">RELOAD</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Mix</h2>
+        <div class="kv">
+          <div class="k">mix param</div><div class="v" id="mixPath">(none)</div>
+          <div class="k">status</div><div class="v" id="mixStatus">idle</div>
+          <div class="k">source</div><div class="v" id="mixSource">unloaded</div>
+        </div>
+        <div class="split">
+          <button class="btn" id="btnFetch">FETCH MIX</button>
+          <button class="btn" id="btnShow">SHOW MIX TEXT</button>
+          <button class="btn warn" id="btnClear">CLEAR</button>
+        </div>
+        <div class="small">
+          Tip: your launcher prints a URL like <span class="mono">/index.html?mix=/Users/.../osu!megamix.mix</span>. If Safari can’t load local paths, put the mix file under the served directory and pass a relative URL.
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Audio + Microphone</h2>
+        <div class="split">
+          <span class="pill"><span class="dot" id="audDot"></span><span id="audTxt">audio: locked (hub-only)</span></span>
+          <span class="pill"><span class="dot" id="micDot"></span><span id="micTxt">mic: off</span></span>
+        </div>
+        <div class="small" id="consentTxt">
+          MIC is <b>opt-in</b>. If enabled, the browser grants this page access to your microphone stream while permitted. We do <b>not</b> play mic audio to speakers, and mic never replaces or controls mix audio. We only compute two numbers for visuals/aux: <b>MEGAMIX_MIC_LEVEL</b> and <b>MEGAMIX_MIC_PEAK</b>.
+        </div>
+        <div class="split">
+          <button class="btn" id="btnMic">MIC: OFF</button>
+          <button class="btn" id="btnUnlock">UNLOCK AUDIO</button>
+        </div>
+        <div class="kv">
+          <div class="k">MEGAMIX_MIC_LEVEL</div><div class="v" id="micLevel">0</div>
+          <div class="k">MEGAMIX_MIC_PEAK</div><div class="v" id="micPeak">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Console</h2>
+      <div class="small">Hub log (kept local in this tab).</div>
+      <div class="mono" id="log"></div>
+    </div>
+
+    <div class="card" id="mixTextCard" style="display:none">
+      <h2>Mix Text</h2>
+      <textarea id="mixText" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const logEl = $("log");
+  function log(s){
+    const t = new Date().toISOString().replace("T"," ").replace("Z","");
+    logEl.textContent = (logEl.textContent ? (logEl.textContent + "\n") : "") + "["+t+"] " + s;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  // ---- invariants (written, so they exist) ----
+  // Hub does not own your game audio graph. It only provides an unlock shim.
+  window.MEGAMIX_AUDIO_NO_CONFLICT = {
+    game_audio_is_truth: true,
+    mic_analysis_only: true,
+    mic_never_to_destination: true,
+    mic_never_closes_game_audioctx: true
+  };
+
+  // parse mix param
+  const u = new URL(location.href);
+  const mix = u.searchParams.get("mix") || "";
+  $("mixPath").textContent = mix ? mix : "(none)";
+
+  // audio unlock shim (Safari)
+  async function unlockAudio(){
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { log("No AudioContext available."); return; }
+      // Resume any known ctx if present (hub does not create one by default)
+      if (window.audioCtx && typeof window.audioCtx.resume === "function") {
+        await window.audioCtx.resume();
+        log("Resumed window.audioCtx");
+      } else {
+        // create a tiny context and immediately suspend/close to unlock autoplay gate
+        const tmp = new AC();
+        await tmp.resume().catch(()=>{});
+        await tmp.suspend().catch(()=>{});
+        await tmp.close().catch(()=>{});
+        log("Audio unlocked (temporary ctx gesture).");
+      }
+    }catch(e){
+      log("Audio unlock failed: " + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  $("btnUnlock").onclick = unlockAudio;
+
+  // fullscreen
+  $("btnFull").onclick = async ()=>{
+    try{
+      const el = document.documentElement;
+      if (!document.fullscreenElement) await el.requestFullscreen();
+      else await document.exitFullscreen();
+    }catch(e){
+      log("Fullscreen blocked: " + (e && e.message ? e.message : String(e)));
+    }
+  };
+
+  $("btnReload").onclick = ()=>location.reload();
+
+  // ---- mix loading ----
+  let cachedMixText = "";
+
+  async function fetchMix(){
+    if (!mix) { log("No mix= provided."); $("mixStatus").textContent="no mix param"; return; }
+    $("mixStatus").textContent = "fetching...";
+    try{
+      // IMPORTANT: if mix is an absolute filesystem path, the browser will treat it as a URL path.
+      // Your server must be able to serve it. Best practice: place mix under served directory and use relative URL.
+      const res = await fetch(mix, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status + " " + res.statusText);
+      cachedMixText = await res.text();
+      $("mixStatus").textContent = "fetched";
+      $("mixSource").textContent = "fetch(" + mix + ")";
+      log("Fetched mix: " + mix + " (" + cachedMixText.length + " bytes)");
+    }catch(e){
+      $("mixStatus").textContent = "fetch failed";
+      log("Fetch failed: " + (e && e.message ? e.message : String(e)));
+      log("If mix is an absolute path, your http server won't have it. Put the mix file inside ~/osu_megamix and pass a relative URL.");
+    }
+  }
+
+  function showMixText(){
+    $("mixTextCard").style.display = "block";
+    $("mixText").value = cachedMixText || "";
+    log("Mix text " + (cachedMixText ? "shown" : "empty"));
+  }
+
+  function clearMix(){
+    cachedMixText = "";
+    $("mixText").value = "";
+    $("mixTextCard").style.display = "none";
+    $("mixStatus").textContent = "cleared";
+    $("mixSource").textContent = "unloaded";
+    log("Cleared mix.");
+  }
+
+  $("btnFetch").onclick = fetchMix;
+  $("btnShow").onclick = showMixText;
+  $("btnClear").onclick = clearMix;
+
+  // ---- mic (opt-in) ----
+  window.MEGAMIX_MIC_LEVEL = 0;
+  window.MEGAMIX_MIC_PEAK  = 0;
+
+  const micDot = $("micDot");
+  const micTxt = $("micTxt");
+  const micBtn = $("btnMic");
+  const micLevelEl = $("micLevel");
+  const micPeakEl  = $("micPeak");
+
+  let mic = null;
+  let micReady = false;
+
+  function setMicUI(on, denied){
+    if (on) {
+      micDot.className = "dot ok";
+      micTxt.textContent = "mic: on (analysis-only)";
+      micBtn.textContent = "MIC: ON";
+      return;
+    }
+    micDot.className = denied ? "dot bad" : "dot";
+    micTxt.textContent = denied ? "mic: denied" : "mic: off";
+    micBtn.textContent = denied ? "MIC: DENIED" : "MIC: OFF";
+  }
+
+  async function ensureMicModule(){
+    if (micReady) return true;
+    try{
+      // dynamic import keeps this page functional even if mic.js is missing
+      const mod = await import("./src/mic.js");
+      mic = (window.MEGAMIX_MIC ||= mod.createMic());
+      micReady = true;
+      log("Mic module loaded.");
+      return true;
+    }catch(e){
+      log("Mic module missing or blocked: " + (e && e.message ? e.message : String(e)));
+      return false;
+    }
+  }
+
+  micBtn.onclick = async ()=>{
+    const ok = await ensureMicModule();
+    if (!ok) { setMicUI(false, true); return; }
+
+    if (mic && mic.enabled) {
+      await mic.stop();
+      window.MEGAMIX_MIC_LEVEL = 0;
+      window.MEGAMIX_MIC_PEAK  = 0;
+      setMicUI(false, false);
+      log("Mic stopped.");
+      return;
+    }
+
+    // permission prompt happens here (user gesture)
+    const started = await mic.start();
+    if (!started) {
+      setMicUI(false, true);
+      log("Mic denied or failed.");
+      return;
+    }
+    setMicUI(true, false);
+    log("Mic started (analysis-only).");
+  };
+
+  // hub loop (updates mic numbers only)
+  function loop(){
+    try{
+      if (mic && mic.enabled) {
+        mic.tick();
+        window.MEGAMIX_MIC_LEVEL = mic.level();
+        window.MEGAMIX_MIC_PEAK  = mic.peak();
+      } else {
+        window.MEGAMIX_MIC_LEVEL = 0;
+        window.MEGAMIX_MIC_PEAK  = 0;
+      }
+      micLevelEl.textContent = String(window.MEGAMIX_MIC_LEVEL.toFixed(3));
+      micPeakEl.textContent  = String(window.MEGAMIX_MIC_PEAK.toFixed(3));
+    }catch(e){}
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // audio indicator (hub is not routing audio)
+  const audDot = $("audDot");
+  const audTxt = $("audTxt");
+  audDot.className = "dot warn";
+  audTxt.textContent = "audio: hub can source mix audio (opt-in, no-conflict)";
+
+  // boot mix = unlock audio + fetch mix (hub functionality)
+  $("btnBoot").onclick = async ()=>{
+    log("BOOT MIX pressed.");
+    await unlockAudio();
+    await fetchMix();
+    if (cachedMixText) {
+      log("Mix is loaded in hub. (No gameplay boot here by design.)");
+      $("mixStatus").textContent = "loaded (hub)";
+    }
+  };
+
+  log("Hub ready. mix=" + (mix ? mix : "(none)"));
+})();
+</script>
+<script type="module">
+import { createMixAudio } from "./src/mix_audio.js";
+
+// Hub-owned mix audio (opt-in). Does not touch other audio engines.
+const mixAudio = (window.MEGAMIX_MIX_AUDIO ||= createMixAudio());
+
+// UI: add a floating control strip
+function mountMixAudioUI(){
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9999;display:flex;gap:8px;align-items:center;background:#0f1319;border:1px solid #2a3442;border-radius:12px;padding:10px 12px;opacity:.92;font:12px ui-monospace,Menlo,monospace;color:#e9eef7";
+
+  const st = document.createElement("span");
+  st.textContent = "MIX AUDIO: OFF";
+
+  const btn = document.createElement("button");
+  btn.textContent = "TOGGLE";
+  btn.style.cssText = "border:1px solid #2a3442;background:#11151b;color:#e9eef7;border-radius:10px;padding:8px 10px;cursor:pointer";
+
+  const vol = document.createElement("input");
+  vol.type = "range";
+  vol.min = "0";
+  vol.max = "1";
+  vol.step = "0.01";
+  vol.value = "1";
+  vol.style.cssText = "width:120px";
+
+  function mixParam(){
+    const u = new URL(location.href);
+    return u.searchParams.get("mix") || "";
+  }
+
+  async function refreshSource(){
+    const m = mixParam();
+    if (!m) return false;
+    await mixAudio.setSource(m);
+    return true;
+  }
+
+  btn.onclick = async ()=>{
+    // must be a click: Safari audio unlock lives here
+    if (mixAudio.playing()) {
+      await mixAudio.stop();
+      st.textContent = "MIX AUDIO: OFF";
+      return;
+    }
+    const ok = await refreshSource();
+    if (!ok) { st.textContent = "MIX AUDIO: NO MIX"; return; }
+    const started = await mixAudio.start();
+    st.textContent = started ? "MIX AUDIO: ON" : "MIX AUDIO: BLOCKED";
+    if (!started && mixAudio.error) console.warn("mix audio error:", mixAudio.error);
+  };
+
+  vol.oninput = ()=> mixAudio.setVolume(vol.value);
+
+  wrap.appendChild(st);
+  wrap.appendChild(btn);
+  wrap.appendChild(document.createTextNode("VOL"));
+  wrap.appendChild(vol);
+  document.body.appendChild(wrap);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", mountMixAudioUI, { once:true });
+} else {
+  mountMixAudioUI();
+}
+</script>
+<script type="module">
+import { createMegamixAPI } from "./src/api.js";
+
+// Construct (single stable surface)
+const API = (window.MEGAMIX_API ||= createMegamixAPI());
+
+// expose aliases (optional)
+window.MEGAMIX = API;
+
+// keep metrics alive for skins/engine
+(function raf(){
+  try { API.tick(); } catch (e) {}
+  requestAnimationFrame(raf);
+})();
+requestAnimationFrame(raf);
+
+// log invariants once (debug)
+try { console.log("[MEGAMIX_API] invariants:", API.invariants); } catch(e){}
+</script>
+<script>
+(function(){
+  // UNLOCK THE MIX (one-time user gesture)
+  // - uses MEGAMIX_API if present
+  // - never touches any other audio engine (no-conflict)
+  let done = false;
+
+  function getMixParam(){
+    try{
+      const u = new URL(location.href);
+      return u.searchParams.get("mix") || "";
+    }catch(e){ return ""; }
+  }
+
+  async function unlockOnce(){
+    if (done) return;
+    done = true;
+
+    try{
+      // Safari gesture unlock: resume a temp AudioContext (harmless)
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        const tmp = new AC();
+        try { await tmp.resume(); } catch(e){}
+        try { await tmp.suspend(); } catch(e){}
+        try { await tmp.close(); } catch(e){}
+      }
+    }catch(e){}
+
+    try{
+      const API = window.MEGAMIX_API || window.MEGAMIX;
+      const mix = getMixParam();
+
+      if (!API) {
+        console.warn("[UNLOCK MIX] MEGAMIX_API missing; cannot start mix audio.");
+        return;
+      }
+
+      if (mix) API.setMixUrl(mix);
+
+      // Start hub-owned mix audio (requires this gesture)
+      const ok = await API.mixAudioOn();
+      if (!ok) console.warn("[UNLOCK MIX] mixAudioOn failed (blocked or bad mix URL).");
+      else console.log("[UNLOCK MIX] mix audio ON");
+    }catch(e){
+      console.warn("[UNLOCK MIX] error:", e);
+    }
+
+    window.removeEventListener("pointerdown", unlockOnce, true);
+    window.removeEventListener("keydown", unlockOnce, true);
+    window.removeEventListener("touchstart", unlockOnce, true);
+  }
+
+  window.addEventListener("pointerdown", unlockOnce, true);
+  window.addEventListener("keydown", unlockOnce, true);
+  window.addEventListener("touchstart", unlockOnce, true);
+})();
+</script>
+<script>
+(function(){
+  let done = false;
+
+  function getMixParam(){
+    try{
+      const u = new URL(location.href);
+      return u.searchParams.get("mix") || "";
+    }catch(e){ return ""; }
+  }
+
+  async function unlockOnce(){
+    if (done) return;
+    done = true;
+    // (de-pop) no temp AudioContext unlock; audio unlock happens via mix audio play()
+
+    try{
+      const API = window.MEGAMIX_API || window.MEGAMIX;
+      if (!API) return;
+
+      const mix = getMixParam();
+      if (mix) API.setMixUrl(mix);
+
+      // starts hub-owned mix audio (no-conflict, opt-in via gesture)
+      await API.mixAudioOn();
+    }catch(e){}
+
+    window.removeEventListener("pointerdown", unlockOnce, true);
+    window.removeEventListener("keydown", unlockOnce, true);
+    window.removeEventListener("touchstart", unlockOnce, true);
+  }
+
+  window.addEventListener("pointerdown", unlockOnce, true);
+  window.addEventListener("keydown", unlockOnce, true);
+  window.addEventListener("touchstart", unlockOnce, true);
+})();
+</script>
+</body>
+</html>
