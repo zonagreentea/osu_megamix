@@ -10,17 +10,21 @@ die(){ print -ru2 -- "$PROG: $*"; exit 1 }
 log(){ print -ru2 -- "$PROG: $*" }
 
 need(){ command -v "$1" >/dev/null 2>&1 || die "missing dependency: $1" }
-need date; need mkdir; need sed; need awk; need find; need sort; need head; need tr
+need date; need mkdir; need sed; need awk; need find; need sort; need head; need shasum
 
 sha256_of(){
-  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk "{print \$1}"
-  else shasum -a 256 "$1" | awk "{print \$1}"
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{print $1}'
+  else shasum -a 256 "$1" | awk '{print $1}'
   fi
 }
 
 now_utc(){ date -u "+%Y-%m-%dT%H:%M:%SZ" }
-seed_default(){ print -n -- "$1" | (command -v sha256sum >/dev/null 2>&1 && sha256sum || shasum -a 256) | awk "{print substr(\$1,1,16)}" }
-json_escape(){ print -n -- "$1" | sed "s/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g" }
+
+seed_default(){
+  print -n -- "$1" | (command -v sha256sum >/dev/null 2>&1 && sha256sum || shasum -a 256) | awk '{print substr($1,1,16)}'
+}
+
+json_escape(){ print -n -- "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' }
 
 is_audio(){
   local p="${1:l}"
@@ -31,22 +35,24 @@ is_audio(){
 }
 
 pick_audio_from_dir(){
-  find "$1" -maxdepth 3 -type f \( -iname "*.wav" -o -iname "*.mp3" -o -iname "*.ogg" -o -iname "*.flac" -o -iname "*.m4a" -o -iname "*.aac" \) 2>/dev/null | LC_ALL=C sort | head -n 1 || true
+  find "$1" -maxdepth 3 -type f \
+    \( -iname "*.wav" -o -iname "*.mp3" -o -iname "*.ogg" -o -iname "*.flac" -o -iname "*.m4a" -o -iname "*.aac" \) \
+    2>/dev/null | LC_ALL=C sort | head -n 1 || true
 }
 
 emit_failsafe_ir(){
   local out="$1" pack="$2" in="$3" seed="$4" mode="$5" reason="$6"
-  cat > "$out" <<EOF
+  cat > "$out" <<EOF2
 {
   "meta": {
     "format": "mixir",
     "version": "1",
-    "pack": "",
-    "built_at_utc": "",
-    "seed": "",
-    "source": "",
+    "pack": "$(json_escape "$pack")",
+    "built_at_utc": "$(now_utc)",
+    "seed": "$(json_escape "$seed")",
+    "source": "$(json_escape "$in")",
     "note": "FAILSAFE: if do then make do",
-    "reason": ""
+    "reason": "$(json_escape "$reason")"
   },
   "audio": {
     "path": null,
@@ -61,7 +67,7 @@ emit_failsafe_ir(){
     "density_is_difficulty": true
   },
   "grid": { "w": 256, "h": 192 },
-  "ruleset_map": { "default": "" },
+  "ruleset_map": { "default": "$(json_escape "$mode")" },
   "layers": {
     "Mix Easy":    { "add_density": 1 },
     "Mix Normal":  { "add_density": 2 },
@@ -77,7 +83,7 @@ emit_failsafe_ir(){
     ]
   }
 }
-EOF
+EOF2
 }
 
 compile(){
@@ -92,6 +98,7 @@ compile(){
       (*) die "unknown arg: $1" ;;
     esac
   done
+
   [[ -n "$input" ]] || die "missing -i <input>"
   [[ -e "$input" ]] || die "input not found: $input"
 
@@ -107,7 +114,12 @@ compile(){
     audio_path="$(pick_audio_from_dir "$input")"
     [[ -n "$audio_path" ]] || reason="no audio found in directory (failsafe)"
   else
-    if is_audio "$input"; then audio_path="$input"; else reason="input not supported as audio (failsafe)"; audio_path="" ; fi
+    if is_audio "$input"; then
+      audio_path="$input"
+    else
+      reason="input not supported as audio (failsafe)"
+      audio_path=""
+    fi
     case "${input:l}" in
       (*.mix) reason=".mix source (no decode) (failsafe audio)"; audio_path="" ;;
     esac
@@ -124,20 +136,20 @@ compile(){
   local audio_hash="$(sha256_of "$audio_path" || true)"
   local abs_audio="$(cd -- "${audio_path:h}" 2>/dev/null && pwd)/${audio_path:t}"
 
-  cat > "$ir" <<EOF
+  cat > "$ir" <<EOF2
 {
   "meta": {
     "format": "mixir",
     "version": "1",
-    "pack": "",
-    "built_at_utc": "",
-    "seed": "",
-    "source": "",
+    "pack": "$(json_escape "$pack")",
+    "built_at_utc": "$(now_utc)",
+    "seed": "$(json_escape "$seed")",
+    "source": "$(json_escape "$input")",
     "note": "Playable IR; if do then make do"
   },
   "audio": {
-    "path": "",
-    "sha256": "",
+    "path": "$(json_escape "$abs_audio")",
+    "sha256": "$(json_escape "$audio_hash")",
     "duration_ms": null,
     "offset_ms": 0,
     "continuity": { "no_pause": true, "no_seek": true }
@@ -148,7 +160,7 @@ compile(){
     "density_is_difficulty": true
   },
   "grid": { "w": 256, "h": 192 },
-  "ruleset_map": { "default": "" },
+  "ruleset_map": { "default": "$(json_escape "$mode")" },
   "layers": {
     "Mix Easy":    { "add_density": 1 },
     "Mix Normal":  { "add_density": 2 },
@@ -164,7 +176,7 @@ compile(){
     ]
   }
 }
-EOF
+EOF2
 
   print -r -- "ok" > "$ok"
   print -r -- "$abs_audio" > "$pathf"
