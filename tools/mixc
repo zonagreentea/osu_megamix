@@ -1,0 +1,178 @@
+#!/usr/bin/env zsh
+# mixc — osu!megamix compiler (zsh)
+# Invariant: if do, then make do — always emit a playable IR.
+
+emulate -L zsh
+setopt errexit nounset pipefail
+
+PROG=${0:t}
+die(){ print -ru2 -- "$PROG: $*"; exit 1 }
+log(){ print -ru2 -- "$PROG: $*" }
+
+need(){ command -v "$1" >/dev/null 2>&1 || die "missing dependency: $1" }
+need date; need mkdir; need sed; need awk; need find; need sort; need head; need tr
+
+sha256_of(){
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk "{print \$1}"
+  else shasum -a 256 "$1" | awk "{print \$1}"
+  fi
+}
+
+now_utc(){ date -u "+%Y-%m-%dT%H:%M:%SZ" }
+seed_default(){ print -n -- "$1" | (command -v sha256sum >/dev/null 2>&1 && sha256sum || shasum -a 256) | awk "{print substr(\$1,1,16)}" }
+json_escape(){ print -n -- "$1" | sed "s/\\\\/\\\\\\\\/g; s/\"/\\\\\"/g" }
+
+is_audio(){
+  local p="${1:l}"
+  case "$p" in
+    (*.wav|*.mp3|*.ogg|*.flac|*.m4a|*.aac) return 0 ;;
+    (*) return 1 ;;
+  esac
+}
+
+pick_audio_from_dir(){
+  find "$1" -maxdepth 3 -type f \( -iname "*.wav" -o -iname "*.mp3" -o -iname "*.ogg" -o -iname "*.flac" -o -iname "*.m4a" -o -iname "*.aac" \) 2>/dev/null | LC_ALL=C sort | head -n 1 || true
+}
+
+emit_failsafe_ir(){
+  local out="$1" pack="$2" in="$3" seed="$4" mode="$5" reason="$6"
+  cat > "$out" <<EOF
+{
+  "meta": {
+    "format": "mixir",
+    "version": "1",
+    "pack": "",
+    "built_at_utc": "",
+    "seed": "",
+    "source": "",
+    "note": "FAILSAFE: if do then make do",
+    "reason": ""
+  },
+  "audio": {
+    "path": null,
+    "sha256": null,
+    "duration_ms": null,
+    "offset_ms": 0,
+    "continuity": { "no_pause": true, "no_seek": true }
+  },
+  "policy": {
+    "bust_to_mix": true,
+    "classic_fail_screens": true,
+    "density_is_difficulty": true
+  },
+  "grid": { "w": 256, "h": 192 },
+  "ruleset_map": { "default": "" },
+  "layers": {
+    "Mix Easy":    { "add_density": 1 },
+    "Mix Normal":  { "add_density": 2 },
+    "Mix Insane":  { "add_density": 3 },
+    "Mix Another": { "add_density": 4 },
+    "Mix Extra":   { "add_density": 5 }
+  },
+  "timeline": {
+    "objects": [
+      { "t_ms": 1000, "x": 128, "y": 96, "type": "circle", "meta": { "failsafe": true } },
+      { "t_ms": 2000, "x": 96,  "y": 96, "type": "circle", "meta": { "failsafe": true } },
+      { "t_ms": 3000, "x": 160, "y": 96, "type": "circle", "meta": { "failsafe": true } }
+    ]
+  }
+}
+EOF
+}
+
+compile(){
+  local input="" outdir="dist" seed="" mode="megamix" pack="pack"
+  while (( $# )); do
+    case "$1" in
+      (-i|--input) input="${2:-}"; shift 2 ;;
+      (-o|--outdir) outdir="${2:-}"; shift 2 ;;
+      (--seed) seed="${2:-}"; shift 2 ;;
+      (--mode) mode="${2:-}"; shift 2 ;;
+      (--name) pack="${2:-}"; shift 2 ;;
+      (*) die "unknown arg: $1" ;;
+    esac
+  done
+  [[ -n "$input" ]] || die "missing -i <input>"
+  [[ -e "$input" ]] || die "input not found: $input"
+
+  mkdir -p "$outdir"
+  local ir="$outdir/$pack.mixir"
+  local ok="$ir.ok"
+  local pathf="$ir.path"
+
+  seed="${seed:-$(seed_default "$input")}"
+
+  local audio_path="" reason="ok"
+  if [[ -d "$input" ]]; then
+    audio_path="$(pick_audio_from_dir "$input")"
+    [[ -n "$audio_path" ]] || reason="no audio found in directory (failsafe)"
+  else
+    if is_audio "$input"; then audio_path="$input"; else reason="input not supported as audio (failsafe)"; audio_path="" ; fi
+    case "${input:l}" in
+      (*.mix) reason=".mix source (no decode) (failsafe audio)"; audio_path="" ;;
+    esac
+  fi
+
+  if [[ -z "$audio_path" ]]; then
+    emit_failsafe_ir "$ir" "$pack" "$input" "$seed" "$mode" "$reason"
+    print -r -- "ok" > "$ok"
+    print -r -- "" > "$pathf"
+    log "ok: $ir (failsafe)"
+    return 0
+  fi
+
+  local audio_hash="$(sha256_of "$audio_path" || true)"
+  local abs_audio="$(cd -- "${audio_path:h}" 2>/dev/null && pwd)/${audio_path:t}"
+
+  cat > "$ir" <<EOF
+{
+  "meta": {
+    "format": "mixir",
+    "version": "1",
+    "pack": "",
+    "built_at_utc": "",
+    "seed": "",
+    "source": "",
+    "note": "Playable IR; if do then make do"
+  },
+  "audio": {
+    "path": "",
+    "sha256": "",
+    "duration_ms": null,
+    "offset_ms": 0,
+    "continuity": { "no_pause": true, "no_seek": true }
+  },
+  "policy": {
+    "bust_to_mix": true,
+    "classic_fail_screens": true,
+    "density_is_difficulty": true
+  },
+  "grid": { "w": 256, "h": 192 },
+  "ruleset_map": { "default": "" },
+  "layers": {
+    "Mix Easy":    { "add_density": 1 },
+    "Mix Normal":  { "add_density": 2 },
+    "Mix Insane":  { "add_density": 3 },
+    "Mix Another": { "add_density": 4 },
+    "Mix Extra":   { "add_density": 5 }
+  },
+  "timeline": {
+    "objects": [
+      { "t_ms": 1200, "x": 128, "y": 96, "type": "circle" },
+      { "t_ms": 1800, "x": 96,  "y": 80, "type": "circle" },
+      { "t_ms": 2400, "x": 160, "y": 112, "type": "circle" }
+    ]
+  }
+}
+EOF
+
+  print -r -- "ok" > "$ok"
+  print -r -- "$abs_audio" > "$pathf"
+  log "ok: $ir"
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  (compile) compile "$@" ;;
+  (*) die "usage: tools/mixc compile -i <input> [-o dist] [--name pack] [--mode megamix]" ;;
+esac
