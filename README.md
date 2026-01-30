@@ -1,83 +1,79 @@
-# osu!megamix
+Osu!megamix Readme — Quickstart
 
-**osu!megamix** is a canon-governed mix runner where the **.mix** artifact is the product.
-Gameplay is continuity-first: the mix timeline is authoritative, and rulesets can change without breaking audio flow.
+osu!megamix — Quickstart
 
-## What you run
+Welcome! This is the fastest way to get playing.
 
-- **Universal pack:** `osu!megamix.mix` (portable payload layout)
-- **Platform binaries:** mac / windows / linux archives in `dist/`
+What is osu!megamix?
 
-## Quickstart
+osu!megamix is a rhythm game inspired by osu!, focused on tight timing, clean rules, and forward momentum. Hit notes on the beat. Finish the song. Feel good doing it.
 
-- Download the latest Release asset **osu_megamix_universal.tar.gz**
-- Extract it
-- Run the platform launcher inside:
-  - `mac/` (macOS)
-  - `win/` (Windows)
-  - `linux/` (Linux)
+Requirements
 
-> If you only have the repo: run the packaging script(s) below to generate `dist/`.
+Keyboard (recommended)
+Audio on (timing matters)
+A supported mix / beatmap
+Mouse is optional depending on mode.
 
-## Gameplay
+Launch
 
-- **Continuity:** once play starts, the mix timeline and audio do not pause/reset.
-- **Always playable:** failing is not “game over” — it collapses you back to the mix layer (bust-to-mix behavior) without stopping the timeline.
-- **Modes:** rulesets can switch (osu/taiko/catch/mania/megamix) while the mix audio remains continuous.
-- **Difficulty:** scales by additive density (“the mix doubles”) with continuous diffs:
-  - Mix Easy ⊂ Mix Normal ⊂ Mix Insane ⊂ Mix Another ⊂ Mix Extra
+Start the game / runtime
+Load a song or mix
+Press play
+That’s it.
 
-### Controls / Input
+How to Play
 
-- Input is handled by the core runner; timing is locked by invariants and the timing layer.
-- The project prioritizes “feels like osu!” over strict formalism when edge cases occur.
+Core Loop
+Circles fall toward the hit line
+When a circle reaches the line → press a key
+Timing > everything
+Controls (default mental model)
+Two hit keys (commonly Z / X)
+Use either or alternate — both are valid
+You can rebind keys if needed.
 
-## Implementation overview
+Timing Rules
 
-### Repository layout (what matters)
+Hit on the beat
+Early = miss
+Late = miss
+On time = hit (good / great / perfect)
+If visuals disagree with the music, trust the music.
 
-- `src/` — canonical Python packages (engine + CLI)
-- `tools/` — **zsh-only** operator scripts (build/release/router)
-- `dist/` — build outputs (archives + .mix payloads)
-- `cat/` — mode contracts + UI share surfaces
-- `ultra/` — optional native timing/input experiments (quarantined)
+Difficulty & Flow
 
-### Engine & orchestration
+Start on Easy or Normal
+Misses are okay — keep going
+Momentum matters more than perfection
+One mistake does not end a run.
 
-- **Control plane:** Python (`osu_megamix.py`, `src/osu_megamix.py`)
-- **Transport / orchestration:** `src/imagination/` (client/server/protocol + engine core)
-- **Payload plane:** `.mix` directory pack (portable layout)
+Ending a Run
 
-### Invariants (non-negotiable)
+When the song ends, the run ends
+The game exits cleanly
+You stop because you choose to stop
+“See you next time.”
 
-See:
-- `docs/INVARIANTS.md`
-- `docs/CANON.md`
-- `docs/JIT_FREEZE.md`
-- `docs/TIMING_LOCK.md` (and `ultra/TIMING_LOCK.md` if present)
+First-Time Tips
 
-If an invariant isn’t written down, it doesn’t exist.
+Play one song all the way through
+Ignore score on your first run
+Let your hands learn before your brain
+Relax your shoulders and breathe
+Philosophy (short)
 
-## Build & release
+Rhythm first
+Clear rules
+No punishment for playing
+Have fun. That’s the whole point.
 
-### One-command release builders
+Done ✅
+I dropped a clean README Quickstart into the canvas — ready to ship, paste, or tweak.
+If you want, I can:
 
-Prefer the zsh tools:
-
-- `tools/release_full.zsh` — full packaging (recommended)
-- `full_megamix_pkg.sh` — legacy/alternate full packager
-- `tools/build_onefile.zsh` — onefile/pyinstaller-style builds (if used)
-
-Outputs land in `dist/`.
-
-## Documentation index
-
-- `docs/INVARIANTS.md` — core laws
-- `docs/CANON.md` / `docs/CANON_THEMES.md` — canon definitions
-- `docs/SHARE.md` — share surfaces and distribution intent
-- `docs/WORK_CYCLE.md` — operator workflow
-- `docs/RELEASE_*.md` — historical release notes
-
-## Support osu!megamix
-
-- Donate (PayPal): https://www.paypal.com/ncp/payment/PV5VCJGG7B3FL
+Tighten it further (ultra-minimal / speedrun style)
+Add a Controls table
+Add a “Troubleshooting / Common misses” section
+Match it exactly to your repo tone (more playful / more formal)
+Just say the word.
