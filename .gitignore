@@ -4,3 +4,6 @@
 builddir/
 *.swp
 .DS_Store
+.DS_Store
+.env
+.venv/
