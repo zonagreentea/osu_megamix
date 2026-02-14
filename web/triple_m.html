@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Triple M — Mix & Megamix</title>
+<style>
+body{margin:0;background:#111;overflow:hidden;}
+canvas{display:block;margin:0 auto;background:#222;}
+#score{position:absolute;color:#0f0;top:10px;left:10px;font-family:sans-serif;font-size:20px;}
+</style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<canvas id="game" width="800" height="600"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score');
+let circles=[],score=0,mode=prompt("Mode: osu|taiko|ctb|mania|mix|megamix")||"mix";
+let frame=0,autoplay=false;
+
+canvas.addEventListener('click',e=>{
+  circles.forEach(c=>{
+    if(!c.hit&&Math.hypot(c.x-e.offsetX,c.y-e.offsetY)<c.radius){
+      c.hit=true;score+=100;scoreEl.textContent="Score: "+score;
+      console.log("🎯 Hit circle! Mode:",mode,"Score:",score);
+    }
+  });
+});
+
+function addCircle(){
+  circles.push({x:Math.random()*760+20,y:0,radius:20,hit:false});
+}
+
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(frame%60===0)addCircle(); // spawn new circle every 60 frames
+  circles.forEach(c=>{
+    if(!c.hit){
+      c.y+=3;
+      ctx.beginPath();
+      ctx.arc(c.x,c.y,c.radius,0,2*Math.PI);
+      ctx.fillStyle=mode==="megamix"?"#f00":"#fff";
+      ctx.fill();
+    }
+  });
+  // Megamix continuity: autopilot bursts
+  if(mode==="megamix"&&frame%180===0){
+    circles.forEach(c=>{if(!c.hit){c.hit=true;score+=100;scoreEl.textContent="Score: "+score;}});
+    console.log("🚀 Megamix autopilot burst! Score:",score);
+  }
+  frame++;
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
