@@ -1,206 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>osu!megamix</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>1c Pet — MIX HUB</title>
 <style>
-body { margin:0; background:black; overflow:hidden; color:white; font-family:sans-serif;}
-#menu { position:absolute; top:10px; left:10px; z-index:10;}
-button { margin:2px; padding:6px 10px; background:#111; color:white; border:1px solid #444;}
-canvas { display:block; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #111;
+    color: #eee;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    overflow: hidden;
+    font-family: monospace;
+  }
+  canvas {
+    background: #222;
+    display: block;
+  }
 </style>
 </head>
 <body>
-
 <canvas id="game"></canvas>
-
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-/* ===========================
-   CORE CLOCK
-=========================== */
+// Base resolution for scaling
+const BASE_WIDTH = 256;
+const BASE_HEIGHT = 192;
 
-class Clock { constructor(){ this.reset(); } reset(){ this.start=performance.now(); } now(){ return performance.now()-this.start; } }
-const clock = new Clock();
-
-/* ===========================
-   LOSSLESS .MIX LOGGING
-=========================== */
-
-const mixLog=[];
-function logEvent(type, details){ mixLog.push({type,time:clock.now(),...details}); }
-function saveMix(){ const blob=new Blob([JSON.stringify(mixLog,null,2)],{type:"application/json"}); const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download="session.mix.json"; a.click(); URL.revokeObjectURL(url); }
-document.addEventListener("keydown",e=>{ if(e.key.toLowerCase()==="s"&&e.ctrlKey){ e.preventDefault(); saveMix(); alert("Mix saved!"); } });
-
-/* ===========================
-   GLOBAL ENGINE
-=========================== */
-
-let currentRuleset = null;
-let currentRulesetName = null;
-function switchMode(name){
-    logEvent("switchMode",{mode:name});
-    clock.reset();
-    currentRuleset = rulesets[name];
-    currentRulesetName = name;
-    currentRuleset.init();
+// Scaling function
+function resizeCanvas() {
+  const scaleX = window.innerWidth / BASE_WIDTH;
+  const scaleY = window.innerHeight / BASE_HEIGHT;
+  const scale = Math.min(scaleX, scaleY);
+  canvas.width = BASE_WIDTH * scale;
+  canvas.height = BASE_HEIGHT * scale;
+  ctx.setTransform(scale, 0, 0, scale, 0, 0); // scale drawing context
 }
 
-/* ===========================
-   HIT WINDOWS
-=========================== */
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-const OD=5;
-function hitWindow300(){ return 79-6*OD; }
-function hitWindow100(){ return 139-8*OD; }
-function hitWindow50(){ return 199-10*OD; }
-function judge(delta){ delta=Math.abs(delta); if(delta<=hitWindow300())return 300; if(delta<=hitWindow100())return 100; if(delta<=hitWindow50())return 50; return 0; }
+// 1c Pet prototype state
+let petX = BASE_WIDTH/2;
+let petY = BASE_HEIGHT/2;
+let petColor = 'cyan';
 
-/* ===========================
-   OSU RULESET
-=========================== */
+// Key handling
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
 
-const osuRuleset = {
-    objects:[], AR:800, baseRadius:40,
-    init(){ 
-        const scale=canvas.width/800; 
-        this.radius=this.baseRadius*scale; 
-        this.objects=[];
-        for(let i=0;i<20;i++){ 
-            this.objects.push({x:(200+(i%4)*200)*scale, y:(200+(i%3)*150)*scale, time:1000+i*600, hit:false}); 
-        } 
-    },
-    draw(now){
-        for(let obj of this.objects){ if(obj.hit)continue;
-            const timeUntil=obj.time-now;
-            const appearTime=obj.time-this.AR;
-            if(now<appearTime)continue;
-            if(timeUntil<-hitWindow50()){obj.hit=true;continue;}
-            const approachRadius=this.radius+(this.radius*2)*(timeUntil/this.AR);
-            ctx.strokeStyle="white"; ctx.beginPath(); ctx.arc(obj.x,obj.y,Math.max(approachRadius,this.radius),0,Math.PI*2); ctx.stroke();
-            ctx.fillStyle="cyan"; ctx.beginPath(); ctx.arc(obj.x,obj.y,this.radius,0,Math.PI*2); ctx.fill();
-        }
-    },
-    input(e,now){ if(e.type!=="mousedown")return;
-        logEvent("mousedown",{x:e.clientX,y:e.clientY});
-        const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left; const my=e.clientY-rect.top;
-        for(let obj of this.objects){ if(obj.hit)continue;
-            const dx=mx-obj.x; const dy=my-obj.y; if(Math.sqrt(dx*dx+dy*dy)<=this.radius){ const r=judge(now-obj.time); if(r>0)obj.hit=true; return; }
-        }
-    }
-};
+function update() {
+  if(keys['a'] || keys['ArrowLeft']) petX -= 2;
+  if(keys['d'] || keys['ArrowRight']) petX += 2;
+  if(keys['w'] || keys['ArrowUp']) petY -= 2;
+  if(keys['s'] || keys['ArrowDown']) petY += 2;
 
-/* ===========================
-   MANIA RULESET
-=========================== */
+  // Clamp to canvas
+  petX = Math.max(0, Math.min(BASE_WIDTH, petX));
+  petY = Math.max(0, Math.min(BASE_HEIGHT, petY));
+}
 
-const maniaRuleset = {
-    objects:[], scroll:0.6, hitLine:canvas.height-120,
-    init(){ this.objects=[]; for(let i=0;i<20;i++){ this.objects.push({lane:i%4,time:1000+i*600,hit:false}); }},
-    draw(now){
-        const laneWidth=canvas.width/6;
-        for(let i=0;i<4;i++){ ctx.strokeStyle="#333"; ctx.strokeRect(canvas.width/2-2*laneWidth+i*laneWidth,0,laneWidth,canvas.height); }
-        ctx.strokeStyle="white"; ctx.beginPath(); ctx.moveTo(0,this.hitLine); ctx.lineTo(canvas.width,this.hitLine); ctx.stroke();
-        for(let obj of this.objects){ if(obj.hit)continue;
-            const y=this.hitLine-(obj.time-now)*this.scroll; if(y>canvas.height||y<-50)continue;
-            ctx.fillStyle="cyan"; ctx.fillRect(canvas.width/2-2*laneWidth+obj.lane*laneWidth,y,laneWidth,20);
-        }
-    },
-    input(e,now){ if(e.type!=="keydown")return;
-        logEvent("keydown",{key:e.key});
-        const keys=["d","f","j","k"]; const lane=keys.indexOf(e.key); if(lane===-1)return;
-        for(let obj of this.objects){ if(obj.hit||obj.lane!==lane)continue; const r=judge(now-obj.time); if(r>0){obj.hit=true;return;} }
-    }
-};
+function draw() {
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
-/* ===========================
-   TAIKO RULESET
-=========================== */
+  // Draw pet
+  ctx.fillStyle = petColor;
+  ctx.fillRect(petX-8, petY-8, 16, 16);
+}
 
-const taikoRuleset={
-    objects:[], scroll:0.5,
-    init(){ this.objects=[]; for(let i=0;i<20;i++){ this.objects.push({type:i%2===0?"don":"ka",time:1000+i*600,hit:false}); }},
-    draw(now){
-        const centerY=canvas.height/2;
-        ctx.beginPath(); ctx.arc(200,centerY,60,0,Math.PI*2); ctx.strokeStyle="white"; ctx.stroke();
-        for(let obj of this.objects){ if(obj.hit)continue;
-            const x=canvas.width - ((now-obj.time)*this.scroll);
-            if(x<-50)continue;
-            ctx.fillStyle=obj.type==="don"?"red":"blue";
-            ctx.beginPath(); ctx.arc(x,centerY,40,0,Math.PI*2); ctx.fill();
-        }
-    },
-    input(e,now){ if(e.type!=="keydown")return;
-        if(!["f","j","d","k"].includes(e.key))return;
-        logEvent("keydown",{key:e.key});
-        for(let obj of this.objects){ if(obj.hit)continue; const r=judge(now-obj.time); if(r>0){obj.hit=true;return;} }
-    }
-};
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
 
-/* ===========================
-   CATCH RULESET
-=========================== */
-
-const catchRuleset={
-    objects:[], catcher:{x:canvas.width/2,y:canvas.height-60},
-    init(){ this.objects=[]; for(let i=0;i<20;i++){ this.objects.push({x:200+(i%4)*200,time:1000+i*600,hit:false}); }},
-    draw(now){
-        for(let obj of this.objects){ if(obj.hit)continue;
-            const y=(now-obj.time+1000)*0.4; if(y<0)continue;
-            ctx.fillStyle="yellow"; ctx.fillRect(obj.x,y,20,20);
-            if(Math.abs(obj.x-this.catcher.x)<40&&Math.abs(y-this.catcher.y)<40)obj.hit=true;
-        }
-        ctx.fillStyle="white"; ctx.fillRect(this.catcher.x-50,this.catcher.y,100,20);
-    },
-    input(e){ if(e.type!=="keydown")return;
-        logEvent("keydown",{key:e.key});
-        if(e.key==="ArrowLeft")this.catcher.x-=40;
-        if(e.key==="ArrowRight")this.catcher.x+=40;
-    }
-};
-
-/* ===========================
-   TITLE / MEGAMIX
-=========================== */
-
-const megamixScreen = {
-    init(){},
-    draw(now){
-        ctx.fillStyle="black"; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle="white"; ctx.font=`${Math.floor(canvas.width/10)}px sans-serif`;
-        ctx.textAlign="center"; ctx.fillText("osu!megamix",canvas.width/2,canvas.height/2-40);
-        ctx.font=`${Math.floor(canvas.width/20)}px sans-serif`; ctx.fillText("Press ENTER to Start",canvas.width/2,canvas.height/2+20);
-    },
-    input(e){
-        if(e.type==="keydown" && e.key==="Enter"){
-            logEvent("burstToMegamix",{}); switchMode("osu");
-        }
-    }
-};
-
-/* ===========================
-   RULESET REGISTRY
-=========================== */
-
-const rulesets={ osu:osuRuleset, mania:maniaRuleset, taiko:taikoRuleset, catch:catchRuleset, megamix:megamixScreen };
-switchMode("megamix");
-
-/* ===========================
-   INPUT ROUTING
-=========================== */
-
-document.addEventListener("mousedown",e=>{ currentRuleset.input(e,clock.now()); });
-document.addEventListener("keydown",e=>{ currentRuleset.input(e,clock.now()); });
-
-/* ===========================
-   LOOP
-=========================== */
-
-function loop(){ ctx.clearRect(0,0,canvas.width,canvas.height); const now=clock.now(); currentRuleset.draw(now); requestAnimationFrame(loop); }
 loop();
 </script>
 </body>
