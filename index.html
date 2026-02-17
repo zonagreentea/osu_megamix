@@ -4,352 +4,75 @@
 <meta charset="UTF-8">
 <title>osu!megamix</title>
 <style>
-/* ===========================
-   STYLES
-=========================== */
-body { margin:0; background:black; overflow:hidden; color:white; font-family:sans-serif;}
-#menu { position:absolute; top:10px; left:10px; z-index:10;}
-button { margin:2px; padding:6px 10px; background:#111; color:white; border:1px solid #444;}
-canvas { display:block; }
+body{margin:0;background:black;overflow:hidden;color:white;font-family:sans-serif}
+#menu{position:absolute;top:10px;left:10px;z-index:10}
+button{margin:2px;padding:6px 10px;background:#111;color:white;border:1px solid #444}
+canvas{display:block}
 </style>
 </head>
 <body>
-
-<!--
-# osu!megamix HTML Interface
-- Four game modes: osu!, taiko, catch, mania
-- Canvas-based gameplay
-- Menu buttons switch modes
-- Lossless replay logging implemented
--->
-
 <div id="menu">
 <button onclick="switchMode('osu')">osu!</button>
 <button onclick="switchMode('taiko')">taiko</button>
 <button onclick="switchMode('catch')">catch</button>
 <button onclick="switchMode('mania')">mania</button>
-<button onclick="saveReplay()">Save Replay</button>
 </div>
-
 <canvas id="game"></canvas>
-
 <script>
-/* ===========================
-   SETUP
-=========================== */
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const lowW=256,lowH=192,off=document.createElement("canvas");off.width=lowW;off.height=lowH;
+const octx=off.getContext("2d");let replayLog=[];
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight;}
+window.onresize=resize;resize();
 
-/* ===========================
-   CLOCK CLASS
-=========================== */
-/*
-# Clock
-- Provides timing in milliseconds relative to start/reset
-*/
-class Clock {
-    constructor(){ this.reset(); }
-    reset(){ this.start = performance.now(); }
-    now(){ return performance.now() - this.start; }
-}
-const clock = new Clock();
+class Clock{constructor(){this.reset();}reset(){this.start=performance.now();}now(){return performance.now()-this.start;}}
+const clock=new Clock();
 
-/* ===========================
-   GLOBAL ENGINE
-=========================== */
-/*
-# Mode Switching
-- Resets clock
-- Initializes selected ruleset
-*/
-let currentRuleset = null;
-function switchMode(name){
-    clock.reset();
-    currentRuleset = rulesets[name];
-    currentRuleset.init();
-}
+let currentRuleset=null;
+function switchMode(n){clock.reset();currentRuleset=rulesets[n];currentRuleset.init();}
 
-/* ===========================
-   HIT WINDOWS
-=========================== */
-/*
-# Hit Judgement
-- Defines hit windows for 300/100/50
-- Judge function returns hit score
-*/
-const OD = 5;
-function hitWindow300(){ return 79 - 6*OD; }
-function hitWindow100(){ return 139 - 8*OD; }
-function hitWindow50(){ return 199 - 10*OD; }
+const OD=5,hw300=()=>79-6*OD,hw100=()=>139-8*OD,hw50=()=>199-10*OD;
+function judge(d){d=Math.abs(d);return d<=hw300()?300:d<=hw100()?100:d<=hw50()?50:0;}
 
-function judge(delta){
-    delta = Math.abs(delta);
-    if(delta <= hitWindow300()) return 300;
-    if(delta <= hitWindow100()) return 100;
-    if(delta <= hitWindow50()) return 50;
-    return 0;
-}
+function logInput(e){replayLog.push({type:e.type,time:clock.now(),key:e.key,x:e.clientX,y:e.clientY});}
 
-/* ===========================
-   REPLAY LOGGING
-=========================== */
-/*
-# Lossless Replay System
-- Captures every input event with timestamp and mode
-- Can save as session.mix.json
-*/
-const replayLog = [];
-function logEvent(e, now){
-    if(!currentRuleset) return;
-    replayLog.push({
-        type: e.type,
-        key: e.key || null,
-        x: e.clientX || null,
-        y: e.clientY || null,
-        mode: Object.keys(rulesets).find(k=>rulesets[k]===currentRuleset),
-        time: now
-    });
-}
-function saveReplay(){
-    const blob = new Blob([JSON.stringify(replayLog)], { type:"application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "session.mix.json";
-    a.click();
-    URL.revokeObjectURL(url);
-    alert("Replay saved as session.mix.json");
-}
+document.addEventListener("mousedown",e=>{currentRuleset.input(e,clock.now());logInput(e);});
+document.addEventListener("keydown",e=>{currentRuleset.input(e,clock.now());logInput(e);});
 
-/* ===========================
-   OSU RULESET
-=========================== */
-/*
-# osu! Mode
-- Circle objects with approach circle
-- Click to hit
-*/
-const osuRuleset = {
-    objects: [],
-    AR: 800,
-    radius: 40,
-    init(){
-        this.objects = [];
-        for(let i=0;i<20;i++){
-            this.objects.push({
-                x: 200 + (i%4)*200,
-                y: 200 + (i%3)*150,
-                time: 1000 + i*600,
-                hit:false
-            });
-        }
-    },
-    update(now){},
-    draw(now){
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const timeUntil = obj.time - now;
-            const appearTime = obj.time - this.AR;
-            if(now < appearTime) continue;
-            if(timeUntil < -hitWindow50()){ obj.hit = true; continue; }
+function saveMix(){const b=new Blob([JSON.stringify(replayLog)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="replay.mix.json";a.click();}
 
-            const approachRadius = this.radius + (this.radius*2)*(timeUntil/this.AR);
-            ctx.strokeStyle="white";
-            ctx.beginPath();
-            ctx.arc(obj.x,obj.y,Math.max(approachRadius,this.radius),0,Math.PI*2);
-            ctx.stroke();
-
-            ctx.fillStyle="cyan";
-            ctx.beginPath();
-            ctx.arc(obj.x,obj.y,this.radius,0,Math.PI*2);
-            ctx.fill();
-        }
-    },
-    input(e, now){
-        if(e.type !== "mousedown") return;
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.clientX - rect.left;
-        const my = e.clientY - rect.top;
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const dx = mx - obj.x;
-            const dy = my - obj.y;
-            if(Math.sqrt(dx*dx+dy*dy) <= this.radius){
-                const result = judge(now - obj.time);
-                if(result>0) obj.hit=true;
-                return;
-            }
-        }
-    }
+const osuRuleset={objects:[],AR:800,radius:40,
+init(){this.objects=[];for(let i=0;i<20;i++)this.objects.push({x:200+(i%4)*200,y:200+(i%3)*150,time:1000+i*600,hit:!1});},
+draw(now,ctx){for(let o of this.objects){if(o.hit)continue;const t=o.time-now,a=o.time-this.AR;if(now<a)continue;if(t<-hw50()){o.hit=!0;continue;}const r=this.radius+2*this.radius*t/this.AR;ctx.strokeStyle="white";ctx.beginPath();ctx.arc(o.x,o.y,Math.max(r,this.radius),0,2*Math.PI);ctx.stroke();ctx.fillStyle="cyan";ctx.beginPath();ctx.arc(o.x,o.y,this.radius,0,2*Math.PI);ctx.fill();}},
+input(e,now){if(e.type!="mousedown")return;const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;for(let o of this.objects)if(!o.hit&&Math.hypot(mx-o.x,my-o.y)<=this.radius){if(judge(now-o.time))o.hit=!0;return;}}
 };
 
-/* ===========================
-   MANIA RULESET
-=========================== */
-/*
-# Mania Mode
-- Four lanes, falling rectangles
-- Keypress: d/f/j/k
-*/
-const maniaRuleset = {
-    objects: [],
-    scroll: 0.6,
-    hitLine: canvas.height-120,
-    init(){
-        this.objects=[];
-        for(let i=0;i<20;i++){
-            this.objects.push({ lane: i%4, time: 1000+i*600, hit:false });
-        }
-    },
-    draw(now){
-        const laneWidth = canvas.width/6;
-        for(let i=0;i<4;i++){
-            ctx.strokeStyle="#333";
-            ctx.strokeRect(canvas.width/2-2*laneWidth+i*laneWidth,0,laneWidth,canvas.height);
-        }
-        ctx.strokeStyle="white";
-        ctx.beginPath();
-        ctx.moveTo(0,this.hitLine);
-        ctx.lineTo(canvas.width,this.hitLine);
-        ctx.stroke();
-
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const y = this.hitLine - (obj.time-now)*this.scroll;
-            if(y>canvas.height||y<-50) continue;
-
-            ctx.fillStyle="cyan";
-            ctx.fillRect(canvas.width/2-2*laneWidth+obj.lane*laneWidth, y, laneWidth, 20);
-        }
-    },
-    input(e, now){
-        if(e.type!=="keydown") return;
-        const keys=["d","f","j","k"];
-        const lane=keys.indexOf(e.key);
-        if(lane===-1) return;
-        for(let obj of this.objects){
-            if(obj.hit||obj.lane!==lane) continue;
-            const result=judge(now-obj.time);
-            if(result>0){ obj.hit=true; return; }
-        }
-    }
+const maniaRuleset={objects:[],scroll:.6,hitLine:lowH-30,
+init(){this.objects=[];for(let i=0;i<20;i++)this.objects.push({lane:i%4,time:1000+i*600,hit:!1});},
+draw(now,ctx){const w=lowW/6;for(let i=0;i<4;i++){ctx.strokeStyle="#333";ctx.strokeRect(lowW/2-2*w+i*w,0,w,lowH);}ctx.strokeStyle="white";ctx.beginPath();ctx.moveTo(0,this.hitLine);ctx.lineTo(lowW,this.hitLine);ctx.stroke();for(let o of this.objects)if(!o.hit){const y=this.hitLine-(o.time-now)*this.scroll;if(y>lowH||y<-50)continue;ctx.fillStyle="cyan";ctx.fillRect(lowW/2-2*w+o.lane*w,y,w,5);}},
+input(e,now){if(e.type!="keydown")return;const k=["d","f","j","k"].indexOf(e.key);if(k==-1)return;for(let o of this.objects)if(!o.hit&&o.lane==k&&judge(now-o.time))o.hit=!0;}
 };
 
-/* ===========================
-   TAIKO RULESET
-=========================== */
-/*
-# Taiko Mode
-- Red/Blue circles
-- Scrolls right → left
-- Keys: f/j/d/k
-*/
-const taikoRuleset = {
-    objects:[],
-    scroll:0.5,
-    init(){
-        this.objects=[];
-        for(let i=0;i<20;i++){
-            this.objects.push({ type:i%2===0?"don":"ka", time:1000+i*600, hit:false });
-        }
-    },
-    draw(now){
-        const centerY = canvas.height/2;
-        ctx.beginPath();
-        ctx.arc(200, centerY, 60, 0, Math.PI*2);
-        ctx.strokeStyle = "white";
-        ctx.stroke();
-
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const startX = canvas.width + 50; // offscreen right
-            const x = startX - (now - obj.time) * this.scroll;
-            if(x < -50) continue;
-
-            ctx.fillStyle = obj.type==="don"?"red":"blue";
-            ctx.beginPath();
-            ctx.arc(x, centerY, 40, 0, Math.PI*2);
-            ctx.fill();
-        }
-    },
-    input(e, now){
-        if(e.type!=="keydown") return;
-        if(!["f","j","d","k"].includes(e.key)) return;
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const result=judge(now-obj.time);
-            if(result>0){ obj.hit=true; return; }
-        }
-    }
+const taikoRuleset={objects:[],scroll:.5,
+init(){this.objects=[];for(let i=0;i<20;i++)this.objects.push({type:i%2==0?"don":"ka",time:1000+i*600,hit:!1});},
+draw(now,ctx){const y=lowH/2;ctx.beginPath();ctx.arc(20,y,10,0,2*Math.PI);ctx.strokeStyle="white";ctx.stroke();for(let o of this.objects)if(!o.hit){const x=20-(o.time-now)*this.scroll;if(x<-20)continue;ctx.fillStyle=o.type=="don"?"red":"blue";ctx.beginPath();ctx.arc(x,y,7,0,2*Math.PI);ctx.fill();}},
+input(e,now){if(e.type!="keydown")return;if(!["f","j","d","k"].includes(e.key))return;for(let o of this.objects)if(!o.hit&&judge(now-o.time))o.hit=!0;}
 };
 
-/* ===========================
-   CATCH RULESET
-=========================== */
-/*
-# Catch Mode
-- Falling blocks, catch with platform
-- Keys: ArrowLeft, ArrowRight
-*/
-const catchRuleset = {
-    objects:[],
-    catcher:{x:canvas.width/2, y:canvas.height-60},
-    init(){
-        this.objects=[];
-        for(let i=0;i<20;i++){
-            this.objects.push({ x:200+(i%4)*200, time:1000+i*600, hit:false });
-        }
-    },
-    draw(now){
-        for(let obj of this.objects){
-            if(obj.hit) continue;
-            const y=(now-obj.time+1000)*0.4;
-            if(y<0) continue;
-
-            ctx.fillStyle="yellow";
-            ctx.fillRect(obj.x, y, 20, 20);
-
-            if(Math.abs(obj.x-this.catcher.x)<40 && Math.abs(y-this.catcher.y)<40){
-                obj.hit=true;
-            }
-        }
-
-        ctx.fillStyle="white";
-        ctx.fillRect(this.catcher.x-50, this.catcher.y, 100, 20);
-    },
-    input(e){
-        if(e.type!=="keydown") return;
-        if(e.key==="ArrowLeft") this.catcher.x-=40;
-        if(e.key==="ArrowRight") this.catcher.x+=40;
-    }
+const catchRuleset={objects:[],catcher:{x:lowW/2,y:lowH-10},
+init(){this.objects=[];for(let i=0;i<20;i++)this.objects.push({x:20+(i%4)*40,time:1000+i*600,hit:!1});},
+draw(now,ctx){for(let o of this.objects)if(!o.hit){const y=(now-o.time+1000)*.4;if(y<0)continue;ctx.fillStyle="yellow";ctx.fillRect(o.x,y,5,5);if(Math.abs(o.x-this.catcher.x)<10&&Math.abs(y-this.catcher.y)<10)o.hit=!0;}ctx.fillStyle="white";ctx.fillRect(this.catcher.x-20,this.catcher.y,40,5);},
+input(e){if(e.type!="keydown")return;if(e.key=="ArrowLeft")this.catcher.x-=10;if(e.key=="ArrowRight")this.catcher.x+=10;}
 };
 
-/* ===========================
-   RULESET REGISTRY
-=========================== */
-const rulesets = {
-    osu: osuRuleset,
-    mania: maniaRuleset,
-    taiko: taikoRuleset,
-    catch: catchRuleset
-};
+const rulesets={osu:osuRuleset,mania:maniaRuleset,taiko:taikoRuleset,catch:catchRuleset};
 switchMode("osu");
 
-/* ===========================
-   INPUT ROUTING
-=========================== */
-document.addEventListener("mousedown", e => { currentRuleset.input(e, clock.now()); logEvent(e, clock.now()); });
-document.addEventListener("keydown", e => { currentRuleset.input(e, clock.now()); logEvent(e, clock.now()); });
-
-/* ===========================
-   MAIN LOOP
-=========================== */
 function loop(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const now=clock.now();
-    currentRuleset.draw(now);
+    octx.fillStyle="black";octx.fillRect(0,0,lowW,lowH);
+    currentRuleset.draw(clock.now(),octx);
+    ctx.imageSmoothingEnabled=!1;
+    ctx.drawImage(off,0,0,canvas.width,canvas.height);
     requestAnimationFrame(loop);
 }
 loop();
