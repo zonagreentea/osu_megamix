@@ -1,183 +1,319 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta charset="UTF-8">
 <title>osu!megamix</title>
 <style>
-html,body{
-  margin:0;
-  height:100%;
-  background:#0f1116;
-  color:#e6edf3;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  overflow:hidden;
-}
-canvas{
-  position:fixed;
-  inset:0;
-}
-.overlay{
-  position:fixed;
-  top:16px;
-  left:16px;
-  font-size:12px;
-  opacity:.6;
-  letter-spacing:.5px;
-}
+body { margin:0; background:black; overflow:hidden; color:white; font-family:sans-serif;}
+#menu { position:absolute; top:10px; left:10px; z-index:10;}
+button { margin:2px; padding:6px 10px; background:#111; color:white; border:1px solid #444;}
+canvas { display:block; }
 </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
-<div class="overlay" id="overlay">
-  1 osu · 2 taiko · 3 catch · 4 mania
+<div id="menu">
+<button onclick="switchMode('osu')">osu!</button>
+<button onclick="switchMode('taiko')">taiko</button>
+<button onclick="switchMode('catch')">catch</button>
+<button onclick="switchMode('mania')">mania</button>
 </div>
+
+<canvas id="game"></canvas>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resize();
-addEventListener("resize", resize);
+/* ===========================
+   CORE CLOCK
+=========================== */
 
-class Clock{
-  constructor(){ this.reset(); }
-  reset(){ this.start = performance.now(); }
-  now(){ return performance.now() - this.start; }
+class Clock {
+    constructor(){ this.reset(); }
+    reset(){ this.start = performance.now(); }
+    now(){ return performance.now() - this.start; }
 }
 const clock = new Clock();
 
-let mode = "osu";
+/* ===========================
+   LOSSLESS .MIX LOGGING
+=========================== */
 
+const mixLog = [];
+
+function logEvent(type, details){
+    mixLog.push({ type, time: clock.now(), ...details });
+}
+
+// Export function
+function saveMix(){
+    const blob = new Blob([JSON.stringify(mixLog, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "session.mix.json";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Optional: save on Ctrl+S
 document.addEventListener("keydown", e=>{
-  if(e.key==="1") mode="osu";
-  if(e.key==="2") mode="taiko";
-  if(e.key==="3") mode="catch";
-  if(e.key==="4") mode="mania";
+    if(e.key.toLowerCase()==="s" && e.ctrlKey){
+        e.preventDefault();
+        saveMix();
+        alert("Mix saved!");
+    }
 });
+
+/* ===========================
+   GLOBAL ENGINE
+=========================== */
+
+let currentRuleset = null;
+
+// Patch switchMode to log
+function switchMode(name){
+    logEvent("switchMode", { mode: name });
+    clock.reset();
+    currentRuleset = rulesets[name];
+    currentRuleset.init();
+}
+
+/* ===========================
+   HIT WINDOWS
+=========================== */
+
+const OD = 5;
+function hitWindow300(){ return 79 - 6*OD; }
+function hitWindow100(){ return 139 - 8*OD; }
+function hitWindow50(){ return 199 - 10*OD; }
 
 function judge(delta){
-  delta=Math.abs(delta);
-  if(delta<70) return true;
-  return false;
+    delta = Math.abs(delta);
+    if(delta <= hitWindow300()) return 300;
+    if(delta <= hitWindow100()) return 100;
+    if(delta <= hitWindow50()) return 50;
+    return 0;
 }
 
-let objects=[];
-function generate(){
-  objects=[];
-  for(let i=0;i<24;i++){
-    objects.push({
-      x: 150 + (i%4)*220,
-      lane:i%4,
-      time:1000+i*500,
-      hit:false
-    });
-  }
-}
-generate();
+/* ===========================
+   OSU RULESET
+=========================== */
 
-let catcher={x:innerWidth/2,y:innerHeight-80};
+const osuRuleset = {
+    objects: [],
+    AR: 800,
+    radius: 40,
+    init(){
+        this.objects = [];
+        for(let i=0;i<20;i++){
+            this.objects.push({
+                x: 200 + (i%4)*200,
+                y: 200 + (i%3)*150,
+                time: 1000 + i*600,
+                hit:false
+            });
+        }
+    },
+    update(now){},
+    draw(now){
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const timeUntil = obj.time - now;
+            const appearTime = obj.time - this.AR;
+            if(now < appearTime) continue;
+            if(timeUntil < -hitWindow50()){ obj.hit = true; continue; }
+
+            const approachRadius = this.radius + (this.radius*2)*(timeUntil / this.AR);
+            ctx.strokeStyle="white";
+            ctx.beginPath();
+            ctx.arc(obj.x,obj.y,Math.max(approachRadius,this.radius),0,Math.PI*2);
+            ctx.stroke();
+
+            ctx.fillStyle="cyan";
+            ctx.beginPath();
+            ctx.arc(obj.x,obj.y,this.radius,0,Math.PI*2);
+            ctx.fill();
+        }
+    },
+    input(e, now){
+        if(e.type !== "mousedown") return;
+        logEvent("mousedown", { x: e.clientX, y: e.clientY });
+
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const dx = mx - obj.x;
+            const dy = my - obj.y;
+            if(Math.sqrt(dx*dx+dy*dy) <= this.radius){
+                const result = judge(now - obj.time);
+                if(result>0) obj.hit=true;
+                return;
+            }
+        }
+    }
+};
+
+/* ===========================
+   MANIA RULESET
+=========================== */
+
+const maniaRuleset = {
+    objects: [],
+    scroll: 0.6,
+    hitLine: canvas.height-120,
+    init(){
+        this.objects=[];
+        for(let i=0;i<20;i++){
+            this.objects.push({ lane: i%4, time: 1000+i*600, hit:false });
+        }
+    },
+    draw(now){
+        const laneWidth = canvas.width/6;
+        for(let i=0;i<4;i++){
+            ctx.strokeStyle="#333";
+            ctx.strokeRect(canvas.width/2-2*laneWidth+i*laneWidth,0,laneWidth,canvas.height);
+        }
+        ctx.strokeStyle="white";
+        ctx.beginPath();
+        ctx.moveTo(0,this.hitLine);
+        ctx.lineTo(canvas.width,this.hitLine);
+        ctx.stroke();
+
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const y = this.hitLine - (obj.time-now)*this.scroll;
+            if(y>canvas.height||y<-50) continue;
+            ctx.fillStyle="cyan";
+            ctx.fillRect(canvas.width/2-2*laneWidth+obj.lane*laneWidth, y, laneWidth, 20);
+        }
+    },
+    input(e, now){
+        if(e.type!=="keydown") return;
+        logEvent("keydown", { key: e.key });
+        const keys=["d","f","j","k"];
+        const lane=keys.indexOf(e.key);
+        if(lane===-1) return;
+
+        for(let obj of this.objects){
+            if(obj.hit||obj.lane!==lane) continue;
+            const result=judge(now-obj.time);
+            if(result>0){ obj.hit=true; return;}
+        }
+    }
+};
+
+/* ===========================
+   TAiKO RULESET
+=========================== */
+
+const taikoRuleset = {
+    objects:[],
+    scroll:0.5,
+    init(){
+        this.objects=[];
+        for(let i=0;i<20;i++){
+            this.objects.push({ type:i%2===0?"don":"ka", time:1000+i*600, hit:false });
+        }
+    },
+    draw(now){
+        const centerY=canvas.height/2;
+        ctx.beginPath();
+        ctx.arc(200,centerY,60,0,Math.PI*2);
+        ctx.strokeStyle="white";
+        ctx.stroke();
+
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const x=200-(obj.time-now)*this.scroll;
+            if(x<-50) continue;
+            ctx.fillStyle=obj.type==="don"?"red":"blue";
+            ctx.beginPath();
+            ctx.arc(x,centerY,40,0,Math.PI*2);
+            ctx.fill();
+        }
+    },
+    input(e,now){
+        if(e.type!=="keydown") return;
+        if(!["f","j","d","k"].includes(e.key)) return;
+        logEvent("keydown", { key: e.key });
+
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const result=judge(now-obj.time);
+            if(result>0){obj.hit=true;return;}
+        }
+    }
+};
+
+/* ===========================
+   CATCH RULESET
+=========================== */
+
+const catchRuleset = {
+    objects:[],
+    catcher:{x:canvas.width/2,y:canvas.height-60},
+    init(){
+        this.objects=[];
+        for(let i=0;i<20;i++){
+            this.objects.push({ x:200+(i%4)*200, time:1000+i*600, hit:false });
+        }
+    },
+    draw(now){
+        for(let obj of this.objects){
+            if(obj.hit) continue;
+            const y=(now-obj.time+1000)*0.4;
+            if(y<0) continue;
+            ctx.fillStyle="yellow";
+            ctx.fillRect(obj.x,y,20,20);
+
+            if(Math.abs(obj.x-this.catcher.x)<40 &&
+               Math.abs(y-this.catcher.y)<40){ obj.hit=true; }
+        }
+        ctx.fillStyle="white";
+        ctx.fillRect(this.catcher.x-50,this.catcher.y,100,20);
+    },
+    input(e){
+        if(e.type!=="keydown") return;
+        logEvent("keydown", { key: e.key });
+        if(e.key==="ArrowLeft") this.catcher.x-=40;
+        if(e.key==="ArrowRight") this.catcher.x+=40;
+    }
+};
+
+/* ===========================
+   RULESET REGISTRY
+=========================== */
+
+const rulesets={ osu:osuRuleset, mania:maniaRuleset, taiko:taikoRuleset, catch:catchRuleset };
+switchMode("osu");
+
+/* ===========================
+   INPUT ROUTING
+=========================== */
 
 document.addEventListener("mousedown",e=>{
-  if(mode!=="osu") return;
-  const rect=canvas.getBoundingClientRect();
-  const mx=e.clientX-rect.left;
-  const my=e.clientY-rect.top;
-  for(let o of objects){
-    if(o.hit) continue;
-    const dx=mx-o.x;
-    const dy=my-canvas.height/2;
-    if(Math.sqrt(dx*dx+dy*dy)<40){
-      if(judge(clock.now()-o.time)) o.hit=true;
-    }
-  }
+    currentRuleset.input(e,clock.now());
 });
-
 document.addEventListener("keydown",e=>{
-  if(mode==="mania"){
-    const keys=["d","f","j","k"];
-    const lane=keys.indexOf(e.key);
-    if(lane===-1) return;
-    for(let o of objects){
-      if(o.hit||o.lane!==lane) continue;
-      if(judge(clock.now()-o.time)) o.hit=true;
-    }
-  }
-
-  if(mode==="taiko"){
-    if(!["f","j","d","k"].includes(e.key)) return;
-    for(let o of objects){
-      if(o.hit) continue;
-      if(judge(clock.now()-o.time)) o.hit=true;
-    }
-  }
-
-  if(mode==="catch"){
-    if(e.key==="ArrowLeft") catcher.x-=50;
-    if(e.key==="ArrowRight") catcher.x+=50;
-  }
+    currentRuleset.input(e,clock.now());
 });
+
+/* ===========================
+   LOOP
+=========================== */
 
 function loop(){
-  const now=clock.now();
-  ctx.fillStyle="#0f1116";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  for(let o of objects){
-    if(o.hit) continue;
-
-    if(mode==="osu"){
-      const y=canvas.height/2;
-      const t=o.time-now;
-      if(Math.abs(t)>900) continue;
-      ctx.strokeStyle="#7aa2ff";
-      ctx.beginPath();
-      ctx.arc(o.x,y,40,0,Math.PI*2);
-      ctx.stroke();
-    }
-
-    if(mode==="mania"){
-      const hitLine=canvas.height-140;
-      const y=hitLine-(o.time-now)*0.5;
-      const laneWidth=90;
-      const base=canvas.width/2-180;
-      ctx.fillStyle="#9ece6a";
-      ctx.fillRect(base+o.lane*laneWidth,y,laneWidth,18);
-      ctx.strokeStyle="#2a2f3a";
-      ctx.strokeRect(base+o.lane*laneWidth,y,laneWidth,18);
-    }
-
-    if(mode==="taiko"){
-      const centerY=canvas.height/2;
-      const x=200-(o.time-now)*0.6;
-      ctx.fillStyle="#f7768e";
-      ctx.beginPath();
-      ctx.arc(x,centerY,35,0,Math.PI*2);
-      ctx.fill();
-    }
-
-    if(mode==="catch"){
-      const y=(now-o.time+1000)*0.4;
-      ctx.fillStyle="#e0af68";
-      ctx.fillRect(o.x,y,18,18);
-      if(Math.abs(o.x-catcher.x)<45 &&
-         Math.abs(y-catcher.y)<40){
-        o.hit=true;
-      }
-    }
-  }
-
-  if(mode==="catch"){
-    ctx.fillStyle="#e6edf3";
-    ctx.fillRect(catcher.x-50,catcher.y,100,18);
-  }
-
-  requestAnimationFrame(loop);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    const now=clock.now();
+    currentRuleset.draw(now);
+    requestAnimationFrame(loop);
 }
 loop();
 </script>
