@@ -1,86 +1,66 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>1c Pet — MIX HUB</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark light"/>
+<title>osu!megamix — FULL MIX & MEGAMIX</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    background: #111;
-    color: #eee;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    overflow: hidden;
-    font-family: monospace;
-  }
-  canvas {
-    background: #222;
-    display: block;
-  }
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:sans-serif}
+  canvas{display:block;margin:0 auto;background:#111;image-rendering:pixelated;width:100%;height:100%}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
+<canvas id="mixCanvas" width="256" height="192"></canvas>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+const canvas=document.getElementById('mixCanvas'),ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
 
-// Base resolution for scaling
-const BASE_WIDTH = 256;
-const BASE_HEIGHT = 192;
+// mode color map
+const modes=['osu','taiko','catch','mania'];
+const colors={'osu':'#ff0000','taiko':'#0000ff','catch':'#00ff00','mania':'#ffff00'};
 
-// Scaling function
-function resizeCanvas() {
-  const scaleX = window.innerWidth / BASE_WIDTH;
-  const scaleY = window.innerHeight / BASE_HEIGHT;
-  const scale = Math.min(scaleX, scaleY);
-  canvas.width = BASE_WIDTH * scale;
-  canvas.height = BASE_HEIGHT * scale;
-  ctx.setTransform(scale, 0, 0, scale, 0, 0); // scale drawing context
+// infinite sequence generator
+function* infiniteMix(){
+  while(true){
+    for(let m of modes) yield m;
+  }
 }
 
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+// gameplay state
+let seq=infiniteMix(),frames=0;
 
-// 1c Pet prototype state
-let petX = BASE_WIDTH/2;
-let petY = BASE_HEIGHT/2;
-let petColor = 'cyan';
+// simple drawing functions
+function drawCircle(x,y,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,5,0,2*Math.PI);ctx.fill();}
+function drawTaiko(x,y,color){ctx.fillStyle=color;ctx.fillRect(x-4,y-4,8,8);}
+function drawCatch(x,y,color){ctx.fillStyle=color;ctx.fillRect(x-3,y-3,6,6);}
+function drawMania(x,y,color){ctx.fillStyle=color;ctx.fillRect(x-2,y-2,4,4);}
 
-// Key handling
-const keys = {};
-window.addEventListener('keydown', e => keys[e.key] = true);
-window.addEventListener('keyup', e => keys[e.key] = false);
+// main loop
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  let mode=seq.next().value;
 
-function update() {
-  if(keys['a'] || keys['ArrowLeft']) petX -= 2;
-  if(keys['d'] || keys['ArrowRight']) petX += 2;
-  if(keys['w'] || keys['ArrowUp']) petY -= 2;
-  if(keys['s'] || keys['ArrowDown']) petY += 2;
+  // simple pattern positions
+  let x=(frames*2)%W;
+  let y=H/2;
 
-  // Clamp to canvas
-  petX = Math.max(0, Math.min(BASE_WIDTH, petX));
-  petY = Math.max(0, Math.min(BASE_HEIGHT, petY));
-}
+  switch(mode){
+    case 'osu': drawCircle(x,y,colors[mode]); break;
+    case 'taiko': drawTaiko(W-x,y,colors[mode]); break; // right→left
+    case 'catch': drawCatch(x,y,colors[mode]); break;
+    case 'mania': drawMania(x,y,colors[mode]); break;
+  }
 
-function draw() {
-  ctx.fillStyle = '#222';
-  ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-
-  // Draw pet
-  ctx.fillStyle = petColor;
-  ctx.fillRect(petX-8, petY-8, 16, 16);
-}
-
-function loop() {
-  update();
-  draw();
+  frames++;
   requestAnimationFrame(loop);
 }
+
+// burst-to-mix / burst-to-megamix triggers
+document.addEventListener('keydown',e=>{
+  if(e.key==='m'){frames=0;} // burst-to-mix
+  if(e.key==='b'){frames=0;} // burst-to-megamix
+});
 
 loop();
 </script>
