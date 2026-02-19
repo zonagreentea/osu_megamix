@@ -1,115 +1,127 @@
-# osu!megamix (web)
+osu!mix / osu!megamix
 
-> no ball. python-powered. browser-hosted.
+osu!mix (aka megamix) is a hybrid rhythm engine and playable prototype for all your osu! fantasies, combining osu!standard, taiko, catch, mania, and a custom Megamix mode in a continuous, seamless, player-driven mix. It’s playable on desktop (mouse + keyboard), supports infinite auto-generation, and respects the Red-Charizard philosophy: fun first, rules second.
 
-This is a **quiet, minimal web version of osu!megamix**.
-It runs in a browser, is hosted for free on GitHub Pages, and can optionally be backed by Python later.
+🎵 Features
+Core Gameplay Modes
 
-No launcher. No installer. Click → play.
+osu!mix osu! – Standard circles, fully playable with mouse or keyboard.
 
----
+osu!taiko – Right-to-left scrolling drum beats, classic taiko rules.
 
-## What this is
+osu!catch – Fast-paced catcher mode, slide-based movement, keys Z/X + Shift by default.
 
-- A browser-based osu!-style prototype
-- Zero dependencies for players
-- Designed to stay **downlow**
-- Extensible into full osu!megamix continuity later
+osu!mania – Four lanes, random musical note generation, keyboard-focused.
 
-Right now:
-- Circles spawn
-- You click them
-- Score goes up
+osu!mix / Megamix – Cross-mode auto-generation, continuous audio timeline, “bust to mix” instead of fail.
 
-That’s enough. It breathes.
+Engine & Gameplay Philosophy
 
----
+Burst-to-Mix: players never “end” or get eliminated; failing triggers a soft transition back into the ongoing mix.
 
-## Hosting (free, GitHub Pages)
+Continuous Audio Layer: the mix never pauses; mode transitions happen seamlessly while the audio keeps playing.
 
-This repo is meant to be hosted directly by GitHub.
+Hybrid Auto-Mix Engine: uses a deterministic “Hyborgian flip” heartbeat for infinite mix generation.
 
-### Folder layout
+Ultra-Minimalist Zsh/Markdown Workflow: setup scripts are zsh-native, lightweight, and maintainable.
 
-```
-/
-├── index.html
-├── README.md
-```
+Full Input Handling: canon keybinds for all modes with mouse, keyboard, or hybrid.
 
-GitHub Pages serves `index.html` automatically.
+Roaming Title Screen: click the logo to start; no forced menus, just jump into the mix.
 
----
+Developer & Prototyping Tools
 
-## Enable GitHub Pages
+Full playable prototype layer (layers/full_playable) auto-generates hit objects based on audio input.
 
-1. Go to **Settings** → **Pages**
-2. Source: `Deploy from a branch`
-3. Branch: `main`
-4. Folder: `/ (root)`
-5. Save
+Cat layer integration: seamless launching of playable prototypes from the base layer.
 
-After ~1 minute, your site is live at:
+Customizable auto-map parameters: soft-coded until Valentine’s, allowing safe experimentation.
 
-```
-https://<username>.github.io/<repo-name>/
-```
+Logging & Persistence: every Megamix session is fully logged for replayability.
 
-This is your **free, real, HTTPS website**.
+🚀 Quick Start
+Requirements
 
----
+Python 3.10+
 
-## Local preview (optional)
+NumPy
+ (pip install numpy)
 
-You can run it locally with Python if you want:
+SoX
+ (for audio input / playable prototypes)
 
-```zsh
-python3 -m http.server 8000
-```
+Zsh terminal for setup scripts
 
-Then open:
+Setup & Play
+# Clone repository
+git clone https://github.com/zonagreentea/osu_megamix.git
+cd osu_megamix
 
-```
-http://localhost:8000
-```
+# Run the full playable prototype setup
+./setup_full_playable.sh
 
-Same site. Same game.
+# Launch base cat layer (includes playable Megamix)
+python3 layers/cat/main.py
+Controls
 
----
+osu!standard: mouse or keyboard (canonical osu! keybinds)
 
-## Subtle zsh flex
+osu!taiko: default drum keys
 
-Print a clickable link in terminal:
+osu!catch: Z/X + Shift for catcher movement
 
-```zsh
-print -Pn '\e]8;;https://<username>.github.io/<repo-name>/\aosu!megamix\e]8;;\a\n'
-```
+osu!mania: D/F/J/K for four-lane notes
 
-Terminal → click → browser → game.
+Burst-to-Mix: always active, no fail screen
 
----
+📂 Directory Structure
+layers/
+ ├─ cat/                # Base layer, includes hooks to full playable prototype
+ ├─ full_playable/      # Auto-map engine prototype
+ ├─ osu/                # osu!standard mode
+ ├─ taiko/              # osu!taiko mode
+ ├─ catch/              # osu!catch mode
+ ├─ mania/              # osu!mania mode
+ └─ megamix/            # Cross-mode infinite mix
+scripts/
+ ├─ setup_full_playable.sh  # Sets up playable prototype layer
+README.md
+LICENSE
+💡 Philosophy & Vision
 
-## Philosophy
+Red-Charizard ethos: fun > strict rules; the system always prioritizes playability.
 
-- no ball, no rules
-- continuity over completion
-- fun > correctness
-- if it runs, it exists
+Long-term vitality: hybrid deterministic engine ensures the mix never stops.
 
-This is not a finished product.
-It’s a **living link**.
+Player-driven continuation: “Bust to mix” preserves momentum without punishment.
 
----
+Soft-coded until Valentine’s: experimental layers remain flexible for safe modifications.
 
-## Next (optional, not required)
+⚡ Roadmap
 
-- Audio sync
-- Mode switching (osu / taiko / mania)
-- Megamix continuity timer
-- Bust-to-mix logic
-- Python backend (FastAPI) for scores
+ Full playable prototype layer
 
-None of this is urgent.
+ Multi-mode integration (osu!, taiko, catch, mania)
 
-Let it live first.
+ Burst-to-Mix continuity
 
+ Spotify / external audio input integration
+
+ One-click all-platform release package
+
+ Further UI/UX polish for arcade-style gameplay
+
+📝 Contributing
+
+Fork the repository and create a branch
+
+Maintain Red-Charizard and Bust-to-Mix invariants
+
+Submit pull requests with clean, modular code
+
+Follow zsh + markdown + soft-coded prototype principles
+
+📜 License
+
+This project is licensed under MIT License – see LICENSE
+ for details.
