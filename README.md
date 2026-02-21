@@ -1,127 +1,134 @@
 osu!mix / osu!megamix
 
-osu!mix (aka megamix) is a hybrid rhythm engine and playable prototype for all your osu! fantasies, combining osu!standard, taiko, catch, mania, and a custom Megamix mode in a continuous, seamless, player-driven mix. It’s playable on desktop (mouse + keyboard), supports infinite auto-generation, and respects the Red-Charizard philosophy: fun first, rules second.
+osu!mix (aka Megamix) is a hybrid rhythm engine and playable prototype for all your osu! fantasies, combining osu!standard, taiko, catch, mania, and a custom Megamix mode into a continuous, seamless, player-driven mix. It supports infinite auto-generation, adaptive layer blending, and the Red-Charizard philosophy: fun first, rules second.
 
-🎵 Features
-Core Gameplay Modes
+It is playable on desktop using mouse + keyboard, with optional hybrid input modes, and is designed for experimentation, prototyping, and endless gameplay.
 
-osu!mix osu! – Standard circles, fully playable with mouse or keyboard.
+🎵 Core Gameplay Modes
+Mode	Input	Notes
+osu!	Mouse / Keyboard	Standard circle hits, fully playable.
+Taiko	Default drum keys	Right-to-left scrolling percussion.
+Catch	Z/X + Shift	Fast-paced catcher mode with sliding movement.
+Mania	D/F/J/K	Four lanes, random musical note generation.
+Megamix	Mouse + Z/X/C/V	Cross-mode auto-generation with real-time adaptive blending; Burst-to-Mix ensures you never fail.
+🧠 Engine & Gameplay Philosophy
 
-osu!taiko – Right-to-left scrolling drum beats, classic taiko rules.
+Burst-to-Mix: Players never “end.” Failing triggers a soft transition back into the ongoing mix instead of a fail screen.
 
-osu!catch – Fast-paced catcher mode, slide-based movement, keys Z/X + Shift by default.
+Continuous Audio Layer: The audio timeline never pauses. Mode transitions happen seamlessly while gameplay continues.
 
-osu!mania – Four lanes, random musical note generation, keyboard-focused.
+Mode Flow Display: Text indicates which mode layer is currently dominant to help players anticipate changes.
 
-osu!mix / Megamix – Cross-mode auto-generation, continuous audio timeline, “bust to mix” instead of fail.
+Hybrid Auto-Mix Engine: Deterministic “Hyborgian flip” heartbeat for infinite, adaptive mix generation.
 
-Engine & Gameplay Philosophy
+Full Input Handling: Canon keybinds for all modes; mouse, keyboard, or hybrid.
 
-Burst-to-Mix: players never “end” or get eliminated; failing triggers a soft transition back into the ongoing mix.
+Ultra-Minimalist Workflow: Zsh-native setup scripts and markdown-driven prototypes for fast, maintainable iteration.
 
-Continuous Audio Layer: the mix never pauses; mode transitions happen seamlessly while the audio keeps playing.
+Roaming Title Screen: Click the logo to start; no forced menus — jump straight into the mix.
 
-Hybrid Auto-Mix Engine: uses a deterministic “Hyborgian flip” heartbeat for infinite mix generation.
+⚙️ Developer & Prototyping Tools
 
-Ultra-Minimalist Zsh/Markdown Workflow: setup scripts are zsh-native, lightweight, and maintainable.
+Full Playable Prototype Layer: Auto-generates hit objects based on audio input.
 
-Full Input Handling: canon keybinds for all modes with mouse, keyboard, or hybrid.
+Cat Layer Integration: Launch playable prototypes seamlessly from the base layer.
 
-Roaming Title Screen: click the logo to start; no forced menus, just jump into the mix.
+Customizable Auto-Map Parameters: Soft-coded until Valentine’s, enabling safe experimentation.
 
-Developer & Prototyping Tools
+Logging & Persistence: Every Megamix session is logged for replayability and analysis.
 
-Full playable prototype layer (layers/full_playable) auto-generates hit objects based on audio input.
+📂 Directory Structure
+layers/
+├─ cat/               # Base layer; hooks to full playable prototype
+├─ full_playable/     # Auto-map engine prototype
+├─ osu/               # osu!standard mode
+├─ taiko/             # osu!taiko mode
+├─ catch/             # osu!catch mode
+├─ mania/             # osu!mania mode
+└─ megamix/           # Cross-mode infinite mix scripts
+setup_full_playable.sh # Setup script for playable prototype layer
+README.md
+LICENSE
+🚀 Getting Started on PC
 
-Cat layer integration: seamless launching of playable prototypes from the base layer.
-
-Customizable auto-map parameters: soft-coded until Valentine’s, allowing safe experimentation.
-
-Logging & Persistence: every Megamix session is fully logged for replayability.
-
-🚀 Quick Start
-Requirements
+Install Requirements
 
 Python 3.10+
 
 NumPy
- (pip install numpy)
+ → pip install numpy
 
 SoX
- (for audio input / playable prototypes)
+ for audio input
 
-Zsh terminal for setup scripts
+Zsh terminal (recommended for setup scripts; optional on Windows via WSL or Git Bash)
 
-Setup & Play
-# Clone repository
+Clone Repository
+
 git clone https://github.com/zonagreentea/osu_megamix.git
 cd osu_megamix
 
-# Run the full playable prototype setup
+Run Full Playable Prototype Setup
+
 ./setup_full_playable.sh
 
-# Launch base cat layer (includes playable Megamix)
+Launch Base Cat Layer (includes playable Megamix)
+
 python3 layers/cat/main.py
+
 Controls
+| Mode | Input |
+|------|-------|
+| osu! | Mouse / Keyboard (canonical osu! keys) |
+| Taiko | Default drum keys |
+| Catch | Z/X + Shift |
+| Mania | D/F/J/K |
+| Megamix | Mouse + Z/X/C/V, adaptive blending |
 
-osu!standard: mouse or keyboard (canonical osu! keybinds)
+Gameplay Notes
 
-osu!taiko: default drum keys
+Burst-to-Mix is always active. No fail screen.
 
-osu!catch: Z/X + Shift for catcher movement
+Mode transitions are dynamic and adaptive to music.
 
-osu!mania: D/F/J/K for four-lane notes
+Dominant layers are displayed via Mode Flow Text.
 
-Burst-to-Mix: always active, no fail screen
+All layers are unlocked automatically; only important layers are emphasized per song section.
 
-📂 Directory Structure
-layers/
- ├─ cat/                # Base layer, includes hooks to full playable prototype
- ├─ full_playable/      # Auto-map engine prototype
- ├─ osu/                # osu!standard mode
- ├─ taiko/              # osu!taiko mode
- ├─ catch/              # osu!catch mode
- ├─ mania/              # osu!mania mode
- └─ megamix/            # Cross-mode infinite mix
-scripts/
- ├─ setup_full_playable.sh  # Sets up playable prototype layer
-README.md
-LICENSE
 💡 Philosophy & Vision
 
-Red-Charizard ethos: fun > strict rules; the system always prioritizes playability.
+Red-Charizard Ethos: Fun > strict rules. Always prioritize playability and enjoyment.
 
-Long-term vitality: hybrid deterministic engine ensures the mix never stops.
+Long-Term Vitality: Hybrid deterministic engine ensures the mix never stops.
 
-Player-driven continuation: “Bust to mix” preserves momentum without punishment.
+Player-Driven Continuation: “Bust to Mix” preserves momentum without punishment.
 
-Soft-coded until Valentine’s: experimental layers remain flexible for safe modifications.
+Soft-Coded Layers Until Valentine’s: Experimental layers remain flexible for safe modifications.
 
 ⚡ Roadmap
 
- Full playable prototype layer
+Full playable prototype layer refinement
 
- Multi-mode integration (osu!, taiko, catch, mania)
+Multi-mode integration (osu!, taiko, catch, mania)
 
- Burst-to-Mix continuity
+Burst-to-Mix continuity
 
- Spotify / external audio input integration
+Spotify / external audio input integration
 
- One-click all-platform release package
+One-click all-platform release package
 
- Further UI/UX polish for arcade-style gameplay
+Further UI/UX polish for arcade-style gameplay
 
 📝 Contributing
 
-Fork the repository and create a branch
+Fork the repository and create a branch.
 
-Maintain Red-Charizard and Bust-to-Mix invariants
+Maintain Red-Charizard and Burst-to-Mix invariants.
 
-Submit pull requests with clean, modular code
+Submit pull requests with clean, modular code.
 
-Follow zsh + markdown + soft-coded prototype principles
+Follow Zsh + Markdown + soft-coded prototype principles.
 
 📜 License
 
-This project is licensed under MIT License – see LICENSE
- for details.
+This project is licensed under the MIT License – see LICENSE for details.
