@@ -1,11 +1,9 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    overflow: hidden;
-    background: #0a0a0a; /* subtle dark flex */
+body {
+  margin: 0;
+  overflow: hidden;
+  background: black;
 }
 
 canvas {
-    display: block;
+  display: block;
 }
-

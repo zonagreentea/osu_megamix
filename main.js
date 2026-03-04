@@ -1,51 +1,90 @@
-const canvas = document.getElementById('petCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-const pet = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    radius: 25,
-    color: '#FF00FF', // subtle flex color
-    speed: 5,
-    boost: 12,
+const lanes = 4;
+const laneWidth = canvas.width / lanes;
+const hitLineY = canvas.height - 150;
+
+let notes = [];
+let score = 0;
+
+const keys = {
+  d: 0,
+  f: 1,
+  j: 2,
+  k: 3
 };
 
-const keys = { left: false, right: false, boost: false };
-
-window.addEventListener('keydown', (e) => {
-    if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-    if(e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
-    if(e.key === 'Shift') keys.boost = true;
+document.addEventListener("keydown", (e) => {
+  const lane = keys[e.key];
+  if (lane !== undefined) {
+    checkHit(lane);
+  }
 });
 
-window.addEventListener('keyup', (e) => {
-    if(e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-    if(e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
-    if(e.key === 'Shift') keys.boost = false;
-});
+function spawnNote() {
+  const lane = Math.floor(Math.random() * lanes);
+  notes.push({
+    lane,
+    y: -20,
+    speed: 4
+  });
+}
+
+function checkHit(lane) {
+  for (let i = 0; i < notes.length; i++) {
+    const n = notes[i];
+    if (n.lane === lane && Math.abs(n.y - hitLineY) < 30) {
+      notes.splice(i, 1);
+      score += 100;
+      return;
+    }
+  }
+}
 
 function update() {
-    const moveSpeed = keys.boost ? pet.boost : pet.speed;
-    if(keys.left) pet.x -= moveSpeed;
-    if(keys.right) pet.x += moveSpeed;
-    pet.x = Math.max(pet.radius, Math.min(canvas.width - pet.radius, pet.x));
+  notes.forEach(n => n.y += n.speed);
+  notes = notes.filter(n => n.y < canvas.height);
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = pet.color;
-    ctx.beginPath();
-    ctx.arc(pet.x, pet.y, pet.radius, 0, Math.PI * 2);
-    ctx.fill();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // lanes
+  for (let i = 0; i < lanes; i++) {
+    ctx.strokeStyle = "#222";
+    ctx.strokeRect(i * laneWidth, 0, laneWidth, canvas.height);
+  }
+
+  // hit line
+  ctx.fillStyle = "white";
+  ctx.fillRect(0, hitLineY, canvas.width, 5);
+
+  // notes
+  ctx.fillStyle = "lime";
+  notes.forEach(n => {
+    ctx.fillRect(
+      n.lane * laneWidth + laneWidth * 0.2,
+      n.y,
+      laneWidth * 0.6,
+      20
+    );
+  });
+
+  // score
+  ctx.fillStyle = "white";
+  ctx.font = "24px Arial";
+  ctx.fillText("Score: " + score, 20, 40);
 }
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
 }
 
-loop();
-
+setInterval(spawnNote, 600);
+gameLoop();
