@@ -1,0 +1,140 @@
+name: osu!megamix.mix (final)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: "osu!megamix.mix"
+  TARGET_NAME: "cat_ultra"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python (venv)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Create venv + install (pyproject)
+        shell: bash
+        run: |
+          set -e
+          python -m venv .venv
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            . .venv/Scripts/activate
+          else
+            . .venv/bin/activate
+          fi
+          python -m pip install -U pip
+          pip install . || true
+
+      - name: Build ultra (CMake cat_ultra)
+        shell: bash
+        run: |
+          set -e
+          cmake -S ultra -B ultra_build -DCMAKE_BUILD_TYPE=Release
+          cmake --build ultra_build --config Release --target "${TARGET_NAME}"
+
+      - name: Package (mac/linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -e
+          mkdir -p out
+          BIN="ultra_build/${TARGET_NAME}"
+          [ -x "$BIN" ] || { echo "missing executable: $BIN"; exit 2; }
+          cp "$BIN" out/osu_megamix
+          chmod +x out/osu_megamix
+          cp "osu!megamix.mix" "out/osu!megamix.mix"
+          chmod +x "out/osu!megamix.mix" || true
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            (cd out && zip -r "osu!megamix.mix-mac.zip" osu_megamix "osu!megamix.mix" >/dev/null)
+          else
+            (cd out && tar -czf "osu!megamix.mix-linux.tgz" osu_megamix "osu!megamix.mix")
+          fi
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+
+          $bin = Join-Path "ultra_build" "${{ env.TARGET_NAME }}.exe"
+          if (!(Test-Path $bin)) { throw "missing executable: $bin" }
+
+          Copy-Item $bin out\osu_megamix.exe
+          New-Item -ItemType Directory -Force -Path out\win | Out-Null
+          Copy-Item out\osu_megamix.exe out\win\osu_megamix.exe
+          Copy-Item "osu!megamix.mix" "out\win\osu!megamix.mix"
+
+          @'
+          $ErrorActionPreference = "Stop"
+          $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+          $Exe  = Join-Path $Here "osu_megamix.exe"
+          if (!(Test-Path $Exe)) { throw "Missing osu_megamix.exe next to this script." }
+          $ProgId = "osu.megamix.mix"
+          New-Item -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Force | Out-Null
+          Set-ItemProperty -Path "HKCU:\Software\Classes\$ProgId\shell\open\command" -Name "(Default)" -Value "`"$Exe`" `"%1`"" -Force
+          New-Item -Path "HKCU:\Software\Classes\.mix" -Force | Out-Null
+          Set-ItemProperty -Path "HKCU:\Software\Classes\.mix" -Name "(Default)" -Value $ProgId -Force
+          Stop-Process -Name explorer -Force
+          Start-Process explorer
+          Write-Host "OK: double-click .mix now opens osu!megamix for this user."
+          '@ | Out-File -Encoding UTF8 out\win\install-mix-association.ps1
+
+          @'
+          WINDOWS - osu!megamix
+          1) Unzip
+          2) Right-click install-mix-association.ps1 -> Run with PowerShell
+          3) Double-click osu!megamix.mix
+          '@ | Out-File -Encoding UTF8 out\win\README.txt
+
+          Compress-Archive -Path out\win\* -DestinationPath out\osu!megamix.mix-win.zip -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: out-${{ runner.os }}
+          path: out/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect release files
+        shell: bash
+        run: |
+          set -e
+          mkdir -p release
+          find artifacts -type f \( -name 'osu!megamix.mix-*.zip' -o -name 'osu!megamix.mix-*.tgz' \) -print -exec cp {} release/ \;
+          ls -la release
+
+      - name: Publish single release (osu!megamix.mix)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_TAG }}
+          body: |
+            THE ONLY RELEASE.
+
+            mac: download osu!megamix.mix-mac.zip -> unzip -> double-click osu!megamix.mix
+            win: download osu!megamix.mix-win.zip -> unzip -> run install-mix-association.ps1 once -> double-click osu!megamix.mix
+            linux: download osu!megamix.mix-linux.tgz -> unzip -> run ./osu!megamix.mix
+          files: |
+            release/*

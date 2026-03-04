@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>osu!megamix 1d tease</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none;
+}
+canvas {
+  display: block;
+  margin: 0 auto;
+  background: #222;
+}
+#info {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  color: #fff;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 10;
+}
+</style>
+</head>
+<body>
+<div id="info">
+Controls:<br>
+<strong>osu!</strong>: Mouse click / Z X<br>
+<strong>Taiko</strong>: D F (left) / J K (right) or mouse<br>
+<strong>Catch</strong>: Z X to move, Shift to sprint, or mouse slide<br>
+<strong>Mania</strong>: F J D K / mouse click
+</div>
+<canvas id="gameCanvas" width="256" height="192"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let width = canvas.width;
+let height = canvas.height;
+
+let mouseX = width/2, mouseDown=false;
+let keys = {};
+let gameModes = ['osu','taiko','catch','mania','megamix'];
+let currentMode = 0;
+let tick = 0;
+
+// Catch settings
+let catcher = {x: width/2, speed: 2, sprint: 1};
+let sprinting = false;
+
+// Input handling
+document.addEventListener('mousemove', e=>{
+  let rect = canvas.getBoundingClientRect();
+  mouseX = (e.clientX - rect.left)/rect.width*width;
+});
+document.addEventListener('mousedown', e=>{ mouseDown=true; });
+document.addEventListener('mouseup', e=>{ mouseDown=false; });
+document.addEventListener('keydown', e=>{ keys[e.key.toLowerCase()]=true; });
+document.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+
+// Basic utility
+function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+// Main loop
+function update(){
+  tick++;
+  
+  // Handle mode switching every 10k ticks for demo
+  if(tick % 10000 === 0) currentMode = (currentMode+1)%gameModes.length;
+
+  ctx.clearRect(0,0,width,height);
+
+  // Example: draw different background per mode
+  switch(gameModes[currentMode]){
+    case 'osu':
+      ctx.fillStyle='#222';
+      ctx.fillRect(0,0,width,height);
+      // Draw a moving circle
+      ctx.fillStyle='#0f0';
+      let osuX = width/2 + Math.sin(tick/10)*60;
+      let osuY = height/2 + Math.cos(tick/20)*40;
+      ctx.beginPath();
+      ctx.arc(osuX, osuY, 15,0,Math.PI*2);
+      ctx.fill();
+      break;
+    case 'taiko':
+      ctx.fillStyle='#111';
+      ctx.fillRect(0,0,width,height);
+      ctx.fillStyle='#f00';
+      // scrolling right to left
+      for(let i=0;i<5;i++){
+        let x = width - (tick*2 + i*50)% (width+50);
+        ctx.beginPath();
+        ctx.arc(x,height/2,20,0,Math.PI*2);
+        ctx.fill();
+      }
+      break;
+    case 'catch':
+      ctx.fillStyle='#000';
+      ctx.fillRect(0,0,width,height);
+      // Move catcher with ZX + sprint
+      sprinting = keys['shift'];
+      let moveSpeed = catcher.speed * (sprinting?1.5:1);
+      if(keys['z']) catcher.x -= moveSpeed;
+      if(keys['x']) catcher.x += moveSpeed;
+      // Mouse override
+      if(mouseDown) catcher.x += (mouseX - catcher.x)*0.1*(sprinting?1.5:1);
+      catcher.x = clamp(catcher.x, 20, width-20);
+      // Draw catcher
+      ctx.fillStyle='#ff0';
+      ctx.fillRect(catcher.x-15,height-30,30,10);
+      // Drop fruits
+      ctx.fillStyle='#0ff';
+      for(let i=0;i<5;i++){
+        let fx = 40 + ((tick+i*40)*1.5)% (width-40);
+        let fy = ((tick+i*100)%height);
+        ctx.beginPath();
+        ctx.arc(fx, fy, 5,0,Math.PI*2);
+        ctx.fill();
+      }
+      break;
+    case 'mania':
+      ctx.fillStyle='#111';
+      ctx.fillRect(0,0,width,height);
+      ctx.fillStyle='#f0f';
+      let lanes = ['f','j','d','k'];
+      for(let i=0;i<4;i++){
+        if(keys[lanes[i]]) ctx.fillRect(50+i*50, height-50, 40, 40);
+      }
+      break;
+    case 'megamix':
+      ctx.fillStyle='#222';
+      ctx.fillRect(0,0,width,height);
+      ctx.fillStyle='#fff';
+      ctx.font = '20px monospace';
+      ctx.fillText('BURST TO MEGAMIX',20,height/2);
+      break;
+  }
+  
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+</body>
+</html>
+
