@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gromp Rhythm</title>
+  <style>
+    body { margin:0; background:#0a0a0f; overflow:hidden; }
+    canvas { display:block; margin:auto; background:#111; }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 800;
+canvas.height = 600;
+
+let notes = [];
+let score = 0;
+
+function gromp(t){
+  return Math.sin(t*0.002) + Math.sin(t*0.0007);
+}
+
+function spawnNote(){
+  const t = Date.now();
+  const g = gromp(t);
+
+  notes.push({
+    x: 400 + g * 200,
+    y: 0,
+    hitTime: t + 1000
+  });
+}
+
+setInterval(spawnNote, 500);
+
+document.addEventListener("keydown", (e) => {
+  const now = Date.now();
+
+  notes = notes.filter(n => {
+    const dx = Math.abs(n.x - 400);
+    const dt = Math.abs(now - n.hitTime);
+
+    if (dt < 200 && dx < 120) {
+      score += 100;
+      console.log("HIT");
+      return false;
+    }
+    return true;
+  });
+});
+
+function loop(){
+  ctx.clearRect(0,0,800,600);
+
+  const now = Date.now();
+
+  for (let n of notes){
+    const progress = (now - (n.hitTime - 1000)) / 1000;
+    n.y = progress * 600;
+
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 20, 0, Math.PI*2);
+    ctx.strokeStyle = "white";
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "white";
+  ctx.fillText("Score: " + score, 20, 20);
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>
