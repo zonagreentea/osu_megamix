@@ -1,23 +1,148 @@
 <!doctype html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>osu!megamix</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="utf-8"/>
+<title>osu!megamix 1e gromp</title>
+<style>
+  body { margin:0; background:#000; overflow:hidden; font-family:monospace; }
+  canvas { display:block; margin:auto; background:#050505; }
+  #hud { position:fixed; top:10px; left:10px; color:#0f0; }
+</style>
 </head>
-
 <body>
-
-<!-- MENU -->
-<div id="menu">
-  <div id="logo">osu!</div>
-  <div id="hint">click to play</div>
-</div>
-
+<canvas id="c" width="512" height="384"></canvas>
 <div id="hud"></div>
-<div id="player"></div>
 
-<script src="game.js"></script>
+<script>
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+const hud = document.getElementById("hud");
 
+let modeIndex = 0;
+const modes = ["osu", "taiko", "catch", "mania"];
+
+let flow = 0;
+let score = 0;
+let combo = 0;
+
+let obj = null;
+
+function grompTime(){
+  return Math.floor(Date.now() / 1000);
+}
+
+function nextMode(){
+  modeIndex = (Math.floor(grompTime()/60)) % modes.length;
+}
+
+function spawn(){
+  const mode = modes[modeIndex];
+
+  if(mode === "osu"){
+    obj = {type:"circle", x:Math.random()*512, y:Math.random()*384, r:20};
+  }
+
+  if(mode === "taiko"){
+    obj = {type:"taiko", side:Math.random()>0.5?"L":"R", r:30};
+  }
+
+  if(mode === "catch"){
+    obj = {type:"fruit", x:Math.random()*512, y:0};
+  }
+
+  if(mode === "mania"){
+    obj = {type:"note", lane:Math.floor(Math.random()*4)};
+  }
+}
+
+function hit(){
+  score += 100;
+  combo++;
+  flow++;
+  spawn();
+}
+
+function miss(){
+  combo = 0;
+  flow = 0;
+  spawn();
+}
+
+canvas.addEventListener("click", (e)=>{
+  if(!obj) return;
+
+  const rect = c.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const mode = modes[modeIndex];
+
+  if(mode==="osu"){
+    const dx = x-obj.x, dy=y-obj.y;
+    if(Math.hypot(dx,dy)<obj.r) hit(); else miss();
+  }
+
+  else if(mode==="taiko"){
+    if((x<256 && obj.side==="L") || (x>=256 && obj.side==="R")) hit();
+    else miss();
+  }
+
+  else if(mode==="catch"){
+    if(Math.abs(x-obj.x)<40) hit(); else miss();
+  }
+
+  else if(mode==="mania"){
+    const laneX = obj.lane*128 + 64;
+    if(Math.abs(x-laneX)<40) hit(); else miss();
+  }
+});
+
+function draw(){
+  ctx.clearRect(0,0,512,384);
+
+  const mode = modes[modeIndex];
+
+  ctx.fillStyle="#0f0";
+  ctx.fillText("MODE: "+mode,10,20);
+  ctx.fillText("SCORE:"+score+" COMBO:"+combo+" FLOW:"+flow,10,40);
+
+  if(!obj) spawn();
+
+  if(mode==="osu" && obj.type==="circle"){
+    ctx.strokeStyle="pink";
+    ctx.beginPath();
+    ctx.arc(obj.x,obj.y,obj.r,0,Math.PI*2);
+    ctx.stroke();
+  }
+
+  if(mode==="taiko"){
+    ctx.fillStyle=obj.side==="L"?"red":"blue";
+    ctx.fillRect(obj.side==="L"?100:400,180,40,40);
+  }
+
+  if(mode==="catch"){
+    ctx.fillStyle="yellow";
+    ctx.fillRect(obj.x,obj.y,20,10);
+    obj.y += 2;
+    if(obj.y>384) miss();
+  }
+
+  if(mode==="mania"){
+    for(let i=0;i<4;i++){
+      ctx.fillStyle=i===obj.lane?"white":"#222";
+      ctx.fillRect(i*128,300,128,20);
+    }
+  }
+}
+
+function loop(){
+  nextMode();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+spawn();
+loop();
+</script>
 </body>
 </html>
