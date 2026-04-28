@@ -2,126 +2,144 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>osu!megamix prototype</title>
+<title>osu!megamix visual build</title>
 <style>
-  body { margin:0; background:black; overflow:hidden; font-family:sans-serif; }
-  canvas { display:block; }
+  body {
+    margin:0;
+    background:#050505;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    overflow:hidden;
+    font-family:sans-serif;
+  }
+  canvas {
+    border-radius:12px;
+    box-shadow:0 0 80px rgba(0,0,0,0.9);
+  }
   #ui {
     position:fixed;
-    top:10px;
-    left:10px;
-    color:white;
-    font-size:14px;
-    opacity:0.8;
+    top:14px;
+    left:14px;
+    color:#fff;
+    font-size:13px;
+    letter-spacing:1px;
+    background:rgba(255,255,255,0.05);
+    padding:6px 10px;
+    border-radius:6px;
+    backdrop-filter: blur(6px);
   }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="ui">mode: osu</div>
+<div id="ui"></div>
 
 <script>
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
 
+// ---------- 4:3 ----------
+const W=1024, H=768;
 function resize(){
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  let s=Math.min(innerWidth/W, innerHeight/H);
+  canvas.width=W*s;
+  canvas.height=H*s;
+  ctx.setTransform(s,0,0,s,0,0);
 }
-window.onresize = resize;
-resize();
+onresize=resize; resize();
 
-// ---------- GLOBAL CLOCK ----------
-let start = Date.now();
-function time(){
-  return (Date.now() - start) / 1000;
-}
+// ---------- TIME ----------
+let start=Date.now();
+const time=()=> (Date.now()-start)/1000;
 
-// ---------- MODE SYSTEM ----------
-const modes = ["osu","taiko","catch","mania"];
-let modeIndex = 0;
-
-setInterval(()=>{
-  modeIndex = (modeIndex + 1) % modes.length;
-}, 10000); // switch every 10s
-
-function mode(){
-  return modes[modeIndex];
-}
+// ---------- MODES ----------
+const modes=["osu","taiko","catch","mania"];
+let modeIndex=0;
+setInterval(()=>modeIndex=(modeIndex+1)%4,10000);
+const mode=()=>modes[modeIndex];
 
 // ---------- INPUT ----------
-let keys = {};
-window.onkeydown = e => keys[e.key] = true;
-window.onkeyup = e => keys[e.key] = false;
-let mouse = {x:0,y:0,down:false};
-window.onmousemove = e => { mouse.x=e.clientX; mouse.y=e.clientY; };
-window.onmousedown = ()=> mouse.down=true;
-window.onmouseup = ()=> mouse.down=false;
+let keys={}, mouse={x:0,y:0,down:false};
+onkeydown=e=>keys[e.key]=true;
+onkeyup=e=>keys[e.key]=false;
+onmousemove=e=>{
+  let r=canvas.getBoundingClientRect();
+  mouse.x=(e.clientX-r.left)*(W/canvas.width);
+  mouse.y=(e.clientY-r.top)*(H/canvas.height);
+};
+onmousedown=()=>mouse.down=true;
+onmouseup=()=>mouse.down=false;
 
 // ---------- OBJECTS ----------
-let objects = [];
+let objects=[], particles=[];
 
 function spawn(){
-  let m = mode();
-  if(m==="osu"){
-    objects.push({
-      x:Math.random()*canvas.width,
-      y:Math.random()*canvas.height,
-      r:30,
-      t:time()
-    });
-  }
-  if(m==="taiko"){
-    objects.push({
-      x:canvas.width,
-      y:canvas.height/2,
-      type: Math.random()>0.5?"red":"blue"
-    });
-  }
-  if(m==="catch"){
-    objects.push({
-      x:Math.random()*canvas.width,
-      y:-20,
-      vy:4
-    });
-  }
-  if(m==="mania"){
-    objects.push({
-      lane: Math.floor(Math.random()*4),
-      y:-20,
-      vy:5
+  let m=mode();
+  if(m==="osu") objects.push({x:Math.random()*W,y:Math.random()*H,r:36});
+  if(m==="taiko") objects.push({x:W,y:H/2,type:Math.random()>0.5?"red":"blue"});
+  if(m==="catch") objects.push({x:Math.random()*W,y:-20,vy:4});
+  if(m==="mania") objects.push({lane:Math.floor(Math.random()*4),y:-20,vy:5});
+}
+setInterval(spawn,500);
+
+// ---------- FX ----------
+function burst(x,y,color){
+  for(let i=0;i<12;i++){
+    particles.push({
+      x,y,
+      vx:(Math.random()-0.5)*6,
+      vy:(Math.random()-0.5)*6,
+      life:1,
+      color
     });
   }
 }
 
-setInterval(spawn, 600);
-
 // ---------- PLAYER ----------
-let catcher = {x:canvas.width/2};
-let score = 0;
+let catcher={x:W/2}, score=0;
 
-// ---------- GAME LOOP ----------
+// ---------- DRAW HELPERS ----------
+function glowCircle(x,y,r,color){
+  for(let i=6;i>0;i--){
+    ctx.globalAlpha=0.05*i;
+    ctx.beginPath();
+    ctx.arc(x,y,r+i*4,0,Math.PI*2);
+    ctx.fillStyle=color;
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=color;
+  ctx.fill();
+}
+
+// ---------- LOOP ----------
 function loop(){
   requestAnimationFrame(loop);
-  ctx.fillStyle = "black";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  let m = mode();
-  ui.innerText = "mode: " + m + " | score: " + score;
+  // gradient background
+  let g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,"#0a0f1f");
+  g.addColorStop(1,"#050505");
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,H);
+
+  let m=mode();
+  ui.innerText=`${m} | score ${score}`;
 
   // ---- OSU ----
   if(m==="osu"){
     objects.forEach((o,i)=>{
-      ctx.beginPath();
-      ctx.strokeStyle="pink";
-      ctx.arc(o.x,o.y,o.r,0,Math.PI*2);
-      ctx.stroke();
+      glowCircle(o.x,o.y,o.r,"#ff66cc");
 
       if(mouse.down){
-        let dx = mouse.x - o.x;
-        let dy = mouse.y - o.y;
-        if(Math.sqrt(dx*dx+dy*dy)<o.r){
+        let dx=mouse.x-o.x, dy=mouse.y-o.y;
+        if(dx*dx+dy*dy<o.r*o.r){
+          burst(o.x,o.y,"#ff66cc");
           objects.splice(i,1);
           score++;
         }
@@ -131,18 +149,17 @@ function loop(){
 
   // ---- TAIKO ----
   if(m==="taiko"){
-    ctx.fillStyle="white";
-    ctx.fillRect(100, canvas.height/2-50, 20,100);
+    ctx.fillStyle="#fff";
+    ctx.fillRect(150,H/2-40,6,80);
 
     objects.forEach((o,i)=>{
-      o.x -= 6;
-      ctx.fillStyle = o.type==="red"?"red":"blue";
-      ctx.beginPath();
-      ctx.arc(o.x,o.y,20,0,Math.PI*2);
-      ctx.fill();
+      o.x-=6;
+      let color=o.type==="red"?"#ff4d4d":"#4da6ff";
+      glowCircle(o.x,o.y,22,color);
 
-      if(o.x < 120){
-        if((o.type==="red" && keys["z"]) || (o.type==="blue" && keys["x"])){
+      if(o.x<160){
+        if((o.type==="red"&&keys["z"])||(o.type==="blue"&&keys["x"])){
+          burst(o.x,o.y,color);
           score++;
         }
         objects.splice(i,1);
@@ -152,19 +169,16 @@ function loop(){
 
   // ---- CATCH ----
   if(m==="catch"){
-    catcher.x = mouse.x;
-    ctx.fillStyle="yellow";
-    ctx.fillRect(catcher.x-40, canvas.height-20, 80,10);
+    catcher.x=mouse.x;
+    glowCircle(catcher.x,H-30,40,"#ffd966");
 
     objects.forEach((o,i)=>{
-      o.y += o.vy;
-      ctx.fillStyle="lime";
-      ctx.beginPath();
-      ctx.arc(o.x,o.y,10,0,Math.PI*2);
-      ctx.fill();
+      o.y+=o.vy;
+      glowCircle(o.x,o.y,10,"#66ff99");
 
-      if(o.y > canvas.height-20){
-        if(Math.abs(o.x - catcher.x)<50){
+      if(o.y>H-30){
+        if(Math.abs(o.x-catcher.x)<60){
+          burst(o.x,o.y,"#66ff99");
           score++;
         }
         objects.splice(i,1);
@@ -174,39 +188,49 @@ function loop(){
 
   // ---- MANIA ----
   if(m==="mania"){
-    let lanes = 4;
-    let w = canvas.width / lanes;
+    let lanes=4, w=W/lanes;
+
+    ctx.fillStyle="#111";
+    ctx.fillRect(0,H-120,W,120);
 
     for(let i=0;i<lanes;i++){
-      ctx.strokeStyle="white";
-      ctx.strokeRect(i*w,0,w,canvas.height);
+      ctx.strokeStyle="#333";
+      ctx.strokeRect(i*w,0,w,H);
     }
 
     objects.forEach((o,i)=>{
-      o.y += o.vy;
-      let x = o.lane * w + w/2;
+      o.y+=o.vy;
+      let x=o.lane*w+w/2;
+      glowCircle(x,o.y,18,"#66ccff");
 
-      ctx.fillStyle="cyan";
-      ctx.fillRect(x-20,o.y,40,20);
-
-      if(o.y > canvas.height-100){
-        let key = ["z","x",",","."][o.lane];
+      if(o.y>H-120){
+        let key=["z","x",",","."][o.lane];
         if(keys[key]){
+          burst(x,o.y,"#66ccff");
           score++;
           objects.splice(i,1);
         }
       }
 
-      if(o.y > canvas.height){
-        objects.splice(i,1);
-      }
+      if(o.y>H) objects.splice(i,1);
     });
   }
 
-  // cleanup overflow
-  if(objects.length > 200){
-    objects.splice(0,50);
-  }
+  // ---- PARTICLES ----
+  particles.forEach((p,i)=>{
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.life-=0.03;
+
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.fillRect(p.x,p.y,4,4);
+    ctx.globalAlpha=1;
+
+    if(p.life<=0) particles.splice(i,1);
+  });
+
+  if(objects.length>200) objects.splice(0,50);
 }
 
 loop();
