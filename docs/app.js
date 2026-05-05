@@ -1,91 +1,59 @@
-const canvas = document.querySelector("canvas");
-const ctx = canvas.getContext("2d");
+console.log("APP LOADED");
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+const canvas = window.canvas;
+const ctx = window.ctx;
 
-/* =========================
-   SINGLE SOURCE STATE
-========================= */
 let mode = "osu";
 
-/* OSU */
-let bpm = 120;
-let beatInterval = 60000 / bpm;
-let lastBeat = -1;
+/* state */
 let circles = [];
-
-/* CATCH */
 let catcherX = canvas.width / 2;
 let targetX = catcherX;
 
-/* =========================
-   FIXED INPUT (NO DESYNC)
-========================= */
-window.addEventListener("mousemove", (e) => {
-  const rect = canvas.getBoundingClientRect();
-  targetX = e.clientX - rect.left;
+/* input */
+window.addEventListener("mousemove", e => {
+  const r = canvas.getBoundingClientRect();
+  targetX = e.clientX - r.left;
 });
 
-/* =========================
-   SPAWN (STRICT 1 PER BEAT)
-========================= */
-function spawnCircle() {
+/* spawn */
+function spawn(){
   circles.push({
-    x: Math.random() * canvas.width,
+    x: Math.random()*canvas.width,
     y: -10,
     r: 18,
     v: 2
   });
 }
 
-/* =========================
-   OSU UPDATE
-========================= */
-function updateOsu() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+/* loop */
+function loop(t){
 
-  for (let c of circles) {
-    c.y += c.v;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    ctx.beginPath();
-    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
-    ctx.fillStyle = "white";
-    ctx.fill();
-  }
+  /* 🔥 DEBUG VISUAL (THIS MUST SHOW EVEN IF GAME FAILS) */
+  ctx.fillStyle = "red";
+  ctx.fillRect(10,10,20,20);
 
-  circles = circles.filter(c => c.y < canvas.height + 50);
-}
-
-/* =========================
-   CATCH UPDATE (NO SWING, NO LOCK)
-========================= */
-function updateCatch() {
-  catcherX += (targetX - catcherX) * 0.25;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "white";
-  ctx.fillRect(catcherX - 40, canvas.height - 60, 80, 20);
-}
-
-/* =========================
-   MAIN LOOP (ONLY ONE EVER)
-========================= */
-function loop(t) {
-  if (mode === "osu") {
-    const beat = Math.floor(t / beatInterval);
-
-    if (beat !== lastBeat) {
-      spawnCircle();
-      lastBeat = beat;
+  if(mode === "osu"){
+    if(Math.floor(t/500) % 60 === 0){
+      spawn();
     }
 
-    updateOsu();
+    for(let c of circles){
+      c.y += c.v;
+      ctx.beginPath();
+      ctx.arc(c.x,c.y,c.r,0,Math.PI*2);
+      ctx.fillStyle="white";
+      ctx.fill();
+    }
   }
 
-  if (mode === "catch") {
-    updateCatch();
+  if(mode === "catch"){
+    catcherX += (targetX - catcherX) * 0.25;
+
+    ctx.fillStyle="white";
+    ctx.fillRect(catcherX-40, canvas.height-60, 80, 20);
   }
 
   requestAnimationFrame(loop);
@@ -93,15 +61,7 @@ function loop(t) {
 
 requestAnimationFrame(loop);
 
-/* =========================
-   MODE SWITCH RESET
-========================= */
-window.setMode = (m) => {
+window.setMode = m => {
   mode = m;
-
   circles = [];
-  lastBeat = -1;
-
-  catcherX = canvas.width / 2;
-  targetX = catcherX;
 };

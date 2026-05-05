@@ -1,31 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>osu!megamix</title>
+  <meta charset="utf-8"/>
+  <title>megamix debug</title>
   <style>
-    html,body { margin:0; padding:0; background:black; overflow:hidden; }
-    canvas { display:block; }
+    html,body{margin:0;overflow:hidden;background:black}
+    canvas{display:block}
   </style>
 </head>
 <body>
 
-<canvas id="game"></canvas>
+<canvas id="c"></canvas>
 
 <script>
-window.canvas = document.getElementById("game");
+console.log("INDEX LOADED");
+
+window.canvas = document.getElementById("c");
 window.ctx = canvas.getContext("2d");
 
-function resize(){
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-window.addEventListener("resize", resize);
-resize();
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 </script>
 
-<!-- ENGINE ENTRY -->
-<script src="../engine/core.js"></script>
+<script src="app.js"></script>
 
 </body>
 </html>
