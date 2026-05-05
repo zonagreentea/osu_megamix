@@ -1,0 +1,31 @@
+--- old
++++ new
+@@
+-let catcherX = 0;
++let catcherX = 0;
++let targetX = 0;
+
+-document.onmousemove = function(e) {};
++canvas.addEventListener("mousemove", (e) => {
++  const rect = canvas.getBoundingClientRect();
++  targetX = e.clientX - rect.left;
++});
+
+-function update() {}
++function updateCatch() {
++  catcherX += (targetX - catcherX) * 0.25;
++}
+
+-function draw() {}
++function draw() {
++  updateCatch();
++  drawCatcher(catcherX);
++}
+
++function gameLoop() {
++  updateCatch();
++  render();
++  requestAnimationFrame(gameLoop);
++}
++
++requestAnimationFrame(gameLoop);
