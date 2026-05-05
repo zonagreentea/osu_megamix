@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>MEGAMIX DEBUG</title>
+  <title>MEGAMIX</title>
   <style>
     html,body{margin:0;overflow:hidden;background:black}
     canvas{display:block}
@@ -13,7 +13,7 @@
 <canvas id="c"></canvas>
 
 <script>
-console.log("INDEX LOADED ✔");
+console.log("INDEX LOADED");
 
 window.canvas = document.getElementById("c");
 window.ctx = canvas.getContext("2d");
@@ -22,7 +22,8 @@ canvas.width = innerWidth;
 canvas.height = innerHeight;
 </script>
 
-<script src="./app.js"></script>
+<!-- 🔥 IMPORTANT FIX: absolute-safe path -->
+<script src="./app.js?v=1"></script>
 
 </body>
 </html>
