@@ -4,28 +4,23 @@ const ctx = canvas.getContext("2d");
 canvas.width = innerWidth;
 canvas.height = innerHeight;
 
+/* =========================
+   SINGLE SOURCE STATE
+========================= */
 let mode = "osu";
 
-/* =========================
-   STRICT TIME BASE (fix spam)
-========================= */
+/* OSU */
 let bpm = 120;
 let beatInterval = 60000 / bpm;
 let lastBeat = -1;
-
-/* =========================
-   OSU OBJECTS
-========================= */
 let circles = [];
 
-/* =========================
-   CATCH STATE (FIXED INPUT)
-========================= */
+/* CATCH */
 let catcherX = canvas.width / 2;
 let targetX = catcherX;
 
 /* =========================
-   INPUT (fix broken tracking)
+   FIXED INPUT (NO DESYNC)
 ========================= */
 window.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -33,12 +28,12 @@ window.addEventListener("mousemove", (e) => {
 });
 
 /* =========================
-   SPAWN (NO FRAME DRIFT)
+   SPAWN (STRICT 1 PER BEAT)
 ========================= */
 function spawnCircle() {
   circles.push({
     x: Math.random() * canvas.width,
-    y: -20,
+    y: -10,
     r: 18,
     v: 2
   });
@@ -63,10 +58,10 @@ function updateOsu() {
 }
 
 /* =========================
-   CATCH UPDATE (FIXED MOVE)
+   CATCH UPDATE (NO SWING, NO LOCK)
 ========================= */
 function updateCatch() {
-  catcherX += (targetX - catcherX) * 0.2;
+  catcherX += (targetX - catcherX) * 0.25;
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -75,7 +70,7 @@ function updateCatch() {
 }
 
 /* =========================
-   MAIN LOOP (ONLY ONE SOURCE)
+   MAIN LOOP (ONLY ONE EVER)
 ========================= */
 function loop(t) {
   if (mode === "osu") {
