@@ -1,28 +1,85 @@
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* =========================
+   MEGAMIX CORE FIXED LOOP
+========================= */
 
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+const canvas = window.canvas || document.querySelector("canvas");
+const ctx = window.ctx || canvas.getContext("2d");
+
+let mode = "osu";
+
+/* ===== OSU STATE ===== */
+let bpm = 120;
+let beatInterval = 60000 / bpm;
+let lastBeat = -1;
+
+/* ===== CATCH STATE ===== */
+let catcherX = 0;
+let targetX = 0;
+
+/* =========================
+   INPUT (single source)
+========================= */
+window.addEventListener("mousemove", (e) => {
+  const rect = canvas.getBoundingClientRect();
+  targetX = e.clientX - rect.left;
+});
+
+/* =========================
+   OSU SPAWN (1 per beat)
+========================= */
+function spawnCircle() {
+  console.log("spawn");
 }
-window.onresize = resize;
-resize();
 
-let t = 0;
+/* =========================
+   CATCH UPDATE
+========================= */
+function updateCatch() {
+  catcherX += (targetX - catcherX) * 0.25;
+}
 
-function loop() {
-  t += 0.016;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  const x = canvas.width/2 + Math.sin(t)*200;
-  const y = canvas.height/2;
-
-  ctx.beginPath();
-  ctx.arc(x,y,30,0,Math.PI*2);
+/* =========================
+   DRAW CATCH (minimal test)
+========================= */
+function drawCatch() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = "white";
-  ctx.fill();
+  ctx.fillRect(catcherX, canvas.height - 50, 80, 20);
+}
+
+/* =========================
+   MAIN LOOP (ONE ONLY)
+========================= */
+function loop(t) {
+  if (mode === "osu") {
+    const beat = Math.floor(t / beatInterval);
+
+    if (beat !== lastBeat) {
+      spawnCircle();
+      lastBeat = beat;
+    }
+  }
+
+  if (mode === "catch") {
+    updateCatch();
+    drawCatch();
+  }
 
   requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
+
+/* =========================
+   DEBUG SWITCH
+========================= */
+window.setMode = (m) => {
+  mode = m;
+
+  // hard reset prevents ghost state bugs
+  lastBeat = -1;
+  catcherX = 0;
+  targetX = 0;
+
+  console.log("mode:", mode);
+};
