@@ -1,293 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>osu!megamix MAX</title>
-<style>
-body { margin:0; background:black; overflow:hidden; }
-canvas { display:block; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>osu!megamix</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
 </head>
 <body>
-<canvas id="c"></canvas>
+
+<canvas id="game"></canvas>
+
 <script>
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
+  // global canvas bootstrap
+  window.canvas = document.getElementById("game");
+  window.ctx = canvas.getContext("2d");
 
-function resize(){ c.width=innerWidth; c.height=innerHeight; }
-onresize=resize; resize();
-
-// ===== audio =====
-let audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-let startTime = audioCtx.currentTime;
-let bpm=160, beat=60/bpm;
-
-function hitSound(freq=500){
-  const o=audioCtx.createOscillator();
-  const g=audioCtx.createGain();
-  o.frequency.value=freq;
-  g.gain.value=0.2;
-  o.connect(g).connect(audioCtx.destination);
-  o.start();
-  o.stop(audioCtx.currentTime+0.05);
-}
-
-// ===== input =====
-let keys={};
-onkeydown=e=>keys[e.key.toLowerCase()]=true;
-onkeyup=e=>keys[e.key.toLowerCase()]=false;
-
-let mouse={x:0,y:0,click:false};
-onmousemove=e=>{mouse.x=e.clientX;mouse.y=e.clientY;}
-onclick=()=>{mouse.click=true;audioCtx.resume();};
-
-// ===== state =====
-let score=0, combo=0, maxCombo=0;
-let fever=false;
-
-// ===== effects =====
-let particles=[], shake=0;
-
-function spawnHit(x,y,color){
-  for(let i=0;i<10;i++){
-    particles.push({
-      x,y,
-      vx:(Math.random()-0.5)*8,
-      vy:(Math.random()-0.5)*8,
-      life:1,
-      color
-    });
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
   }
-  shake=8;
-}
-
-// ===== judge =====
-function judge(dt){
-  dt=Math.abs(dt);
-  if(dt<0.07)return 300;
-  if(dt<0.13)return 100;
-  if(dt<0.2)return 50;
-  return 0;
-}
-
-// ===== patterns =====
-let notes=[];
-function gen(){
-  let t=0, dir=1, x=0.5;
-
-  for(let s=0;s<40;s++){
-    let type=s%4;
-
-    for(let i=0;i<8;i++){
-      x+=dir*0.1;
-      if(x<0.1||x>0.9)dir*=-1;
-
-      notes.push({
-        t:t,
-        lane:i%4,
-        x:x,
-        judged:false,
-        type:(i%2?"blue":"red")
-      });
-
-      t += (type===1 ? beat/4 : beat/2);
-    }
-  }
-}
-gen();
-
-// ===== loop =====
-function loop(){
-requestAnimationFrame(loop);
-const now=audioCtx.currentTime-startTime;
-
-// fever mode
-fever = combo >= 30;
-
-// speed scaling
-let speed = 300 + combo*2 + (fever?150:0);
-
-// screen shake
-let sx = (Math.random()-0.5)*shake;
-let sy = (Math.random()-0.5)*shake;
-shake *= 0.9;
-
-ctx.setTransform(1,0,0,1,sx,sy);
-
-// fade trail
-ctx.fillStyle="rgba(0,0,0,0.25)";
-ctx.fillRect(0,0,c.width,c.height);
-
-// mode cycle
-const modes=["osu","taiko","catch","mania"];
-const mode=modes[Math.floor(now/5)%4];
-
-// combo color
-let hue = (combo*5)%360;
-ctx.strokeStyle = "hsl("+hue+",100%,60%)";
-ctx.fillStyle = "hsl("+hue+",100%,60%)";
-
-// ===== osu =====
-if(mode==="osu"){
-  notes.forEach(n=>{
-    if(n.judged)return;
-    const dt=n.t-now;
-
-    const x=n.x*c.width;
-    const y=c.height/2 + Math.sin(n.t*2)*150;
-
-    if(dt<-0.25){ n.judged=true; combo=0; }
-
-    ctx.beginPath();
-    ctx.arc(x,y,30,0,Math.PI*2);
-    ctx.stroke();
-
-    if(mouse.click){
-      if(Math.hypot(mouse.x-x,mouse.y-y)<30){
-        const res=judge(dt);
-        if(res){
-          score+=res; combo++;
-          maxCombo=Math.max(maxCombo,combo);
-          spawnHit(x,y,"white");
-          hitSound(700);
-          n.judged=true;
-        }
-      }
-    }
-  });
-}
-
-// ===== taiko =====
-if(mode==="taiko"){
-  const drumX=120, drumY=c.height/2;
-
-  ctx.beginPath();
-  ctx.arc(drumX,drumY,50,0,Math.PI*2);
-  ctx.stroke();
-
-  notes.forEach(n=>{
-    if(n.judged)return;
-    const dt=n.t-now;
-    const x=drumX + dt*speed;
-
-    if(x<drumX-60){ n.judged=true; combo=0; }
-
-    ctx.beginPath();
-    ctx.arc(x,drumY,20,0,Math.PI*2);
-    ctx.fillStyle=n.type==="red"?"#ff4444":"#4488ff";
-    ctx.fill();
-
-    const red = keys["z"]||keys["v"];
-    const blue = keys["x"]||keys["c"];
-
-    if((n.type==="red"&&red)||(n.type==="blue"&&blue)){
-      const res=judge(dt);
-      if(res){
-        score+=res; combo++;
-        spawnHit(drumX,drumY,"orange");
-        hitSound(200+res);
-        n.judged=true;
-      }
-    }
-  });
-}
-
-// ===== catch =====
-if(mode==="catch"){
-  let playerX=c.width/2;
-  if(keys["z"]||keys["x"]) playerX-=10;
-  if(keys["c"]||keys["v"]) playerX+=10;
-
-  ctx.fillRect(playerX-40,c.height-40,80,10);
-
-  notes.forEach(n=>{
-    if(n.judged)return;
-    const dt=n.t-now;
-
-    const x=n.x*c.width;
-    const y=c.height - dt*speed;
-
-    if(y>c.height){ n.judged=true; combo=0; }
-
-    ctx.beginPath();
-    ctx.arc(x,y,10,0,Math.PI*2);
-    ctx.fill();
-
-    if(Math.abs(x-playerX)<40 && Math.abs(y-(c.height-40))<15){
-      score+=300; combo++;
-      spawnHit(x,y,"yellow");
-      hitSound(900);
-      n.judged=true;
-    }
-  });
-}
-
-// ===== mania =====
-if(mode==="mania"){
-  const lanes=4;
-  const w=c.width/lanes;
-  const hitY=c.height*0.8;
-
-  ctx.beginPath();
-  ctx.moveTo(0,hitY);
-  ctx.lineTo(c.width,hitY);
-  ctx.stroke();
-
-  notes.forEach(n=>{
-    if(n.judged)return;
-    const dt=n.t-now;
-
-    const x=n.lane*w+w/2;
-    const y=hitY-dt*speed;
-
-    if(y>c.height){ n.judged=true; combo=0; }
-
-    ctx.beginPath();
-    ctx.arc(x,y,20,0,Math.PI*2);
-    ctx.fill();
-
-    const map=["z","x","c","v"];
-    if(keys[map[n.lane]]){
-      const res=judge(dt);
-      if(res){
-        score+=res; combo++;
-        spawnHit(x,hitY,"cyan");
-        hitSound(300+n.lane*120);
-        n.judged=true;
-      }
-    }
-  });
-}
-
-// ===== particles =====
-particles.forEach(p=>{
-  p.x+=p.vx;
-  p.y+=p.vy;
-  p.life-=0.03;
-  ctx.globalAlpha=p.life;
-  ctx.fillStyle=p.color;
-  ctx.fillRect(p.x,p.y,5,5);
-  ctx.globalAlpha=1;
-});
-particles=particles.filter(p=>p.life>0);
-
-// ===== UI =====
-ctx.setTransform(1,0,0,1,0,0);
-ctx.fillStyle="white";
-ctx.font="18px monospace";
-ctx.fillText("mode: "+mode,20,30);
-ctx.fillText("score: "+score,20,55);
-ctx.fillText("combo: "+combo,20,80);
-ctx.fillText("max: "+maxCombo,20,105);
-
-if(fever){
-  ctx.fillStyle="rgba(255,255,0,0.2)";
-  ctx.fillRect(0,0,c.width,c.height);
-}
-
-mouse.click=false;
-}
-loop();
+  window.addEventListener("resize", resize);
+  resize();
 </script>
+
+<!-- MAIN ENGINE -->
+<script src="app.js"></script>
+
 </body>
 </html>
