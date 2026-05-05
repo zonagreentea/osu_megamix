@@ -1,19 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
   <title>osu!megamix</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: black;
-    }
-    canvas {
-      display: block;
-    }
+    html,body { margin:0; padding:0; background:black; overflow:hidden; }
+    canvas { display:block; }
   </style>
 </head>
 <body>
@@ -21,20 +13,19 @@
 <canvas id="game"></canvas>
 
 <script>
-  // global canvas bootstrap
-  window.canvas = document.getElementById("game");
-  window.ctx = canvas.getContext("2d");
+window.canvas = document.getElementById("game");
+window.ctx = canvas.getContext("2d");
 
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
-  window.addEventListener("resize", resize);
-  resize();
+function resize(){
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
 </script>
 
-<!-- MAIN ENGINE -->
-<script src="app.js"></script>
+<!-- ENGINE ENTRY -->
+<script src="../engine/core.js"></script>
 
 </body>
 </html>

@@ -1,23 +1,36 @@
 /* =========================
-   MEGAMIX CORE FIXED LOOP
+   OSU!MEGAMIX CORE ENGINE
+   SINGLE LOOP • CLEAN STATE
 ========================= */
 
 const canvas = window.canvas || document.querySelector("canvas");
-const ctx = window.ctx || canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+/* =========================
+   MODE
+========================= */
 let mode = "osu";
 
-/* ===== OSU STATE ===== */
+/* =========================
+   OSU STATE
+========================= */
 let bpm = 120;
 let beatInterval = 60000 / bpm;
 let lastBeat = -1;
 
-/* ===== CATCH STATE ===== */
-let catcherX = 0;
-let targetX = 0;
+let circles = [];
 
 /* =========================
-   INPUT (single source)
+   CATCH STATE
+========================= */
+let catcherX = canvas.width / 2;
+let targetX = catcherX;
+
+/* =========================
+   INPUT
 ========================= */
 window.addEventListener("mousemove", (e) => {
   const rect = canvas.getBoundingClientRect();
@@ -25,30 +38,49 @@ window.addEventListener("mousemove", (e) => {
 });
 
 /* =========================
-   OSU SPAWN (1 per beat)
+   SPAWN CIRCLE
 ========================= */
 function spawnCircle() {
-  console.log("spawn");
+  circles.push({
+    x: Math.random() * canvas.width,
+    y: -20,
+    r: 18,
+    speed: 2 + Math.random() * 2
+  });
 }
 
 /* =========================
-   CATCH UPDATE
+   UPDATE OSU
+========================= */
+function updateOsu() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let c of circles) {
+    c.y += c.speed;
+
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+    ctx.fillStyle = "white";
+    ctx.fill();
+  }
+
+  circles = circles.filter(c => c.y < canvas.height + 50);
+}
+
+/* =========================
+   UPDATE CATCH
 ========================= */
 function updateCatch() {
-  catcherX += (targetX - catcherX) * 0.25;
-}
+  catcherX += (targetX - catcherX) * 0.2;
 
-/* =========================
-   DRAW CATCH (minimal test)
-========================= */
-function drawCatch() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   ctx.fillStyle = "white";
-  ctx.fillRect(catcherX, canvas.height - 50, 80, 20);
+  ctx.fillRect(catcherX - 40, canvas.height - 60, 80, 20);
 }
 
 /* =========================
-   MAIN LOOP (ONE ONLY)
+   MAIN LOOP (ONLY ONE)
 ========================= */
 function loop(t) {
   if (mode === "osu") {
@@ -58,11 +90,12 @@ function loop(t) {
       spawnCircle();
       lastBeat = beat;
     }
+
+    updateOsu();
   }
 
   if (mode === "catch") {
     updateCatch();
-    drawCatch();
   }
 
   requestAnimationFrame(loop);
@@ -71,15 +104,16 @@ function loop(t) {
 requestAnimationFrame(loop);
 
 /* =========================
-   DEBUG SWITCH
+   MODE SWITCH
 ========================= */
 window.setMode = (m) => {
   mode = m;
 
-  // hard reset prevents ghost state bugs
+  // hard reset state to prevent drift bugs
+  circles = [];
   lastBeat = -1;
-  catcherX = 0;
-  targetX = 0;
+  catcherX = canvas.width / 2;
+  targetX = catcherX;
 
   console.log("mode:", mode);
 };
