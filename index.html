@@ -2,45 +2,78 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>MEGAMIX CORE // TRUE MERGE</title>
+<title>MEGAMIX CORE // DESIGN ENGINE</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
+
+/* CORE LAYERS */
 .note{position:absolute;font-size:28px;transform:translateX(-50%)}
-#hud{position:fixed;top:10px;left:10px}
+#hud{position:fixed;top:10px;left:10px;font-size:14px;line-height:1.4}
 #hitbar{position:fixed;bottom:120px;width:100%;height:4px;background:#333}
-.perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
-.layer{opacity:0.8}
+
+/* FEEDBACK SYSTEM */
+.perfect{color:#00ff99}
+.good{color:#ffd400}
+.bad{color:#ff3355}
+
+/* GAME FEEL STATES */
+.state-neutral{filter:none}
+.state-intense{filter:contrast(1.2) saturate(1.4)}
+.state-broken{filter:grayscale(1) contrast(1.5)}
+.state-flow{filter:brightness(1.2) blur(0.3px)}
 </style>
 </head>
 <body>
 
 <div id="hud">
-score: <span id="score">0</span> |
-combo: <span id="combo">0</span> |
-hp: <span id="hp">100</span> |
-truth: <span id="truth">4-LAYER</span>
+score: <span id="score">0</span><br>
+combo: <span id="combo">0</span><br>
+hp: <span id="hp">100</span><br>
+heat: <span id="heat">0</span><br>
+state: <span id="state">FLOW</span><br>
+design loop: <span id="loop">feedback</span>
 <div id="msg"></div>
 </div>
 
 <div id="hitbar"></div>
 
 <script>
-// ================= CORE =================
+// ===============================
+// CORE GAME DESIGN PRINCIPLES
+// ===============================
+
+// 1. CORE LOOP VARIABLES
+let score=0, combo=0, hp=100, heat=0;
+
+// 2. SYSTEM FEEDBACK LOOP (everything feeds everything)
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+
+// 3. PLAYER AGENCY (input affects multiple systems)
 const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
 
-let score=0, combo=0, hp=100;
+// 4. EMERGENT SYSTEM STATE
+let state="FLOW";
 
+// 5. ALL ACTIVE ENTITIES
 const notes=[];
+
+// ===============================
+// DESIGN PRINCIPLE: MULTI-LAYER FEEDBACK
+// ===============================
+
 const emojis=["🟣","🔴","🟡","🟢"];
 
-// ================= NOTE =================
+// ===============================
+// PROCEDURAL GENERATION (VARIETY)
+// ===============================
+
 function spawn(){
   const lane=Math.random()*4|0;
 
   const el=document.createElement("div");
-  el.className="note layer";
+  el.className="note";
   el.textContent=emojis[lane];
 
   el.style.left=(lane*laneW+laneW/2)+"px";
@@ -53,49 +86,47 @@ function spawn(){
     lane,
     y:-40,
     hit:false,
-    time:performance.now()
+    t:performance.now()
   });
 }
 
-// ================= LAYERS =================
+// ===============================
+// GAME DESIGN SYSTEM: FEEDBACK TYPES
+// ===============================
 
-// OSU: timing precision
-function layer_osu(dist){
-  if(dist<10) return 300;
-  if(dist<25) return 120;
-  return 0;
+function judge(d){
+  if(d<10) return "perfect";
+  if(d<25) return "good";
+  return "bad";
 }
 
-// TAIKO: binary impact
-function layer_taiko(dist){
-  return dist<35 ? 180 : 0;
-}
-
-// MANIA: lane pressure
-function layer_mania(lane){
-  return lane>=0 ? 80 : 0;
-}
-
-// CATCH: positional forgiveness
-function layer_catch(dist){
-  return dist<50 ? 100 : 0;
-}
-
-// ================= FEEDBACK =================
 function flash(t){
   const m=document.getElementById("msg");
   m.className=t;
   m.textContent=t;
-  setTimeout(()=>m.textContent="",120);
+  setTimeout(()=>m.textContent="",100);
 }
 
-function update(){
-  document.getElementById("score").textContent=score;
-  document.getElementById("combo").textContent=combo;
-  document.getElementById("hp").textContent=hp;
+// ===============================
+// DESIGN LOOP: STATE EVOLUTION
+// ===============================
+
+function updateState(){
+  heat = clamp(heat + combo*0.002 - 0.01, 0, 100);
+
+  if(hp<30) state="BROKEN";
+  else if(heat>70) state="INTENSE";
+  else if(combo>20) state="FLOW";
+  else state="NEUTRAL";
+
+  document.body.className="state-"+state.toLowerCase();
+  document.getElementById("state").textContent=state;
 }
 
-// ================= HIT ENGINE =================
+// ===============================
+// CORE FEEDBACK LOOP (THE ACTUAL GAME DESIGN)
+// ===============================
+
 function hit(lane){
   let best=null,bd=999;
 
@@ -105,57 +136,65 @@ function hit(lane){
     if(d<bd){bd=d;best=n;}
   });
 
+  // FAILURE IS ALSO DESIGN INPUT
   if(!best){
     combo=0;
-    hp-=8;
-    flash("MISS");
-    update();
-    return;
+    hp-=6;
+    heat+=3;
+    flash("miss");
+  }else{
+    best.hit=true;
+    best.el.remove();
+
+    const r=judge(bd);
+
+    if(r==="perfect"){
+      score+=300;
+      combo++;
+      hp=clamp(hp+2,0,100);
+      heat+=1;
+    }else if(r==="good"){
+      score+=120;
+      combo++;
+      hp=clamp(hp+1,0,100);
+      heat+=0.5;
+    }else{
+      combo=0;
+      hp-=4;
+      heat+=2;
+    }
+
+    flash(r);
   }
 
-  best.hit=true;
-  best.el.remove();
-
-  // ===== TRUE MULTI-LAYER SCORING =====
-  const osu   = layer_osu(bd);
-  const taiko = layer_taiko(bd);
-  const mania = layer_mania(lane);
-  const catchL= layer_catch(bd);
-
-  const total = osu + taiko + mania + catchL;
-
-  score += total;
-
-  if(total > 500){
-    flash("PERFECT STACK");
-    combo++;
-    hp=Math.min(100,hp+2);
-  } else if(total > 250){
-    flash("GOOD STACK");
-    combo++;
-    hp=Math.min(100,hp+1);
-  } else {
-    flash("WEAK HIT");
-    combo=0;
-    hp-=4;
-  }
-
-  update();
-
-  if(hp<=0){
-    document.body.innerHTML=
-      "<div style='padding:40px;font-size:40px'>MEGAMIX COLLAPSED<br>score:"+score+"</div>";
-  }
+  updateHUD();
 }
 
-// ================= LOOP =================
+// ===============================
+// UPDATE UI (PLAYER READABILITY)
+// ===============================
+
+function updateHUD(){
+  document.getElementById("score").textContent=score;
+  document.getElementById("combo").textContent=combo;
+  document.getElementById("hp").textContent=hp;
+  document.getElementById("heat").textContent=Math.floor(heat);
+}
+
+// ===============================
+// GAME LOOP (EMERGENCE ENGINE)
+// ===============================
+
 function loop(){
   if(Math.random()<0.04) spawn();
 
   notes.forEach(n=>{
     if(n.hit) return;
 
-    n.y+=3.7;
+    // DIFFICULTY SCALING = SYSTEM RESPONSE
+    const speed = 3.5 + heat*0.02;
+
+    n.y+=speed;
     n.el.style.top=n.y+"px";
 
     if(n.y>window.innerHeight+50){
@@ -163,14 +202,19 @@ function loop(){
       n.el.remove();
       combo=0;
       hp-=5;
-      update();
     }
   });
+
+  updateState();
+  updateHUD();
 
   requestAnimationFrame(loop);
 }
 
-// ================= INPUT =================
+// ===============================
+// INPUT (SIMPLE, EXPRESSIVE)
+// ===============================
+
 window.addEventListener("keydown",e=>{
   if(e.key==="d") hit(0);
   if(e.key==="f") hit(1);
@@ -178,6 +222,7 @@ window.addEventListener("keydown",e=>{
   if(e.key==="k") hit(3);
 });
 
+// START
 loop();
 </script>
 
