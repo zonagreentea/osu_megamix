@@ -5,27 +5,44 @@
 <title>MEGAMIX CORE // 1e gromp</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
+.screen{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column}
+button{background:#111;color:#fff;border:1px solid #333;padding:10px 20px;font-size:18px;cursor:pointer}
+button:hover{border-color:#888}
 .note{position:absolute;font-size:28px;transform:translateX(-50%)}
-.lane{position:absolute;top:0;width:25%;height:100vh;border-right:1px solid #151515}
-#hitbar{position:fixed;bottom:120px;left:0;width:100%;height:4px;background:#333}
 #hud{position:fixed;top:10px;left:10px}
 .perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
+#hitbar{position:fixed;bottom:120px;width:100%;height:4px;background:#333}
 </style>
 </head>
 <body>
 
-<div id="hud">
+<!-- ===== MENU ===== -->
+<div id="menu" class="screen">
+  <div style="font-size:40px;margin-bottom:20px">MEGAMIX CORE</div>
+  <button onclick="startGame()">START MIX</button>
+</div>
+
+<!-- ===== GAME HUD ===== -->
+<div id="hud" style="display:none">
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
 hp: <span id="hp">100</span> |
-core: <span id="core">MEGAMIX</span>
+state: <span id="state">MIX</span>
 <div id="msg"></div>
 </div>
 
-<div id="hitbar"></div>
+<div id="hitbar" style="display:none"></div>
 
 <script>
-// ===== CORE STATE =====
+// ===== STATE MACHINE =====
+let state="menu";
+
+function setState(s){
+  state=s;
+  document.getElementById("state").textContent=s;
+}
+
+// ===== CORE =====
 const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
@@ -33,63 +50,70 @@ const hitY=window.innerHeight-120;
 let score=0, combo=0, hp=100;
 
 const notes=[];
-
 const emojis=["🟣","🔴","🟡","🟢"];
 
-// ===== UNIFIED INPUT MODEL =====
-// one key = multiple interpretations
-
-const inputMap={
-  d:0, f:1, j:2, k:3
-};
-
-// ===== MEGAMIX STREAM =====
-// everything is one continuous timeline
-
+// ===== STREAM =====
 const stream=[
-  {t:0,l:0,v:"osu"},
-  {t:0.2,l:1,v:"taiko"},
-  {t:0.4,l:2,v:"mania"},
-  {t:0.6,l:3,v:"catch"},
-
-  {t:1.2,l:0,v:"stream"},
-  {t:1.4,l:1,v:"stream"},
-  {t:1.6,l:2,v:"stream"},
-  {t:1.8,l:3,v:"stream"},
-
-  {t:2.6,l:1,v:"chord"},
-  {t:2.6,l:2,v:"chord"},
-
-  {t:3.5,l:0,v:"burst"},
-  {t:3.7,l:1,v:"burst"},
-  {t:3.9,l:2,v:"burst"},
-  {t:4.1,l:3,v:"burst"}
+  {t:0,l:0},{t:0.25,l:1},{t:0.5,l:2},{t:0.75,l:3},
+  {t:1.5,l:0},{t:1.7,l:1},{t:1.9,l:2},{t:2.1,l:3},
+  {t:3,l:1},{t:3,l:2}
 ];
 
-let start=performance.now();
+let start=0;
 let i=0;
 
+// ===== UI =====
+function showGameUI(on){
+  document.getElementById("hud").style.display=on?"block":"none";
+  document.getElementById("hitbar").style.display=on?"block":"none";
+  document.getElementById("menu").style.display=on?"none":"flex";
+}
+
+// ===== START =====
+function startGame(){
+  showGameUI(true);
+  reset();
+  setState("MIX");
+  start=performance.now();
+  loop();
+}
+
+// ===== RESET =====
+function reset(){
+  score=0;combo=0;hp=100;i=0;
+  notes.forEach(n=>n.el.remove());
+  notes.length=0;
+  update();
+}
+
+// ===== BUST TO MIX =====
+function bustToMix(){
+  setState("BUST");
+
+  document.body.style.background="#220000";
+
+  setTimeout(()=>{
+    document.body.style.background="#05050a";
+    reset();
+    setState("MIX");
+    start=performance.now();
+    loop();
+  },900);
+}
+
 // ===== SPAWN =====
-function spawn(lane,type){
+function spawn(lane){
   const el=document.createElement("div");
   el.className="note";
   el.textContent=emojis[lane];
-
   el.style.left=(lane*laneW+laneW/2)+"px";
   el.style.top="-40px";
-
   document.body.appendChild(el);
 
-  notes.push({
-    el,
-    lane,
-    y:-40,
-    hit:false,
-    type
-  });
+  notes.push({el,lane,y:-40,hit:false});
 }
 
-// ===== JUDGE CORE =====
+// ===== JUDGE =====
 function judge(d){
   if(d<10) return "perfect";
   if(d<25) return "good";
@@ -103,13 +127,14 @@ function flash(t){
   setTimeout(()=>m.textContent="",120);
 }
 
+// ===== UPDATE =====
 function update(){
   document.getElementById("score").textContent=score;
   document.getElementById("combo").textContent=combo;
   document.getElementById("hp").textContent=hp;
 }
 
-// ===== HIT SYSTEM (MEGAMIX UNIFIED LOGIC) =====
+// ===== HIT =====
 function hit(lane){
   let best=null,bd=999;
 
@@ -121,7 +146,7 @@ function hit(lane){
 
   if(!best || bd>60){
     combo=0;
-    hp-=6;
+    hp-=10;
     flash("bad");
   }else{
     best.hit=true;
@@ -130,36 +155,30 @@ function hit(lane){
     const r=judge(bd);
 
     if(r==="perfect"){
-      score+=300;
-      combo++;
-      hp=Math.min(100,hp+2);
+      score+=300;combo++;hp=Math.min(100,hp+2);
     }else{
-      score+=120;
-      combo++;
-      hp=Math.min(100,hp+1);
+      score+=120;combo++;hp=Math.min(100,hp+1);
     }
-
-    // MEGAMIX MULTI-LAYER REACTION
-    if(best.type==="burst") score+=50;
-    if(best.type==="chord") combo++;
-    if(best.type==="stream") hp+=0.5;
 
     flash(r);
   }
 
   update();
 
+  // ===== CRITICAL SYSTEM EVENT =====
   if(hp<=0){
-    document.body.innerHTML="<div style='padding:40px;font-size:40px'>MEGAMIX COLLAPSE<br>score:"+score+"</div>";
+    bustToMix();
   }
 }
 
-// ===== STREAM ENGINE =====
+// ===== LOOP =====
 function loop(){
+  if(state!=="MIX") return;
+
   const now=(performance.now()-start)/1000;
 
   while(i<stream.length && now>stream[i].t){
-    spawn(stream[i].l,stream[i].v);
+    spawn(stream[i].l);
     i++;
   }
 
@@ -172,8 +191,12 @@ function loop(){
       n.hit=true;
       n.el.remove();
       combo=0;
-      hp-=4;
+      hp-=5;
       update();
+
+      if(hp<=0){
+        bustToMix();
+      }
     }
   });
 
@@ -182,12 +205,13 @@ function loop(){
 
 // ===== INPUT =====
 window.addEventListener("keydown",e=>{
-  if(inputMap[e.key]!==undefined){
-    hit(inputMap[e.key]);
-  }
-});
+  if(state!=="MIX") return;
 
-loop();
+  if(e.key==="d") hit(0);
+  if(e.key==="f") hit(1);
+  if(e.key==="j") hit(2);
+  if(e.key==="k") hit(3);
+});
 </script>
 
 </body>
