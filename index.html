@@ -2,112 +2,73 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>MEGAMIX CORE // 1e gromp</title>
+<title>MEGAMIX CORE // INFINITE</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
-.screen{position:absolute;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column}
-button{background:#111;color:#fff;border:1px solid #333;padding:10px 20px;font-size:18px;cursor:pointer}
-button:hover{border-color:#888}
 .note{position:absolute;font-size:28px;transform:translateX(-50%)}
 #hud{position:fixed;top:10px;left:10px}
-.perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
 #hitbar{position:fixed;bottom:120px;width:100%;height:4px;background:#333}
+.perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
 </style>
 </head>
 <body>
 
-<!-- ===== MENU ===== -->
-<div id="menu" class="screen">
-  <div style="font-size:40px;margin-bottom:20px">MEGAMIX CORE</div>
-  <button onclick="startGame()">START MIX</button>
-</div>
-
-<!-- ===== GAME HUD ===== -->
-<div id="hud" style="display:none">
+<div id="hud">
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
 hp: <span id="hp">100</span> |
-state: <span id="state">MIX</span>
+heat: <span id="heat">0</span>%
 <div id="msg"></div>
 </div>
 
-<div id="hitbar" style="display:none"></div>
+<div id="hitbar"></div>
 
 <script>
-// ===== STATE MACHINE =====
-let state="menu";
-
-function setState(s){
-  state=s;
-  document.getElementById("state").textContent=s;
-}
-
 // ===== CORE =====
 const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
 
-let score=0, combo=0, hp=100;
+let score=0, combo=0, hp=100, heat=0;
 
 const notes=[];
 const emojis=["🟣","🔴","🟡","🟢"];
 
-// ===== STREAM =====
-const stream=[
-  {t:0,l:0},{t:0.25,l:1},{t:0.5,l:2},{t:0.75,l:3},
-  {t:1.5,l:0},{t:1.7,l:1},{t:1.9,l:2},{t:2.1,l:3},
-  {t:3,l:1},{t:3,l:2}
-];
+// ===== INFINITE GENERATOR STATE =====
+let time=0;
+let nextSpawn=0;
+let lastLane=-1;
 
-let start=0;
-let i=0;
-
-// ===== UI =====
-function showGameUI(on){
-  document.getElementById("hud").style.display=on?"block":"none";
-  document.getElementById("hitbar").style.display=on?"block":"none";
-  document.getElementById("menu").style.display=on?"none":"flex";
+// heat = difficulty curve driver
+function updateHeat(){
+  heat=Math.min(100, heat + 0.01 + combo*0.002);
 }
 
-// ===== START =====
-function startGame(){
-  showGameUI(true);
-  reset();
-  setState("MIX");
-  start=performance.now();
-  loop();
+// ===== PATTERN GENERATOR =====
+function generateLane(){
+  let l=Math.random()*4|0;
+
+  // avoid repetition spam unless heat is high
+  if(heat<60){
+    while(l===lastLane){
+      l=Math.random()*4|0;
+    }
+  }
+
+  lastLane=l;
+  return l;
 }
 
-// ===== RESET =====
-function reset(){
-  score=0;combo=0;hp=100;i=0;
-  notes.forEach(n=>n.el.remove());
-  notes.length=0;
-  update();
-}
+function spawn(){
+  const lane=generateLane();
 
-// ===== BUST TO MIX =====
-function bustToMix(){
-  setState("BUST");
-
-  document.body.style.background="#220000";
-
-  setTimeout(()=>{
-    document.body.style.background="#05050a";
-    reset();
-    setState("MIX");
-    start=performance.now();
-    loop();
-  },900);
-}
-
-// ===== SPAWN =====
-function spawn(lane){
   const el=document.createElement("div");
   el.className="note";
   el.textContent=emojis[lane];
+
   el.style.left=(lane*laneW+laneW/2)+"px";
   el.style.top="-40px";
+
   document.body.appendChild(el);
 
   notes.push({el,lane,y:-40,hit:false});
@@ -124,17 +85,17 @@ function flash(t){
   const m=document.getElementById("msg");
   m.className=t;
   m.textContent=t.toUpperCase();
-  setTimeout(()=>m.textContent="",120);
+  setTimeout(()=>m.textContent="",100);
 }
 
-// ===== UPDATE =====
 function update(){
   document.getElementById("score").textContent=score;
   document.getElementById("combo").textContent=combo;
   document.getElementById("hp").textContent=hp;
+  document.getElementById("heat").textContent=Math.floor(heat);
 }
 
-// ===== HIT =====
+// ===== HIT SYSTEM =====
 function hit(lane){
   let best=null,bd=999;
 
@@ -146,7 +107,8 @@ function hit(lane){
 
   if(!best || bd>60){
     combo=0;
-    hp-=10;
+    hp-=8;
+    heat+=5;
     flash("bad");
   }else{
     best.hit=true;
@@ -165,26 +127,31 @@ function hit(lane){
 
   update();
 
-  // ===== CRITICAL SYSTEM EVENT =====
   if(hp<=0){
-    bustToMix();
+    document.body.innerHTML=
+    "<div style='padding:40px;font-size:40px'>INFINITE LOOP BROKEN<br>score:"+score+"</div>";
   }
 }
 
-// ===== LOOP =====
+// ===== INFINITE LOOP =====
 function loop(){
-  if(state!=="MIX") return;
+  time+=0.016;
 
-  const now=(performance.now()-start)/1000;
+  updateHeat();
 
-  while(i<stream.length && now>stream[i].t){
-    spawn(stream[i].l);
-    i++;
+  // dynamic spawn rate based on heat
+  const spawnRate=Math.max(80, 420 - heat*3);
+
+  if(time*1000 > nextSpawn){
+    spawn();
+    nextSpawn = time*1000 + spawnRate;
   }
 
   notes.forEach(n=>{
     if(n.hit) return;
-    n.y+=3.8;
+
+    // speed increases with heat
+    n.y += 3.2 + heat*0.02;
     n.el.style.top=n.y+"px";
 
     if(n.y>window.innerHeight+50){
@@ -193,10 +160,6 @@ function loop(){
       combo=0;
       hp-=5;
       update();
-
-      if(hp<=0){
-        bustToMix();
-      }
     }
   });
 
@@ -205,13 +168,13 @@ function loop(){
 
 // ===== INPUT =====
 window.addEventListener("keydown",e=>{
-  if(state!=="MIX") return;
-
   if(e.key==="d") hit(0);
   if(e.key==="f") hit(1);
   if(e.key==="j") hit(2);
   if(e.key==="k") hit(3);
 });
+
+loop();
 </script>
 
 </body>
