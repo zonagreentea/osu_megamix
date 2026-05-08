@@ -2,10 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>1e gromp // structured stream</title>
+<title>MEGAMIX CORE // 1e gromp</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
-.note{position:absolute;font-size:30px;transform:translateX(-50%)}
+.note{position:absolute;font-size:28px;transform:translateX(-50%)}
 .lane{position:absolute;top:0;width:25%;height:100vh;border-right:1px solid #151515}
 #hitbar{position:fixed;bottom:120px;left:0;width:100%;height:4px;background:#333}
 #hud{position:fixed;top:10px;left:10px}
@@ -18,84 +18,98 @@ body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidde
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
 hp: <span id="hp">100</span> |
-acc: <span id="acc">100</span>%
+core: <span id="core">MEGAMIX</span>
 <div id="msg"></div>
 </div>
 
 <div id="hitbar"></div>
 
 <script>
-// ===== AUDIO CLOCK (BPM CORE) =====
-const audio=new (window.AudioContext||window.webkitAudioContext)();
-const bpm=140;
-const beat=60/bpm;
-let tick=0;
-
-function pulse(){
-  const osc=audio.createOscillator();
-  const gain=audio.createGain();
-  osc.frequency.value=1200;
-  gain.gain.value=0.05;
-  osc.connect(gain); gain.connect(audio.destination);
-  osc.start();
-  osc.stop(audio.currentTime+0.05);
-}
-
-// ===== GAME STATE =====
+// ===== CORE STATE =====
 const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
 
 let score=0, combo=0, hp=100;
-let hits=0, total=0;
 
 const notes=[];
 
-const chart=[
-  // structured patterns instead of chaos
-  {t:0,l:0},{t:0.25,l:1},{t:0.5,l:2},{t:0.75,l:3}, // stream
-  {t:2,l:1},{t:2,l:2},                               // chord
-  {t:3,l:0},{t:3.5,l:0},{t:4,l:0},{t:4.5,l:0},       // repeat burst
+const emojis=["🟣","🔴","🟡","🟢"];
+
+// ===== UNIFIED INPUT MODEL =====
+// one key = multiple interpretations
+
+const inputMap={
+  d:0, f:1, j:2, k:3
+};
+
+// ===== MEGAMIX STREAM =====
+// everything is one continuous timeline
+
+const stream=[
+  {t:0,l:0,v:"osu"},
+  {t:0.2,l:1,v:"taiko"},
+  {t:0.4,l:2,v:"mania"},
+  {t:0.6,l:3,v:"catch"},
+
+  {t:1.2,l:0,v:"stream"},
+  {t:1.4,l:1,v:"stream"},
+  {t:1.6,l:2,v:"stream"},
+  {t:1.8,l:3,v:"stream"},
+
+  {t:2.6,l:1,v:"chord"},
+  {t:2.6,l:2,v:"chord"},
+
+  {t:3.5,l:0,v:"burst"},
+  {t:3.7,l:1,v:"burst"},
+  {t:3.9,l:2,v:"burst"},
+  {t:4.1,l:3,v:"burst"}
 ];
 
 let start=performance.now();
+let i=0;
 
-const emojis=["🟣","🔴","🟡","🟢"];
-
-function spawn(lane){
+// ===== SPAWN =====
+function spawn(lane,type){
   const el=document.createElement("div");
   el.className="note";
   el.textContent=emojis[lane];
+
   el.style.left=(lane*laneW+laneW/2)+"px";
   el.style.top="-40px";
 
   document.body.appendChild(el);
 
-  notes.push({el,lane,y:-40,hit:false});
+  notes.push({
+    el,
+    lane,
+    y:-40,
+    hit:false,
+    type
+  });
 }
 
+// ===== JUDGE CORE =====
 function judge(d){
   if(d<10) return "perfect";
   if(d<25) return "good";
   return "bad";
 }
 
-function feedback(t){
+function flash(t){
   const m=document.getElementById("msg");
   m.className=t;
   m.textContent=t.toUpperCase();
   setTimeout(()=>m.textContent="",120);
 }
 
-function updateHUD(){
+function update(){
   document.getElementById("score").textContent=score;
   document.getElementById("combo").textContent=combo;
   document.getElementById("hp").textContent=hp;
-
-  const acc=total?Math.floor((hits/total)*100):100;
-  document.getElementById("acc").textContent=acc;
 }
 
+// ===== HIT SYSTEM (MEGAMIX UNIFIED LOGIC) =====
 function hit(lane){
   let best=null,bd=999;
 
@@ -105,12 +119,10 @@ function hit(lane){
     if(d<bd){bd=d;best=n;}
   });
 
-  total++;
-
   if(!best || bd>60){
     combo=0;
     hp-=6;
-    feedback("bad");
+    flash("bad");
   }else{
     best.hit=true;
     best.el.remove();
@@ -121,43 +133,39 @@ function hit(lane){
       score+=300;
       combo++;
       hp=Math.min(100,hp+2);
-      hits++;
     }else{
       score+=120;
       combo++;
       hp=Math.min(100,hp+1);
-      hits++;
     }
 
-    feedback(r);
+    // MEGAMIX MULTI-LAYER REACTION
+    if(best.type==="burst") score+=50;
+    if(best.type==="chord") combo++;
+    if(best.type==="stream") hp+=0.5;
+
+    flash(r);
   }
 
-  updateHUD();
+  update();
 
   if(hp<=0){
-    document.body.innerHTML="<div style='padding:40px;font-size:40px'>gromp collapsed<br>score:"+score+"</div>";
+    document.body.innerHTML="<div style='padding:40px;font-size:40px'>MEGAMIX COLLAPSE<br>score:"+score+"</div>";
   }
 }
 
-// ===== PATTERN ENGINE =====
-let chartIndex=0;
-
+// ===== STREAM ENGINE =====
 function loop(){
   const now=(performance.now()-start)/1000;
 
-  // beat clock
-  const phase=(now%beat)/beat;
-  if(phase<0.02) pulse();
-
-  // spawn from chart
-  while(chartIndex<chart.length && now>chart[chartIndex].t){
-    spawn(chart[chartIndex].l);
-    chartIndex++;
+  while(i<stream.length && now>stream[i].t){
+    spawn(stream[i].l,stream[i].v);
+    i++;
   }
 
   notes.forEach(n=>{
     if(n.hit) return;
-    n.y+=3.6;
+    n.y+=3.8;
     n.el.style.top=n.y+"px";
 
     if(n.y>window.innerHeight+50){
@@ -165,21 +173,18 @@ function loop(){
       n.el.remove();
       combo=0;
       hp-=4;
-      updateHUD();
+      update();
     }
   });
 
   requestAnimationFrame(loop);
 }
 
-setInterval(()=>spawn(Math.random()*4|0),1800);
-
-// controls
+// ===== INPUT =====
 window.addEventListener("keydown",e=>{
-  if(e.key==="d") hit(0);
-  if(e.key==="f") hit(1);
-  if(e.key==="j") hit(2);
-  if(e.key==="k") hit(3);
+  if(inputMap[e.key]!==undefined){
+    hit(inputMap[e.key]);
+  }
 });
 
 loop();
