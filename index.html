@@ -2,59 +2,148 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>1e gromp</title>
+<title>1e gromp — live stream</title>
 <style>
-body{margin:0;background:#0b0b0f;color:#fff;font-family:monospace;overflow:hidden}
-#lane{position:absolute;left:50%;top:0;width:4px;height:100vh;background:#222}
-.note{position:absolute;font-size:32px;transition:top 0.02s linear}
+body{margin:0;background:#07070c;color:#fff;font-family:monospace;overflow:hidden}
+.lane{position:absolute;top:0;width:25%;height:100vh;border-right:1px solid #1a1a1a}
+.note{position:absolute;font-size:28px;transform:translateX(-50%)}
+#hitbar{position:fixed;bottom:120px;left:0;width:100%;height:4px;background:#333}
 #hud{position:fixed;top:10px;left:10px}
+.good{color:#00ff88} .bad{color:#ff3355} .perfect{color:#ffd400}
 </style>
 </head>
 <body>
-<div id="lane"></div>
-<div id="hud">gromp: <span id="score">0</span></div>
+
+<div id="hud">
+score: <span id="score">0</span> |
+combo: <span id="combo">0</span> |
+hp: <span id="hp">100</span>
+<div id="msg"></div>
+</div>
+
+<div id="hitbar"></div>
 
 <script>
-let score=0;
-const emojis=["🟣","🔴","🟡","🟢"];
+const lanes=4;
+const laneWidth=window.innerWidth/lanes;
 const notes=[];
+let score=0, combo=0, hp=100;
+
+const emojis=["🟣","🔴","🟡","🟢"];
+const speed=3.8;
+const hitY=window.innerHeight-120;
 
 function spawn(){
+  const lane=Math.random()*lanes|0;
   const el=document.createElement("div");
   el.className="note";
-  el.textContent=emojis[Math.random()*emojis.length|0];
-  el.style.left=(window.innerWidth/2-20)+"px";
+  el.textContent=emojis[lane];
+  el.style.left=(lane*laneWidth + laneWidth/2)+"px";
   el.style.top="-40px";
   document.body.appendChild(el);
-  notes.push({el,y:-40,hit:false});
+
+  notes.push({
+    el,
+    lane,
+    y:-40,
+    hit:false
+  });
+}
+
+function judge(dist){
+  if(dist<12) return "perfect";
+  if(dist<28) return "good";
+  return "miss";
+}
+
+function feedback(type){
+  const msg=document.getElementById("msg");
+  msg.className=type;
+  msg.textContent=type.toUpperCase();
+  setTimeout(()=>msg.textContent="",200);
+}
+
+function updateHUD(){
+  document.getElementById("score").textContent=score;
+  document.getElementById("combo").textContent=combo;
+  document.getElementById("hp").textContent=hp;
+}
+
+function gameOver(){
+  document.body.innerHTML="<div style='padding:40px;font-size:40px'>gromp collapsed<br>score: "+score+"</div>";
 }
 
 function loop(){
   notes.forEach(n=>{
-    n.y+=4;
+    if(n.hit) return;
+
+    n.y += speed;
     n.el.style.top=n.y+"px";
-    if(n.y>window.innerHeight && !n.hit){
-      n.el.remove();
+
+    if(n.y > window.innerHeight + 50){
       n.hit=true;
+      n.el.remove();
+      combo=0;
+      hp-=8;
+      feedback("bad");
+      updateHUD();
+      if(hp<=0) gameOver();
     }
   });
+
   requestAnimationFrame(loop);
 }
 
-setInterval(spawn,350);
+function hit(lane){
+  let best=null;
+  let bestDist=999;
+
+  notes.forEach(n=>{
+    if(n.hit || n.lane!==lane) return;
+    const dist=Math.abs(n.y-hitY);
+    if(dist<bestDist){
+      best=n;
+      bestDist=dist;
+    }
+  });
+
+  if(!best || bestDist>60){
+    combo=0;
+    hp-=5;
+    feedback("bad");
+  }else{
+    best.hit=true;
+    best.el.remove();
+
+    const result=judge(bestDist);
+
+    if(result==="perfect"){
+      score+=300;
+      combo++;
+      hp=Math.min(100,hp+2);
+    }else{
+      score+=100;
+      combo++;
+      hp=Math.min(100,hp+1);
+    }
+
+    feedback(result);
+  }
+
+  updateHUD();
+}
+
+setInterval(spawn,420);
+
 loop();
 
 window.addEventListener("keydown",(e)=>{
-  const hitZone=window.innerHeight-120;
-  notes.forEach(n=>{
-    if(!n.hit && Math.abs(n.y-hitZone)<40){
-      n.hit=true;
-      n.el.style.opacity=0;
-      score+=1;
-      document.getElementById("score").textContent=score;
-    }
-  });
+  if(e.key==="d") hit(0);
+  if(e.key==="f") hit(1);
+  if(e.key==="j") hit(2);
+  if(e.key==="k") hit(3);
 });
 </script>
+
 </body>
 </html>
