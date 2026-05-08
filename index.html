@@ -1,68 +1,60 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-<<<<<<< HEAD
-<<<<<<< HEAD
-  <meta charset="utf-8"/>
-  <title>megamix</title>
-  <style>
-    html,body{margin:0;overflow:hidden;background:black}
-    canvas{display:block}
-  </style>
+<meta charset="utf-8"/>
+<title>1e gromp</title>
+<style>
+body{margin:0;background:#0b0b0f;color:#fff;font-family:monospace;overflow:hidden}
+#lane{position:absolute;left:50%;top:0;width:4px;height:100vh;background:#222}
+.note{position:absolute;font-size:32px;transition:top 0.02s linear}
+#hud{position:fixed;top:10px;left:10px}
+</style>
 </head>
 <body>
-
-<canvas id="c"></canvas>
+<div id="lane"></div>
+<div id="hud">gromp: <span id="score">0</span></div>
 
 <script>
-window.canvas = document.getElementById("c");
-window.ctx = canvas.getContext("2d");
+let score=0;
+const emojis=["🟣","🔴","🟡","🟢"];
+const notes=[];
 
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+function spawn(){
+  const el=document.createElement("div");
+  el.className="note";
+  el.textContent=emojis[Math.random()*emojis.length|0];
+  el.style.left=(window.innerWidth/2-20)+"px";
+  el.style.top="-40px";
+  document.body.appendChild(el);
+  notes.push({el,y:-40,hit:false});
+}
+
+function loop(){
+  notes.forEach(n=>{
+    n.y+=4;
+    n.el.style.top=n.y+"px";
+    if(n.y>window.innerHeight && !n.hit){
+      n.el.remove();
+      n.hit=true;
+    }
+  });
+  requestAnimationFrame(loop);
+}
+
+setInterval(spawn,350);
+loop();
+
+window.addEventListener("keydown",(e)=>{
+  const hitZone=window.innerHeight-120;
+  notes.forEach(n=>{
+    if(!n.hit && Math.abs(n.y-hitZone)<40){
+      n.hit=true;
+      n.el.style.opacity=0;
+      score+=1;
+      document.getElementById("score").textContent=score;
+    }
+  });
+});
 </script>
-
-<script src="./app.js"></script>
-
-=======
-  <title>osu!megamix</title>
-  <style>
-    body { margin:0; background:#000; color:#fff; overflow:hidden; }
-    canvas { display:block; margin:auto; background:#111; }
-  </style>
-=======
-<meta charset="UTF-8">
-<title>osu!megamix</title>
-
-<style>
-html,body{
-  margin:0;
-  overflow:hidden;
-  background:black;
-}
-
-canvas{
-  width:100vw;
-  height:100vh;
-}
-
-*{
-  color:white;
-  font-family:sans-serif;
-}
-</style>
->>>>>>> c8fdf9c (hook up core megamix runtime)
-</head>
-
-<body>
-<<<<<<< HEAD
-<canvas id="game"></canvas>
-<script src="src/main.js"></script>
->>>>>>> bb605ba (init: clean megamix reset)
-=======
-<canvas></canvas>
-
-<script type="module" src="./src/core/game.js"></script>
->>>>>>> c8fdf9c (hook up core megamix runtime)
 </body>
 </html>
