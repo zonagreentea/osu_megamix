@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>MEGAMIX CORE // MODE SHIFT</title>
+<title>MEGAMIX CORE // TRUE MERGE</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
 .note{position:absolute;font-size:28px;transform:translateX(-50%)}
 #hud{position:fixed;top:10px;left:10px}
 #hitbar{position:fixed;bottom:120px;width:100%;height:4px;background:#333}
 .perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
-.mode{opacity:0.7}
+.layer{opacity:0.8}
 </style>
 </head>
 <body>
@@ -18,14 +18,14 @@ body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidde
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
 hp: <span id="hp">100</span> |
-mode: <span id="mode">OSU</span>
+truth: <span id="truth">4-LAYER</span>
 <div id="msg"></div>
 </div>
 
 <div id="hitbar"></div>
 
 <script>
-// ===== CORE =====
+// ================= CORE =================
 const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
@@ -35,28 +35,12 @@ let score=0, combo=0, hp=100;
 const notes=[];
 const emojis=["🟣","🔴","🟡","🟢"];
 
-// ===== MODE SYSTEM =====
-const modes=["OSU","TAIKO","MANIA","CATCH"];
-let modeIndex=0;
-let modeTime=0;
-
-function switchMode(){
-  modeIndex=(modeIndex+1)%modes.length;
-  document.getElementById("mode").textContent=modes[modeIndex];
-
-  // small “reality shift” penalty/reward
-  hp=Math.min(100,hp+10);
-  flash("MODE: "+modes[modeIndex]);
-}
-
-setInterval(switchMode, 25000);
-
-// ===== SPAWN =====
+// ================= NOTE =================
 function spawn(){
   const lane=Math.random()*4|0;
 
   const el=document.createElement("div");
-  el.className="note";
+  el.className="note layer";
   el.textContent=emojis[lane];
 
   el.style.left=(lane*laneW+laneW/2)+"px";
@@ -64,16 +48,40 @@ function spawn(){
 
   document.body.appendChild(el);
 
-  notes.push({el,lane,y:-40,hit:false});
+  notes.push({
+    el,
+    lane,
+    y:-40,
+    hit:false,
+    time:performance.now()
+  });
 }
 
-// ===== JUDGE =====
-function judge(d){
-  if(d<10) return "perfect";
-  if(d<25) return "good";
-  return "bad";
+// ================= LAYERS =================
+
+// OSU: timing precision
+function layer_osu(dist){
+  if(dist<10) return 300;
+  if(dist<25) return 120;
+  return 0;
 }
 
+// TAIKO: binary impact
+function layer_taiko(dist){
+  return dist<35 ? 180 : 0;
+}
+
+// MANIA: lane pressure
+function layer_mania(lane){
+  return lane>=0 ? 80 : 0;
+}
+
+// CATCH: positional forgiveness
+function layer_catch(dist){
+  return dist<50 ? 100 : 0;
+}
+
+// ================= FEEDBACK =================
 function flash(t){
   const m=document.getElementById("msg");
   m.className=t;
@@ -87,30 +95,7 @@ function update(){
   document.getElementById("hp").textContent=hp;
 }
 
-// ===== MODE BEHAVIOR LAYER =====
-function applyMode(hitDist){
-  const m=modes[modeIndex];
-
-  if(m==="OSU"){
-    return hitDist;
-  }
-
-  if(m==="TAIKO"){
-    return hitDist + (Math.random()*10); // timing jitter
-  }
-
-  if(m==="MANIA"){
-    return hitDist - 5; // tighter windows
-  }
-
-  if(m==="CATCH"){
-    return hitDist + 15; // leniency but slower recovery
-  }
-
-  return hitDist;
-}
-
-// ===== HIT =====
+// ================= HIT ENGINE =================
 function hit(lane){
   let best=null,bd=999;
 
@@ -120,42 +105,57 @@ function hit(lane){
     if(d<bd){bd=d;best=n;}
   });
 
-  if(!best || bd>60){
+  if(!best){
     combo=0;
     hp-=8;
-    flash("bad");
-  }else{
-    best.hit=true;
-    best.el.remove();
+    flash("MISS");
+    update();
+    return;
+  }
 
-    const adjusted=applyMode(bd);
-    const r=judge(adjusted);
+  best.hit=true;
+  best.el.remove();
 
-    if(r==="perfect"){
-      score+=300;combo++;hp=Math.min(100,hp+2);
-    }else{
-      score+=120;combo++;hp=Math.min(100,hp+1);
-    }
+  // ===== TRUE MULTI-LAYER SCORING =====
+  const osu   = layer_osu(bd);
+  const taiko = layer_taiko(bd);
+  const mania = layer_mania(lane);
+  const catchL= layer_catch(bd);
 
-    flash(r);
+  const total = osu + taiko + mania + catchL;
+
+  score += total;
+
+  if(total > 500){
+    flash("PERFECT STACK");
+    combo++;
+    hp=Math.min(100,hp+2);
+  } else if(total > 250){
+    flash("GOOD STACK");
+    combo++;
+    hp=Math.min(100,hp+1);
+  } else {
+    flash("WEAK HIT");
+    combo=0;
+    hp-=4;
   }
 
   update();
 
   if(hp<=0){
     document.body.innerHTML=
-      "<div style='padding:40px;font-size:40px'>MEGAMIX BROKEN<br>score:"+score+"</div>";
+      "<div style='padding:40px;font-size:40px'>MEGAMIX COLLAPSED<br>score:"+score+"</div>";
   }
 }
 
-// ===== LOOP =====
+// ================= LOOP =================
 function loop(){
-  if(Math.random()<0.03) spawn();
+  if(Math.random()<0.04) spawn();
 
   notes.forEach(n=>{
     if(n.hit) return;
 
-    n.y+=3.6;
+    n.y+=3.7;
     n.el.style.top=n.y+"px";
 
     if(n.y>window.innerHeight+50){
@@ -170,7 +170,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// ===== INPUT =====
+// ================= INPUT =================
 window.addEventListener("keydown",e=>{
   if(e.key==="d") hit(0);
   if(e.key==="f") hit(1);
