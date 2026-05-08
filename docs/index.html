@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<<<<<<< HEAD
+<<<<<<< HEAD
+  <meta charset="utf-8"/>
+  <title>megamix</title>
+  <style>
+    html,body{margin:0;overflow:hidden;background:black}
+    canvas{display:block}
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+window.canvas = document.getElementById("c");
+window.ctx = canvas.getContext("2d");
+
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+</script>
+
+<script src="./app.js"></script>
+
+=======
+  <title>osu!megamix</title>
+  <style>
+    body { margin:0; background:#000; color:#fff; overflow:hidden; }
+    canvas { display:block; margin:auto; background:#111; }
+  </style>
+=======
+<meta charset="UTF-8">
+<title>osu!megamix</title>
+
+<style>
+html,body{
+  margin:0;
+  overflow:hidden;
+  background:black;
+}
+
+canvas{
+  width:100vw;
+  height:100vh;
+}
+
+*{
+  color:white;
+  font-family:sans-serif;
+}
+</style>
+>>>>>>> c8fdf9c (hook up core megamix runtime)
+</head>
+
+<body>
+<<<<<<< HEAD
+<canvas id="game"></canvas>
+<script src="src/main.js"></script>
+>>>>>>> bb605ba (init: clean megamix reset)
+=======
+<canvas></canvas>
+
+<script type="module" src="./src/core/game.js"></script>
+>>>>>>> c8fdf9c (hook up core megamix runtime)
+</body>
+</html>
