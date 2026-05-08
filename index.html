@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>1e gromp — live stream</title>
+<title>1e gromp // structured stream</title>
 <style>
-body{margin:0;background:#07070c;color:#fff;font-family:monospace;overflow:hidden}
-.lane{position:absolute;top:0;width:25%;height:100vh;border-right:1px solid #1a1a1a}
-.note{position:absolute;font-size:28px;transform:translateX(-50%)}
+body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
+.note{position:absolute;font-size:30px;transform:translateX(-50%)}
+.lane{position:absolute;top:0;width:25%;height:100vh;border-right:1px solid #151515}
 #hitbar{position:fixed;bottom:120px;left:0;width:100%;height:4px;background:#333}
 #hud{position:fixed;top:10px;left:10px}
-.good{color:#00ff88} .bad{color:#ff3355} .perfect{color:#ffd400}
+.perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
 </style>
 </head>
 <body>
@@ -17,132 +17,172 @@ body{margin:0;background:#07070c;color:#fff;font-family:monospace;overflow:hidde
 <div id="hud">
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
-hp: <span id="hp">100</span>
+hp: <span id="hp">100</span> |
+acc: <span id="acc">100</span>%
 <div id="msg"></div>
 </div>
 
 <div id="hitbar"></div>
 
 <script>
-const lanes=4;
-const laneWidth=window.innerWidth/lanes;
-const notes=[];
-let score=0, combo=0, hp=100;
+// ===== AUDIO CLOCK (BPM CORE) =====
+const audio=new (window.AudioContext||window.webkitAudioContext)();
+const bpm=140;
+const beat=60/bpm;
+let tick=0;
 
-const emojis=["🟣","🔴","🟡","🟢"];
-const speed=3.8;
+function pulse(){
+  const osc=audio.createOscillator();
+  const gain=audio.createGain();
+  osc.frequency.value=1200;
+  gain.gain.value=0.05;
+  osc.connect(gain); gain.connect(audio.destination);
+  osc.start();
+  osc.stop(audio.currentTime+0.05);
+}
+
+// ===== GAME STATE =====
+const lanes=4;
+const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
 
-function spawn(){
-  const lane=Math.random()*lanes|0;
+let score=0, combo=0, hp=100;
+let hits=0, total=0;
+
+const notes=[];
+
+const chart=[
+  // structured patterns instead of chaos
+  {t:0,l:0},{t:0.25,l:1},{t:0.5,l:2},{t:0.75,l:3}, // stream
+  {t:2,l:1},{t:2,l:2},                               // chord
+  {t:3,l:0},{t:3.5,l:0},{t:4,l:0},{t:4.5,l:0},       // repeat burst
+];
+
+let start=performance.now();
+
+const emojis=["🟣","🔴","🟡","🟢"];
+
+function spawn(lane){
   const el=document.createElement("div");
   el.className="note";
   el.textContent=emojis[lane];
-  el.style.left=(lane*laneWidth + laneWidth/2)+"px";
+  el.style.left=(lane*laneW+laneW/2)+"px";
   el.style.top="-40px";
+
   document.body.appendChild(el);
 
-  notes.push({
-    el,
-    lane,
-    y:-40,
-    hit:false
-  });
+  notes.push({el,lane,y:-40,hit:false});
 }
 
-function judge(dist){
-  if(dist<12) return "perfect";
-  if(dist<28) return "good";
-  return "miss";
+function judge(d){
+  if(d<10) return "perfect";
+  if(d<25) return "good";
+  return "bad";
 }
 
-function feedback(type){
-  const msg=document.getElementById("msg");
-  msg.className=type;
-  msg.textContent=type.toUpperCase();
-  setTimeout(()=>msg.textContent="",200);
+function feedback(t){
+  const m=document.getElementById("msg");
+  m.className=t;
+  m.textContent=t.toUpperCase();
+  setTimeout(()=>m.textContent="",120);
 }
 
 function updateHUD(){
   document.getElementById("score").textContent=score;
   document.getElementById("combo").textContent=combo;
   document.getElementById("hp").textContent=hp;
+
+  const acc=total?Math.floor((hits/total)*100):100;
+  document.getElementById("acc").textContent=acc;
 }
 
-function gameOver(){
-  document.body.innerHTML="<div style='padding:40px;font-size:40px'>gromp collapsed<br>score: "+score+"</div>";
+function hit(lane){
+  let best=null,bd=999;
+
+  notes.forEach(n=>{
+    if(n.hit||n.lane!==lane) return;
+    const d=Math.abs(n.y-hitY);
+    if(d<bd){bd=d;best=n;}
+  });
+
+  total++;
+
+  if(!best || bd>60){
+    combo=0;
+    hp-=6;
+    feedback("bad");
+  }else{
+    best.hit=true;
+    best.el.remove();
+
+    const r=judge(bd);
+
+    if(r==="perfect"){
+      score+=300;
+      combo++;
+      hp=Math.min(100,hp+2);
+      hits++;
+    }else{
+      score+=120;
+      combo++;
+      hp=Math.min(100,hp+1);
+      hits++;
+    }
+
+    feedback(r);
+  }
+
+  updateHUD();
+
+  if(hp<=0){
+    document.body.innerHTML="<div style='padding:40px;font-size:40px'>gromp collapsed<br>score:"+score+"</div>";
+  }
 }
+
+// ===== PATTERN ENGINE =====
+let chartIndex=0;
 
 function loop(){
+  const now=(performance.now()-start)/1000;
+
+  // beat clock
+  const phase=(now%beat)/beat;
+  if(phase<0.02) pulse();
+
+  // spawn from chart
+  while(chartIndex<chart.length && now>chart[chartIndex].t){
+    spawn(chart[chartIndex].l);
+    chartIndex++;
+  }
+
   notes.forEach(n=>{
     if(n.hit) return;
-
-    n.y += speed;
+    n.y+=3.6;
     n.el.style.top=n.y+"px";
 
-    if(n.y > window.innerHeight + 50){
+    if(n.y>window.innerHeight+50){
       n.hit=true;
       n.el.remove();
       combo=0;
-      hp-=8;
-      feedback("bad");
+      hp-=4;
       updateHUD();
-      if(hp<=0) gameOver();
     }
   });
 
   requestAnimationFrame(loop);
 }
 
-function hit(lane){
-  let best=null;
-  let bestDist=999;
+setInterval(()=>spawn(Math.random()*4|0),1800);
 
-  notes.forEach(n=>{
-    if(n.hit || n.lane!==lane) return;
-    const dist=Math.abs(n.y-hitY);
-    if(dist<bestDist){
-      best=n;
-      bestDist=dist;
-    }
-  });
-
-  if(!best || bestDist>60){
-    combo=0;
-    hp-=5;
-    feedback("bad");
-  }else{
-    best.hit=true;
-    best.el.remove();
-
-    const result=judge(bestDist);
-
-    if(result==="perfect"){
-      score+=300;
-      combo++;
-      hp=Math.min(100,hp+2);
-    }else{
-      score+=100;
-      combo++;
-      hp=Math.min(100,hp+1);
-    }
-
-    feedback(result);
-  }
-
-  updateHUD();
-}
-
-setInterval(spawn,420);
-
-loop();
-
-window.addEventListener("keydown",(e)=>{
+// controls
+window.addEventListener("keydown",e=>{
   if(e.key==="d") hit(0);
   if(e.key==="f") hit(1);
   if(e.key==="j") hit(2);
   if(e.key==="k") hit(3);
 });
+
+loop();
 </script>
 
 </body>
