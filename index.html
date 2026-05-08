@@ -2,13 +2,14 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>MEGAMIX CORE // INFINITE</title>
+<title>MEGAMIX CORE // MODE SHIFT</title>
 <style>
 body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidden}
 .note{position:absolute;font-size:28px;transform:translateX(-50%)}
 #hud{position:fixed;top:10px;left:10px}
 #hitbar{position:fixed;bottom:120px;width:100%;height:4px;background:#333}
 .perfect{color:#00ff99}.good{color:#ffd400}.bad{color:#ff3355}
+.mode{opacity:0.7}
 </style>
 </head>
 <body>
@@ -17,7 +18,7 @@ body{margin:0;background:#05050a;color:#fff;font-family:monospace;overflow:hidde
 score: <span id="score">0</span> |
 combo: <span id="combo">0</span> |
 hp: <span id="hp">100</span> |
-heat: <span id="heat">0</span>%
+mode: <span id="mode">OSU</span>
 <div id="msg"></div>
 </div>
 
@@ -29,38 +30,30 @@ const lanes=4;
 const laneW=window.innerWidth/lanes;
 const hitY=window.innerHeight-120;
 
-let score=0, combo=0, hp=100, heat=0;
+let score=0, combo=0, hp=100;
 
 const notes=[];
 const emojis=["🟣","🔴","🟡","🟢"];
 
-// ===== INFINITE GENERATOR STATE =====
-let time=0;
-let nextSpawn=0;
-let lastLane=-1;
+// ===== MODE SYSTEM =====
+const modes=["OSU","TAIKO","MANIA","CATCH"];
+let modeIndex=0;
+let modeTime=0;
 
-// heat = difficulty curve driver
-function updateHeat(){
-  heat=Math.min(100, heat + 0.01 + combo*0.002);
+function switchMode(){
+  modeIndex=(modeIndex+1)%modes.length;
+  document.getElementById("mode").textContent=modes[modeIndex];
+
+  // small “reality shift” penalty/reward
+  hp=Math.min(100,hp+10);
+  flash("MODE: "+modes[modeIndex]);
 }
 
-// ===== PATTERN GENERATOR =====
-function generateLane(){
-  let l=Math.random()*4|0;
+setInterval(switchMode, 25000);
 
-  // avoid repetition spam unless heat is high
-  if(heat<60){
-    while(l===lastLane){
-      l=Math.random()*4|0;
-    }
-  }
-
-  lastLane=l;
-  return l;
-}
-
+// ===== SPAWN =====
 function spawn(){
-  const lane=generateLane();
+  const lane=Math.random()*4|0;
 
   const el=document.createElement("div");
   el.className="note";
@@ -84,18 +77,40 @@ function judge(d){
 function flash(t){
   const m=document.getElementById("msg");
   m.className=t;
-  m.textContent=t.toUpperCase();
-  setTimeout(()=>m.textContent="",100);
+  m.textContent=t;
+  setTimeout(()=>m.textContent="",120);
 }
 
 function update(){
   document.getElementById("score").textContent=score;
   document.getElementById("combo").textContent=combo;
   document.getElementById("hp").textContent=hp;
-  document.getElementById("heat").textContent=Math.floor(heat);
 }
 
-// ===== HIT SYSTEM =====
+// ===== MODE BEHAVIOR LAYER =====
+function applyMode(hitDist){
+  const m=modes[modeIndex];
+
+  if(m==="OSU"){
+    return hitDist;
+  }
+
+  if(m==="TAIKO"){
+    return hitDist + (Math.random()*10); // timing jitter
+  }
+
+  if(m==="MANIA"){
+    return hitDist - 5; // tighter windows
+  }
+
+  if(m==="CATCH"){
+    return hitDist + 15; // leniency but slower recovery
+  }
+
+  return hitDist;
+}
+
+// ===== HIT =====
 function hit(lane){
   let best=null,bd=999;
 
@@ -108,13 +123,13 @@ function hit(lane){
   if(!best || bd>60){
     combo=0;
     hp-=8;
-    heat+=5;
     flash("bad");
   }else{
     best.hit=true;
     best.el.remove();
 
-    const r=judge(bd);
+    const adjusted=applyMode(bd);
+    const r=judge(adjusted);
 
     if(r==="perfect"){
       score+=300;combo++;hp=Math.min(100,hp+2);
@@ -129,29 +144,18 @@ function hit(lane){
 
   if(hp<=0){
     document.body.innerHTML=
-    "<div style='padding:40px;font-size:40px'>INFINITE LOOP BROKEN<br>score:"+score+"</div>";
+      "<div style='padding:40px;font-size:40px'>MEGAMIX BROKEN<br>score:"+score+"</div>";
   }
 }
 
-// ===== INFINITE LOOP =====
+// ===== LOOP =====
 function loop(){
-  time+=0.016;
-
-  updateHeat();
-
-  // dynamic spawn rate based on heat
-  const spawnRate=Math.max(80, 420 - heat*3);
-
-  if(time*1000 > nextSpawn){
-    spawn();
-    nextSpawn = time*1000 + spawnRate;
-  }
+  if(Math.random()<0.03) spawn();
 
   notes.forEach(n=>{
     if(n.hit) return;
 
-    // speed increases with heat
-    n.y += 3.2 + heat*0.02;
+    n.y+=3.6;
     n.el.style.top=n.y+"px";
 
     if(n.y>window.innerHeight+50){
