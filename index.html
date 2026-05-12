@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>imagination engine (basic)</title>
+  <style>
+    html,body{
+      margin:0;
+      overflow:hidden;
+      background:#000;
+      color:#fff;
+      font-family:monospace;
+    }
+    canvas{
+      display:block;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<script>
+const ctx = c.getContext("2d");
+c.width = innerWidth;
+c.height = innerHeight;
+
+/* =====================
+   STATE
+===================== */
+
+let coin = 0;
+let ballcoin = 0;
+let win = false;
+
+const ball = {
+  x:0,
+  y:0,
+  vx:0,
+  vy:0,
+  active:false
+};
+
+/* =====================
+   INPUT (tap/click)
+===================== */
+
+addEventListener("pointerdown", () => {
+
+  // simple 70/30 success chance (replace later with timing system)
+  if(Math.random() > 0.3){
+    hit();
+  } else {
+    miss();
+  }
+
+});
+
+/* =====================
+   CORE LOGIC
+===================== */
+
+function hit(){
+  coin += 1;
+}
+
+function miss(){
+
+  ballcoin += 1;
+
+  ball.active = true;
+
+  ball.x = Math.random() * c.width;
+  ball.y = Math.random() * c.height;
+
+  ball.vx = (Math.random() - 0.5) * 8;
+  ball.vy = (Math.random() - 0.5) * 8;
+
+}
+
+/* =====================
+   BALL PHYSICS
+===================== */
+
+function updateBall(){
+
+  if(!ball.active) return;
+
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  ball.vx *= 0.97;
+  ball.vy *= 0.97;
+
+  if(ball.x < 0 || ball.x > c.width) ball.vx *= -1;
+  if(ball.y < 0 || ball.y > c.height) ball.vy *= -1;
+
+}
+
+/* =====================
+   WIN CONDITION
+===================== */
+
+function checkWin(){
+
+  if(coin >= 20 && !win){
+    win = true;
+  }
+
+}
+
+/* =====================
+   UPDATE
+===================== */
+
+function update(){
+  updateBall();
+  checkWin();
+}
+
+/* =====================
+   RENDER
+===================== */
+
+function render(){
+
+  ctx.clearRect(0,0,c.width,c.height);
+
+  // ball
+  if(ball.active){
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, 12, 0, Math.PI*2);
+    ctx.fillStyle = "yellow";
+    ctx.fill();
+  }
+
+  // UI
+  ctx.fillStyle = "white";
+  ctx.font = "20px monospace";
+
+  ctx.fillText("coin: " + coin, 20, 30);
+  ctx.fillText("ballcoin: " + ballcoin, 20, 60);
+
+  if(win){
+    ctx.fillText("WIN STATE", 20, 100);
+  }
+
+}
+
+/* =====================
+   LOOP
+===================== */
+
+function loop(){
+  update();
+  render();
+  requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+
+</body>
+</html>
