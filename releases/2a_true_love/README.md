@@ -7,3 +7,9 @@ A continuous rhythm engine where audio is authority and `guardian.l` protects th
 🎮 All games. One world. Unified through one endless megamix experience.
 
 ❤️ Made with ChatGPT — **THE MIX LIVES.**
+
+Timeline is the source of truth.
+
+Audio, gameplay, visuals, RP, and multiplayer
+
+interpret the same clock.
