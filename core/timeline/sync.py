@@ -6,49 +6,57 @@ from .clock import ClockSnapshot, TimelineClock
 
 
 @dataclass(frozen=True)
-class SynchronizedBreak:
-    time_ns: int
+class SynchronizedTransition:
+    """Shared temporal contract for a synchronized jump."""
+
+    break_ns: int
     generation: int
+
+    @property
+    def return_ns(self) -> int:
+        """The jump always returns to the break anchor."""
+        return self.break_ns
 
 
 @dataclass(frozen=True)
 class SyncSnapshot:
-    break_event: SynchronizedBreak
+    transition: SynchronizedTransition
     clock: ClockSnapshot
 
 
 class TimelineSync:
-    """Coordinates simultaneous breaks on the authoritative clock."""
+    """Coordinates synchronized departure and return."""
 
     def __init__(self, clock: TimelineClock) -> None:
         self._clock = clock
-        self._break: SynchronizedBreak | None = None
+        self._transition: SynchronizedTransition | None = None
 
-    def break_now(self) -> SynchronizedBreak:
+    def break_now(self) -> SynchronizedTransition:
         snapshot = self._clock.snapshot()
 
-        self._break = SynchronizedBreak(
-            time_ns=snapshot.time_ns,
+        self._transition = SynchronizedTransition(
+            break_ns=snapshot.time_ns,
             generation=snapshot.generation,
         )
 
-        return self._break
+        return self._transition
 
     def snapshot(self) -> SyncSnapshot | None:
-        if self._break is None:
+        if self._transition is None:
             return None
 
         return SyncSnapshot(
-            break_event=self._break,
+            transition=self._transition,
             clock=self._clock.snapshot(),
         )
 
     def synchronized(
         self,
-        left: SynchronizedBreak,
-        right: SynchronizedBreak,
+        left: SynchronizedTransition,
+        right: SynchronizedTransition,
     ) -> bool:
         return (
-            left.time_ns == right.time_ns
+            left.break_ns == right.break_ns
             and left.generation == right.generation
+            and left.return_ns == right.return_ns
         )
