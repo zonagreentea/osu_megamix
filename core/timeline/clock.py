@@ -37,6 +37,8 @@ class TimelineClock:
 
     def __init__(self, *, clock=time.monotonic_ns) -> None:
         self._clock = clock
+        self._wall_origin_ns = None
+        self._wall_offset_ns = 0
         self._origin_ns: int | None = None
         self._offset_ns = 0
         self._last_ns = 0
@@ -48,6 +50,23 @@ class TimelineClock:
             return
 
         now = self._clock()
+
+        if self._wall_origin_ns is None:
+            # Calibrate wall time against the monotonic source.
+            # Pick the tightest bracket to minimize origin uncertainty.
+            best = None
+            for _ in range(32):
+                mono_a = time.monotonic_ns()
+                wall = time.time_ns()
+                mono_b = time.monotonic_ns()
+                span = mono_b - mono_a
+
+                if best is None or span < best[0]:
+                    best = (span, wall, (mono_a + mono_b) // 2)
+
+            _, wall, mono = best
+            self._wall_origin_ns = wall
+            self._wall_offset_ns = wall - mono
 
         if self._origin_ns is None:
             self._origin_ns = now - self._offset_ns
@@ -88,6 +107,19 @@ class TimelineClock:
             self._origin_ns = self._clock() - self._last_ns
 
         return self._last_ns
+
+    def wall_time_ns(self) -> int:
+        if self._wall_origin_ns is None:
+            raise RuntimeError("clock must be started before wall_time_ns()")
+
+        return time.monotonic_ns() + self._wall_offset_ns
+
+    def wall_datetime(self):
+        from datetime import datetime, timezone
+        return datetime.fromtimestamp(
+            self.wall_time_ns() / 1_000_000_000,
+            tz=timezone.utc,
+        ).astimezone()
 
     def snapshot(self) -> ClockSnapshot:
         return ClockSnapshot(
