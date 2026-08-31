@@ -2,3 +2,13 @@
 .venv/
 
 .venv/
+
+# Local osu! runtime
+runtime/
+
+# Local development checkouts and worktrees
+.worktrees/
+osu/
+upstream-osu/
+
+.venv/
