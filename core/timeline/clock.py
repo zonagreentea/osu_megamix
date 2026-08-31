@@ -27,6 +27,19 @@ class ClockSnapshot:
         return self.time_ns / 1_000_000_000
 
 
+class String:
+    """Pulls authoritative timeline time forward."""
+    def __init__(self, clock): self.clock=clock
+    def pull(self, delta_seconds): self.clock.advance(delta_seconds)
+
+
+class Nail:
+    """Defines the current authoritative moment."""
+    def __init__(self, clock): self.clock=clock
+    @property
+    def current(self): return self.clock.snapshot()
+
+
 class TimelineClock:
     """Authoritative monotonic, integer-quantized master clock.
 

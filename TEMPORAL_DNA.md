@@ -43,3 +43,4 @@ where bounds are advanced by the authoritative temporal source rather than deriv
 `the-clock` and `osu!megamix` share this mathematical DNA while retaining independent temporal implementations.
 
 This is a computational/modeling result, not a claim that physics has experimentally established the ontology of time.
+STRING → pulls time forward | NAIL → creates the current temporal instant (TI)
