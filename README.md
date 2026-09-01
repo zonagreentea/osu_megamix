@@ -53,13 +53,13 @@ A point is simply the current time.
 Creates a temporal interval from a starting point and a length:
 
 ```python
-def duration(time, length): return time, time + length
+def segment(time, length): return time, time + length
 ```
 
 For example:
 
 ```python
-duration(5, 10)
+segment(5, 10)
 # (5, 15)
 ```
 
