@@ -1,80 +1,174 @@
 # osu!megamix
 
-A minimal monotonic clock.
+A minimal experimental game architecture built from small temporal and state primitives.
 
-## Model
+The current system deliberately favors **variables over constants** and **relationships over abstractions**.
 
-TIME is continuous.
+## Primitives
 
-The nail is now.
+### `timer.py`
 
-The string is the elapsed time between two observations.
+Provides the current monotonic clock:
 
-## Mathematics
+```python
+import time
 
-Let:
+now = time.monotonic_ns
+```
 
-C(t) = clock reading at time t
+`now` is a reference to Python's monotonic nanosecond clock.
 
-For t2 >= t1:
+### `point.py`
 
-C(t2) >= C(t1)
+Produces a point in time:
 
-Elapsed time:
+```python
+from timer import now
 
-delta = C(t2) - C(t1)
+def point():
+    return now()
+```
 
-One second:
+A point is an observed value of `now`.
 
-1 s = 1,000,000,000 ns
+### `duration.py`
 
-Therefore:
+Constructs an interval from a starting point and a length:
 
-seconds = delta / 1,000,000,000
+```python
+def duration(time, length):
+    return time, time + length
+```
 
-The clock observes time. It does not create, advance, or count time.
+The primitive does not impose direction or validate the length.
 
-## Implementation
+### `score.py`
 
-    import time
+Maintains score:
 
-    now = time.monotonic_ns
+```python
+score = 0
 
-now() returns a monotonic integer nanosecond reading.
+def add():
+    global score
+    score += 1
+```
 
-The implementation uses Python's portable monotonic clock interface rather than a platform-specific clock API.
+Score is state.
 
-## Test
+### `health.py`
 
-The initial implementation was tested with:
+Represents a bounded health transition:
 
-    a = now()
-    time.sleep(0.01)
-    b = now()
+```python
+health = max(0, min(10, health + delta))
+```
 
-    assert b >= a
-    assert b - a > 0
+Health is bounded between `0` and `10`.
 
-Result:
+The current expression expects `health` and `delta` to exist in its surrounding scope.
 
-    PASS
+## Current Model
 
-The test confirmed that the clock advanced over a real elapsed interval and did not move backward during the observation.
+The temporal core is intentionally small:
 
-The test script was removed after verification.
+```text
+now
+ ↓
+point
+ ↕
+duration
+```
 
-## Output
+State exists separately:
 
-A clock reading is an integer number of nanoseconds.
+```text
+score
+health
+```
 
-A difference between two readings is the string.
+The system does not currently contain a dedicated judgement, hit, hold, error, or accuracy primitive.
 
-## Principle
+## What the Tests Show
 
-Time is not a counter.
+The primitives have been tested for:
 
-The clock observes time.
+* 10,000 generated points
+* monotonic point ordering
+* duration reconstruction
+* zero-length durations
+* reverse durations
+* nested durations
+* extremely large integer ranges
+* arbitrary integer points
+* independent score and health state
+* temporal composition without judgement logic
+* natural Python errors from invalid arguments
+* measurement error as the difference between two points
+* accuracy as a derived calculation
 
-The nail is now.
+The temporal stress test passed all tested cases.
 
-The string is elapsed time.
+Measurement error was represented directly as:
+
+```python
+error = actual - target
+```
+
+This produced positive, negative, and zero error without requiring an additional primitive.
+
+A tested accuracy relationship was:
+
+```python
+accuracy = 1 - abs(error) / duration
+```
+
+This produced:
+
+```text
+error = 0       → accuracy = 1.0
+error = 50      → accuracy = 0.5
+error = 100     → accuracy = 0.0
+```
+
+The tests also showed that zero duration produces a `ZeroDivisionError`, while negative duration can produce values greater than `1`. These behaviors are currently observed rather than normalized by the architecture.
+
+## Design Direction
+
+The current experiments suggest a simple distinction:
+
+```text
+variables
+    ↓
+relationships
+    ↓
+derived values
+```
+
+A point is a value.
+
+A duration is a relationship describing an interval.
+
+Measurement error is a relationship between two points.
+
+Accuracy is a derived calculation from error and a reference duration.
+
+Consequently, concepts do not automatically become primitives merely because they have names.
+
+The current architecture intentionally avoids adding abstractions until the existing variables and relationships are insufficient.
+
+## Current Files
+
+```text
+duration.py
+health.py
+point.py
+score.py
+timer.py
+README.md
+```
+
+The architecture is small by design.
+
+**Whittle the machinery. Don't whittle the concepts.**
+
