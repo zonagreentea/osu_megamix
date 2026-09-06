@@ -1,2 +1,2 @@
-def polygon(S):
-    return len(S)
+def polygon(L):
+    return len(L)
