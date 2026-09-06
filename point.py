@@ -1,2 +1,2 @@
-from timer import now
-def point(): return now()
+def p(x):
+    return x
