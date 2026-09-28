@@ -1,21 +1,21 @@
-Osu!megamix Readme — Quickstart
+# osu!megamix Readme — Quickstart
 
-osu!megamix — Quickstart
+## osu!megamix — Quickstart
 
 Welcome! This is the fastest way to get playing.
 
-What is osu!megamix?
+## What is osu!megamix?
 
 osu!megamix is a rhythm game inspired by osu!, focused on tight timing, clean rules, and forward momentum. Hit notes on the beat. Finish the song. Feel good doing it.
 
-Requirements
+## Requirements
 
 Keyboard (recommended)
 Audio on (timing matters)
 A supported mix / beatmap
 Mouse is optional depending on mode.
 
-Launch
+# Launch
 
 Start the game / runtime
 Load a song or mix
