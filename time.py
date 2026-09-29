@@ -1,4 +1,3 @@
 import time
 
-def timestamp(value):
-    return time.monotonic_ns(), value
+monotonic_ns = time.monotonic_ns()
