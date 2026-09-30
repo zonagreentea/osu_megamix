@@ -1,82 +1,49 @@
 #!/usr/bin/env python3
-import os, time, random
+# osu!megamix playable prototype - audio driver sync minimal
 
-# ---------- RED-CHARIZARD EVERYWHERE ----------
-RC_COLOR = "\033[38;2;255;42;141m"  # reddest pink possible
-RESET = "\033[0m"
+import sounddevice as sd
+import numpy as np
+import time
+import threading
+import random
 
-def rc_log(msg):
-    print(f"{RC_COLOR}[osu!megamix]{RESET} {msg}")
+# Settings
+BPM = 120
+BEAT_INTERVAL = 60 / BPM
+HIT_WINDOW = 0.15  # seconds
 
-# ---------- BEATMAP LOADING ----------
-beatmap_dirs = ["osu_beatmaps", "osu_mix_beatmaps"]
-beatmaps = []
+# Simulated beatmap (random for demo)
+beatmap = [i * BEAT_INTERVAL for i in range(32)]
 
-for d in beatmap_dirs:
-    if os.path.exists(d):
-        for f in os.listdir(d):
-            if f.endswith(".osu") or f.endswith(".mix"):
-                beatmaps.append(os.path.join(d, f))
+score = 0
+hit_index = 0
+start_time = None
 
-rc_log(f"Loaded {len(beatmaps)} beatmaps (Red-Charizard aware!)")
+# Audio callback (just silence, we read driver later if needed)
+def callback(outdata, frames, time_info, status):
+    outdata[:] = np.zeros((frames, 2))
 
-# ---------- GAMEMODE SELECTION ----------
-# Player always sees 'osu!megamix', but internally everything is Red-Charizard
-modes_display = ["osu!megamix", "osu!", "osu!taiko", "osu!catch", "osu!mania"]
-modes_internal = ["red-charizard", "osu!", "taiko", "catch", "mania"]  # hidden everywhere
-
-print("Select gamemode (press Enter for default: osu!megamix):")
-for i, name in enumerate(modes_display, start=1):
-    print(f"{i}. {name}")
-
-choice = input("Enter number: ").strip()
-if choice.isdigit() and 1 <= int(choice) <= len(modes_display):
-    selected_display = modes_display[int(choice)-1]
-    selected_internal = modes_internal[int(choice)-1]
-else:
-    selected_display = "osu!megamix"
-    selected_internal = "red-charizard"
-
-rc_log(f"Mode selected: {selected_display} (internally: {selected_internal})")
-
-# ---------- RED-CHARIZARD / MEGAMIX SESSION ----------
-if selected_internal == "red-charizard":
-    if beatmaps:
-        rc_log("osu!megamix MEGAMIX starting: auto-preloading 50 shuffled beatmaps...")
-        playlist = random.sample(beatmaps, min(50, len(beatmaps)))
-
-        # Auto-detect new beatmaps mid-session
-        def refresh_beatmaps():
-            for d in beatmap_dirs:
-                if os.path.exists(d):
-                    for f in os.listdir(d):
-                        path = os.path.join(d, f)
-                        if (path.endswith(".osu") or path.endswith(".mix")) and path not in playlist:
-                            playlist.append(path)
-                            rc_log(f"New beatmap detected: {f} (Red-Charizard spotted!)")
-
-        for i, bm in enumerate(playlist, start=1):
-            rc_log(f"Cooking beatmap {i}/{len(playlist)}: {bm}")
+def run_audio():
+    with sd.OutputStream(channels=2, callback=callback, samplerate=44100):
+        while hit_index < len(beatmap):
             time.sleep(0.1)
-            if i % 10 == 0:
-                refresh_beatmaps()
 
-        rc_log("osu!megamix session complete! Red-Charizard lurks everywhere.")
-    else:
-        rc_log("No beatmaps found for osu!megamix (Red-Charizard sad).")
-else:
-    rc_log(f"Starting {selected_display} session...")
-    if beatmaps:
-        for i, bm in enumerate(beatmaps, start=1):
-            rc_log(f"Playing beatmap {i}/{len(beatmaps)}: {bm}")
-            time.sleep(0.1)
-        rc_log(f"{selected_display} session complete! Red-Charizard smiles.")
-    else:
-        rc_log(f"No beatmaps available for {selected_display}!")
+# Terminal display
+def run_game():
+    global hit_index, score, start_time
+    start_time = time.time()
+    while hit_index < len(beatmap):
+        now = time.time() - start_time
+        if hit_index < len(beatmap) and abs(now - beatmap[hit_index]) < HIT_WINDOW:
+            print(f"🎯 Hit circle {hit_index+1}! (time {now:.2f}s)")
+            score += 100
+            hit_index += 1
+        time.sleep(0.01)
+    print(f"🏆 Done! Score: {score}")
 
-# ---------- PLAYER HISTORY ----------
-history_file = os.path.expanduser("~/playerbase_history.txt")
-with open(history_file, "a") as f:
-    f.write(f"{selected_display}\n")
-
-
+# Run both threads
+t1 = threading.Thread(target=run_audio, daemon=True)
+t2 = threading.Thread(target=run_game)
+t1.start()
+t2.start()
+t2.join()
