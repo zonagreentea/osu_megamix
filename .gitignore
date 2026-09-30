@@ -18,3 +18,35 @@
 
 # ultra scratch
 /ultra/scratch/
+
+# --- cat: do not commit Xcode/user state or local build junk ---
+**/*.xcuserstate
+**/*.xcuserdata/
+**/xcuserdata/
+build_ios/
+dist_ball/
+ios/
+osu_megamix_r4/
+
+# cat: local notes
+ios_README.txt
+
+# --- cat: Xcode / iOS junk (never commit) ---
+**/*.xcuserstate
+**/xcuserdata/
+**/*.xccheckout
+**/*.xcscmblueprint
+**/DerivedData/
+**/.swiftpm/xcode/package.xcworkspace/
+
+# --- cat: build outputs ---
+build_ios/
+dist_ball/
+ultra/build/
+ultra/scratch/
+
+# runtime logs
+logs/
+
+*.bak
+mixes/*.mix
