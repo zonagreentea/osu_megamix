@@ -1,0 +1,3 @@
+[submodule "osu_megamix"]
+	path = osu_megamix
+	url = https://github.com/zonagreentea/osu_megamix.git
