@@ -2,7 +2,6 @@ import time
 import clock.py
 
 event = bool()
-if event = True
+if event = True:
   clock_ns = time.time_ns()
-elif event = False
-  return event.py
+elif event = False:
