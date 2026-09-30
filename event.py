@@ -5,4 +5,4 @@ event = bool()
 if event = True
   clock_ns = time.time_ns()
 elif event = False
-  return
+  return event.py
