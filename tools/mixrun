@@ -1,0 +1,18 @@
+#!/usr/bin/env zsh
+# mixrun — zsh launcher that makes compiler+runtime share reality
+emulate -L zsh
+setopt errexit nounset pipefail
+
+pack="${1:-dist/mode_switcher.mixir}"
+[[ -f "$pack" ]] || { print -ru2 -- "mixrun: missing pack: $pack"; exit 1 }
+[[ -f "$pack.ok" ]] || { print -ru2 -- "mixrun: pack not ok (missing $pack.ok)"; exit 1 }
+
+audio=""
+[[ -f "$pack.path" ]] && audio="$(<"$pack.path")"
+
+export MEGAMIX_PACK="$pack"
+export MEGAMIX_AUDIO_PATH="$audio"
+
+# run the game runner (your existing entrypoint)
+[[ -x ./mixrun ]] || { print -ru2 -- "mixrun: missing ./mixrun"; exit 1 }
+exec ./mixrun "$@"

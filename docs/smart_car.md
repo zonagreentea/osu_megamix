@@ -14,8 +14,8 @@
 - no prestige, no reset, no re-entry into boss pressure
 
 ## Canonical First Purchase
-**First purchaser:** Shizuka  
-**Date:** 2026-01-14  
+**First purchaser:** Shizuka
+**Date:** 2026-01-14
 **Effect:** Boss resolved permanently for Shizuka’s canon timeline
 
 ## Red-Charizard Rule

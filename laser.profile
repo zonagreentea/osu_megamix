@@ -18,10 +18,10 @@
     "snap_grid": "",
     "fold_curve": "",
     "latency_comp_ms": ,
-    "min_gap_ms": 
+    "min_gap_ms":
   },
   "session": {
     "flip_count": ,
-    "hesitation_marks": 
+    "hesitation_marks":
   }
 }

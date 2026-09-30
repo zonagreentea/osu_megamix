@@ -1,6 +1,6 @@
 # osu!megamix — Input Handling Spec (FROZEN)
 
-Status: **SEALED / FROZEN**  
+Status: **SEALED / FROZEN**
 Rule: input layer is closed; any future change is a **new spec**, not a patch.
 
 ## Authority

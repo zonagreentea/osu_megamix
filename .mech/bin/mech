@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Always anchor to repo hub
+HUB="${HUB:-$HOME/osu_megamix}"
+OPS_DIR="$HUB/.mech/ops"
+
+# shellcheck disable=SC1091
+. "$OPS_DIR/env.sh"
+# shellcheck disable=SC1091
+. "$OPS_DIR/venv.sh"
+
+die(){ echo "mech: $*" >&2; exit 1; }
+
+cmd="${1:-}"; shift || true
+
+case "$cmd" in
+  status)
+    echo "HUB=$HUB"
+    echo "MECH_ROOT=$MECH_ROOT"
+    echo "BALL_DIR=$BALL_DIR"
+    venv_status
+    ;;
+
+  # NOT PLAYING
+  ops:serve)
+    cd "$HUB" || die "missing hub at $HUB"
+    if [ -x tools/mix_server.py ]; then
+      exec python3 tools/mix_server.py "${1:-8000}" 127.0.0.1
+    fi
+    exec python3 -m http.server "${1:-8000}" --bind 127.0.0.1
+    ;;
+
+  venv-on) venv_on; venv_status ;;
+  venv-off) venv_off; venv_status ;;
+  venv-status) venv_status ;;
+
+  # PLAYING (explicit)
+  play:megamix)
+    cd "$HUB" || die "missing hub at $HUB"
+    [ -x ./mixrun ] || die "missing ./mixrun"
+    exec ./mixrun "$@"
+    ;;
+  play:megamix-bg)
+    cd "$HUB" || die "missing hub at $HUB"
+    exec ./mixrun --background "$@"
+    ;;
+  play:megamix-stop)
+    cd "$HUB" || die "missing hub at $HUB"
+    exec ./mixrun --stop "$@"
+    ;;
+
+  # refuse accidental play
+  megamix|megamix-bg|megamix-stop)
+    die "refused: use explicit play:* -> mech play:megamix | play:megamix-bg | play:megamix-stop"
+    ;;
+
+  ball)
+    cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
+    if [ -x ./RUN ]; then exec ./RUN "$@"; fi
+    if [ -x ./ball ]; then exec ./ball "$@"; fi
+    echo "mech: ball present, no launcher found"
+    ;;
+  ball-push)
+    cd "$BALL_DIR" || die "missing ball at $BALL_DIR"
+    git status
+    git add -A
+    git commit -m "ball" || true
+    BALL_PUSH_OK=1 git push
+    ;;
+
+  *)
+    cat <<'HELP'
+mech:
+  mech status
+  mech ops:serve [port]
+  mech venv-on | venv-off | venv-status
+
+  mech play:megamix | play:megamix-bg | play:megamix-stop
+
+  mech ball
+  mech ball-push (guarded)
+HELP
+    exit 2
+    ;;
+esac
