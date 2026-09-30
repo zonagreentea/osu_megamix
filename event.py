@@ -1,9 +1,5 @@
-import time
-import clock.py
+import clock
 
-event = bool()
-if event = True:
-  return clock_ns
-  return
-elif event = False:
-  return
+def process(event):
+    if event:
+        return clock.clock_ns
