@@ -1,18 +1,36 @@
+<<<<<<< HEAD
 # 🎵 osu!mix / osu!megamix
 
 > **The mix is running.**
+=======
+# osu!megamix Readme — Quickstart
+
+## osu!megamix — Quickstart
+>>>>>>> origin/10
 
 This project may be called **osu!megamix**, **megamix**, or simply **the mix**.
 
+<<<<<<< HEAD
 **Players just call it: osu!**
+=======
+## What is osu!megamix?
+>>>>>>> origin/10
 
 ---
 
+<<<<<<< HEAD
 ## 🌌 What is the Megamix?
+=======
+## Requirements
+>>>>>>> origin/10
 
 osu!megamix is a continuous-play interpretation of osu! built around a living audio timeline called a **`.mix`**.
 
+<<<<<<< HEAD
 A `.mix` starts once.
+=======
+# Launch
+>>>>>>> origin/10
 
 Then it **keeps going.**
 

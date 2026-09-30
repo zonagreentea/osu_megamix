@@ -1,0 +1,9 @@
+body {
+    background: #111;
+    color: #fff;
+    font-family: sans-serif;
+    text-align: center;
+}
+#gameCanvas { display: none; margin: auto; background: #222; }
+button { margin: 10px; padding: 10px 20px; font-size: 18px; }
+

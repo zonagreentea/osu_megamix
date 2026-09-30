@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark light"/>
+<title>osu!megamix — Infinite Megamix</title>
+<style>
+html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:sans-serif;}
+canvas{display:block;margin:0 auto;background:#111;image-rendering:pixelated;width:100%;height:100%;}
+#titleScreen{text-align:center;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;color:#fff;animation:fade 1s ease forwards;}
+@keyframes fade{0%{opacity:0}100%{opacity:1}}
+button{margin-top:20px;padding:5px 10px;font-size:14px;}
+</style>
+</head>
+<body>
+<div id="titleScreen">
+  <h1>osu!megamix</h1>
+  <div style="display:flex;gap:10px;">
+    <div style="width:30px;height:30px;background:#ff0000;"></div>
+    <div style="width:30px;height:30px;background:#0000ff;"></div>
+    <div style="width:30px;height:30px;background:#00ff00;"></div>
+    <div style="width:30px;height:30px;background:#ffff00;"></div>
+  </div>
+  <button id="startBtn">Burst to Megamix</button>
+</div>
+<canvas id="mixCanvas" width="256" height="192"></canvas>
+<script>
+const canvas=document.getElementById('mixCanvas'),ctx=canvas.getContext('2d');
+const W=canvas.width,H=canvas.height;
+const modes=['osu','taiko','catch','mania'];
+const colors={'osu':'#ff0000','taiko':'#0000ff','catch':'#00ff00','mania':'#ffff00'};
+let mixFrame=0,running=false,keys={},modeActive='osu',health=100;
+
+// scaling
+function applyScale(){
+  const scaleX=canvas.clientWidth/W,scaleY=canvas.clientHeight/H;
+  ctx.setTransform(scaleX,0,0,scaleY,0,0);
+}
+window.addEventListener('resize',applyScale);
+applyScale();
+
+// infinite generator
+function* infiniteMix(){while(true)for(let m of modes)yield m;}
+let seq=infiniteMix();
+
+// objects
+let osuCircles=[],taikoNotes=[],catchFruits=[],maniaNotes=[];
+let catcherX=W/2,maniaCols=[W/8,3*W/8,5*W/8,7*W/8];
+
+// spawn objects
+function spawnObjects(){
+  if(mixFrame%60===0) osuCircles.push({x:W,y:Math.random()*H/2,size:5,hit:false,color:colors['osu']});
+  if(mixFrame%45===0) taikoNotes.push({x:W,y:H/2,hit:false,color:colors['taiko']});
+  if(mixFrame%50===0) catchFruits.push({x:Math.random()*W,y:0,hit:false,color:colors['catch']});
+  if(mixFrame%40===0) maniaNotes.push({col:Math.floor(Math.random()*4),y:0,hit:false,color:colors['mania']});
+}
+
+// draw functions
+function drawCircle(o){ctx.fillStyle=o.color;ctx.beginPath();ctx.arc(o.x,o.y,o.size,0,2*Math.PI);ctx.fill();}
+function drawRect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
+function drawTaiko(n){drawRect(n.x-4,n.y-4,8,8,n.color);}
+function drawCatch(f){drawRect(f.x-3,f.y-3,6,6,f.color);}
+function drawMania(n){drawRect(maniaCols[n.col]-2,n.y,4,4,n.color);}
+
+// input
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+// burst/start
+document.getElementById('startBtn').onclick=startGame;
+function startGame(){
+  running=true;
+  health=100;
+  document.getElementById('titleScreen').style.display='none';
+  loop();
+}
+
+// hit helpers
+function checkHit(obj,x,y,r){return Math.hypot(obj.x-x,obj.y-y)<r;}
+
+// gameplay loop
+function loop(){
+  if(!running) return;
+  ctx.clearRect(0,0,W,H);
+  spawnObjects();
+
+  // osu!
+  for(let o of osuCircles){o.x-=2;if(!o.hit)drawCircle(o);}
+  osuCircles=osuCircles.filter(o=>o.x>0 && !o.hit);
+
+  // taiko
+  for(let n of taikoNotes){n.x-=3;drawTaiko(n);}
+  taikoNotes=taikoNotes.filter(n=>n.x>0);
+
+  // catch
+  for(let f of catchFruits){f.y+=2;drawCatch(f);}
+  catchFruits=catchFruits.filter(f=>f.y<H);
+
+  // mania
+  for(let n of maniaNotes){n.y+=3;drawMania(n);}
+  maniaNotes=maniaNotes.filter(n=>n.y<H);
+
+  // simple input examples
+  if(keys['a'])catcherX-=3;
+  if(keys['d'])catcherX+=3;
+  drawRect(catcherX,H-10,16,4,'#fff');
+
+  mixFrame++;
+  requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>

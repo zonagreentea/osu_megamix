@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>1c pet Mix</title>
+<style>
+html, body {
+    margin:0; padding:0; overflow:hidden; background:#000; height:100%; font-family:sans-serif;
+}
+canvas { display:block; margin:0 auto; background:#111; }
+#titleScreen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; justify-content:center; align-items:center; cursor:pointer;
+}
+#modeDisplay {
+    position:absolute; top:10px; right:10px; color:#fff; font-size:28px;
+}
+</style>
+</head>
+<body>
+<div id="titleScreen">
+    <canvas id="titleCanvas" width="400" height="400"></canvas>
+</div>
+<div id="modeDisplay"></div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+// ----------------------
+// Title Screen
+// ----------------------
+const titleCanvas = document.getElementById("titleCanvas");
+const tctx = titleCanvas.getContext("2d");
+
+function drawTitleLogo(){
+    const cx = titleCanvas.width/2;
+    const cy = titleCanvas.height/2;
+    const radius = 150;
+    tctx.fillStyle = "#ff66aa";
+    tctx.beginPath();
+    tctx.arc(cx, cy, radius, 0, Math.PI*2);
+    tctx.fill();
+    tctx.fillStyle = "#fff";
+    tctx.font = "bold 48px sans-serif";
+    tctx.textAlign = "center";
+    tctx.textBaseline = "middle";
+    tctx.fillText("osu!", cx, cy);
+}
+drawTitleLogo();
+
+document.getElementById("titleScreen").addEventListener("click", ()=>{
+    document.getElementById("titleScreen").style.display="none";
+    startGame();
+});
+
+// ----------------------
+// Game Setup
+// ----------------------
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+
+window.addEventListener('resize', ()=>{
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+});
+
+// ----------------------
+// Game State
+// ----------------------
+let modes = ["osu","taiko","mania","catch"];
+let currentMode = "osu";
+let modeTimer = 0;
+let modeSwitchInterval = rand(15000, 30000);
+
+let combo = 0;
+let score = 0;
+
+// Objects
+let osuObjects = [];
+let taikoObjects = [];
+let maniaObjects = [];
+let catchObjects = [];
+
+// Catcher position
+let catcherX = width/2;
+let catcherY = height - 50;
+
+// Music
+const audio = new Audio();
+audio.src = "https://cdn.jsdelivr.net/gh/zonagreentea/osu_megamix@main/assets/sample.ogg";
+audio.loop = true;
+
+// Mode Display
+const modeDiv = document.getElementById("modeDisplay");
+
+// ----------------------
+// Utility
+// ----------------------
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function choose(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ----------------------
+// Start Game
+// ----------------------
+function startGame(){
+    audio.play();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+// ----------------------
+// Spawning Objects (pseudo rhythm)
+// ----------------------
+function spawnObjects(delta){
+    // Approximate beat: every 500ms
+    if(Math.random() < 0.02){
+        if(currentMode==="osu"){
+            osuObjects.push({
+                x: rand(100,width-100),
+                y: rand(100,height-200),
+                baseRadius: 20,
+                approachRadius: 60,
+                shrinkSpeed: 0.5,
+                hit:false
+            });
+        } else if(currentMode==="taiko"){
+            taikoObjects.push({
+                key: choose(["Z","X"]),
+                hit:false
+            });
+        } else if(currentMode==="mania"){
+            maniaObjects.push({
+                lane: Math.floor(rand(0,4)),
+                y:0,
+                speed:5,
+                hold:false,
+                hit:false
+            });
+        } else if(currentMode==="catch"){
+            catchObjects.push({
+                x: rand(50,width-50),
+                y:0,
+                speed:3,
+                hit:false
+            });
+        }
+    }
+}
+
+// ----------------------
+// Draw Mode Objects
+// ----------------------
+function drawOsu(){
+    for(const o of osuObjects){
+        if(o.approachRadius>o.baseRadius) o.approachRadius -= o.shrinkSpeed;
+        else if(!o.hit){ combo=0; o.hit=true; }
+
+        // Approach
+        ctx.strokeStyle = "white";
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.arc(o.x,o.y,o.approachRadius,0,Math.PI*2);
+        ctx.stroke();
+        // Hit circle
+        ctx.fillStyle="blue";
+        ctx.beginPath();
+        ctx.arc(o.x,o.y,o.baseRadius,0,Math.PI*2);
+        ctx.fill();
+        if(o.hit){
+            ctx.strokeStyle="yellow";
+            ctx.lineWidth=3;
+            ctx.stroke();
+        }
+    }
+}
+
+function drawTaiko(){
+    ctx.font="48px sans-serif";
+    for(const t of taikoObjects){
+        ctx.fillStyle="red";
+        ctx.fillText(t.key, width/2, height/2);
+    }
+}
+
+function drawMania(){
+    const laneWidth = width/4;
+    // Draw lanes
+    ctx.strokeStyle="cyan";
+    for(let i=0;i<4;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*laneWidth,0);
+        ctx.lineTo(i*laneWidth,height);
+        ctx.stroke();
+    }
+    // Draw notes
+    for(const n of maniaObjects){
+        n.y += n.speed;
+        ctx.fillStyle="purple";
+        ctx.fillRect(n.lane*laneWidth + laneWidth/4, n.y, laneWidth/2, 20);
+        if(n.y>height-50 && !n.hit){ combo=0; n.hit=true; }
+    }
+}
+
+function drawCatch(){
+    // Catcher
+    ctx.fillStyle="yellow";
+    ctx.fillRect(catcherX-50,catcherY,100,20);
+    // Fruits
+    for(const f of catchObjects){
+        f.y += f.speed;
+        ctx.fillStyle="green";
+        ctx.beginPath();
+        ctx.arc(f.x,f.y,20,0,Math.PI*2);
+        ctx.fill();
+        if(f.y>catcherY && Math.abs(f.x-catcherX)<50 && !f.hit){ combo++; score+=300; f.hit=true; }
+        else if(f.y>height && !f.hit){ combo=0; f.hit=true; }
+    }
+}
+
+// ----------------------
+// Update & Draw
+// ----------------------
+let lastTime = 0;
+function gameLoop(now){
+    const delta = now - lastTime;
+    lastTime = now;
+    ctx.clearRect(0,0,width,height);
+
+    // Mode switch
+    modeTimer += delta;
+    if(modeTimer>modeSwitchInterval){
+        currentMode = choose(modes);
+        modeTimer = 0;
+        modeSwitchInterval = rand(15000,30000);
+    }
+    modeDiv.textContent = currentMode.toUpperCase();
+
+    // Spawn objects
+    spawnObjects(delta);
+
+    // Draw objects per mode
+    if(currentMode==="osu") drawOsu();
+    if(currentMode==="taiko") drawTaiko();
+    if(currentMode==="mania") drawMania();
+    if(currentMode==="catch") drawCatch();
+
+    // HUD
+    ctx.fillStyle="white";
+    ctx.font="24px sans-serif";
+    ctx.fillText("Score: "+score,20,30);
+    ctx.fillText("Combo: "+combo,20,60);
+
+    requestAnimationFrame(gameLoop);
+}
+
+// ----------------------
+// Input
+// ----------------------
+document.addEventListener("keydown", e=>{
+    if(currentMode==="osu"){
+        // check clicks in game
+    }
+    if(currentMode==="taiko"){
+        for(const t of taikoObjects){
+            if(e.key.toUpperCase()===t.key && !t.hit){ t.hit=true; combo++; score+=300; }
+        }
+    }
+    if(currentMode==="mania"){
+        // lane keys: A,S,D,F
+        const laneKeys=["A","S","D","F"];
+        for(const n of maniaObjects){
+            if(e.key.toUpperCase()===laneKeys[n.lane] && !n.hit){ n.hit=true; combo++; score+=300; }
+        }
+    }
+});
+
+document.addEventListener("mousemove", e=>{
+    if(currentMode==="catch"){
+        catcherX = e.clientX;
+    }
+});
+</script>
+</body>
+</html>
+

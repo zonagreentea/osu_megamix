@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Megamix</title>
+<style>
+body{background:#111;color:#eee;text-align:center;font-family:sans-serif;}
+canvas{display:block;margin:20px auto;border:1px solid #ccc;background:#222;}
+button{margin:5px;padding:10px 20px;font-size:16px;}
+</style>
+</head>
+<body>
+<h1>Megamix</h1>
+<div id="menu">
+<button onclick="startMode('osu_mix')">osu!mix</button>
+<button onclick="startMode('osu')">osu!</button>
+<button onclick="startMode('osu_taiko')">osu!taiko</button>
+<button onclick="startMode('osu_catch')">osu!catch</button>
+<button onclick="startMode('osu_mania')">osu!mania</button>
+</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script type="module" src="main.js"></script>
+</body>
+</html>

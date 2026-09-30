@@ -1,0 +1,10 @@
+{
+  "title": "Natty Demo",
+  "artist": "Shizuka",
+  "bpm": 120,
+  "notes": [
+    {"time": 1000, "x": 100, "y": 100},
+    {"time": 1500, "x": 200, "y": 150},
+    {"time": 2000, "x": 300, "y": 200}
+  ]
+}
