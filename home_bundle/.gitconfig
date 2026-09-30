@@ -1,0 +1,4 @@
+[alias]
+	safe = !git status && echo \"— OK to proceed —\"
+	pushf = push -f --set-upstream origin HEAD
+	sync = !git fetch origin && git pull --rebase && git push

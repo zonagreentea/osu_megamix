@@ -1,22 +1,20 @@
-# Build output
-build/
-builddir/
-dist/
-tmp/
+# builds
+/build/
+/ultra/build/
 
-# Logs
-*.log
+# scratch / temp
+/scratch/
 
-# Archives
-*.zip
-*.dmg
-
-# OS junk
+# OS
 .DS_Store
 
-# Secrets
-.env
-*.key
+# editors
+*.swp
+*.swo
+*~
 
-# Editors
-.vscode/
+# logs
+*.log
+
+# ultra scratch
+/ultra/scratch/
