@@ -1,0 +1,22 @@
+# Build output
+build/
+builddir/
+dist/
+tmp/
+
+# Logs
+*.log
+
+# Archives
+*.zip
+*.dmg
+
+# OS junk
+.DS_Store
+
+# Secrets
+.env
+*.key
+
+# Editors
+.vscode/
