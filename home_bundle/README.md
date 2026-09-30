@@ -1,4 +1,4 @@
-# Home Bundle
+### Home Bundle
 
 Minimal development snapshot for osu!megamix.
 
