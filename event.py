@@ -3,7 +3,7 @@ import clock.py
 
 event = bool()
 if event = True:
-  clock_ns = time.time_ns()
+  return clock_ns
   return
 elif event = False:
   return
