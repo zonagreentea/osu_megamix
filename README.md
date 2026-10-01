@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # osu_megamix 🚀
 The source code to osu!megamix.
 
@@ -39,3 +40,7 @@ Thank you for playing osu!megamix,
 a wonderful game, with you in mind.
 
 – ball
+=======
+# run
+a simple programming for the .mix file format
+>>>>>>> upstream/main
