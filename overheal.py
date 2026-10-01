@@ -13,7 +13,7 @@ env = os.environ.copy()
 env["OSU_MEGAMIX_ROOT"] = ROOT
 
 subprocess.run(
-    ["python3", "-m", "runtime"],
+    ["bash", "run.sh"],
     env=env,
     check=True
 )
