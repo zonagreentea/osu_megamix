@@ -1,6 +1,0 @@
-#!/bin/zsh
-python3 main.py &
-python3 main.py &
-python3 main.py &
-python3 main.py &
-wait
