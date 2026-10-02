@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mania mode</title>
+  <link rel="stylesheet" href="../../styles/game.css" />
+</head>
+<body>
+  <div class="game-shell">
+    <div class="topbar">
+      <div class="title">Mania mode</div>
+      <a class="back-btn" href="../../index.html">Back</a>
+    </div>
+    <canvas id="gameCanvas" width="960" height="540"></canvas>
+  </div>
+
+  <script type="module">
+    import { GameEngine } from '../../lib/game-engine.js';
+    const game = new GameEngine({ canvasId: 'gameCanvas', mode: 'mania' });
+    game.start();
+  </script>
+</body>
+</html>
