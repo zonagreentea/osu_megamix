@@ -254,3 +254,7 @@ while True:
     pygame.display.flip()
     clock.tick(60)
 
+def agreement(query):
+    return input(f"{query}\n> ")
+def output(input):
+    return input
