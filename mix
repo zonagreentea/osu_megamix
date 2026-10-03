@@ -6,14 +6,14 @@ gamemode="${1:-osu}"
 
 print "gamemode=$gamemode"
 
-while read -r input; do
-    case "$input" in
+while IFS= read -r event; do
+    case "$event" in
         osu|taiko|catch|mania)
-            gamemode="$input"
+            gamemode="$event"
             print "gamemode=$gamemode"
             ;;
         *)
-            print "event=$input"
+            print "$gamemode $event"
             ;;
     esac
 done
