@@ -44,3 +44,19 @@ a wonderful game, with you in mind.
 # run
 a simple programming for the .mix file format
 >>>>>>> upstream/main
+
+
+
+## Smash Infinite — Brock Trailer 🪨
+
+A new challenger approaches.
+
+**BROCK**
+
+🪨 **GEODUDE**
+
+One Pokémon. One battle.
+
+SMASH INFINITE.
+
+
