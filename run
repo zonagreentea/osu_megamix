@@ -1,2 +1,3 @@
-#!/bin/zsh run
-exec zsh
+#!/bin/zsh
+set -e
+exec ./osu_megamix "$@"
