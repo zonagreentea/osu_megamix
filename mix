@@ -1,0 +1,19 @@
+#!/bin/zsh
+
+set -e
+
+gamemode="${1:-osu}"
+
+print "gamemode=$gamemode"
+
+while read -r input; do
+    case "$input" in
+        osu|taiko|catch|mania)
+            gamemode="$input"
+            print "gamemode=$gamemode"
+            ;;
+        *)
+            print "event=$input"
+            ;;
+    esac
+done

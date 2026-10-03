@@ -1,0 +1,12 @@
+#!/bin/zsh
+
+set -e
+
+print "beatmap:"
+read beatmap
+
+print "gamemode:"
+read gamemode
+
+print "beatmap=$beatmap"
+print "gamemode=$gamemode"
