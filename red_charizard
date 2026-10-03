@@ -2,11 +2,13 @@
 
 set -e
 
-print "beatmap:"
-read beatmap
+if [[ $# -lt 1 ]]; then
+    print "usage: red_charizard <beatmap>"
+    exit 1
+fi
 
-print "gamemode:"
-read gamemode
+beatmap="$1"
+gamemode="${2:-osu}"
 
 print "beatmap=$beatmap"
 print "gamemode=$gamemode"
