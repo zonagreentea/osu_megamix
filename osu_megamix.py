@@ -1,5 +1,7 @@
 import pygame
 from timeline import Timeline
+
+timeline = Timeline()
 import random
 import sys
 
@@ -12,12 +14,6 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 FONT = pygame.font.SysFont("Arial", 20)
 
 # ---------------- CLOCK ----------------
-class GameClock:
-    def __init__(self):
-        self.start = time.time()
-    def now(self):
-        return time.time() - self.start
-
 # ---------------- BASE MODE ----------------
 class BaseMode:
     name = "base"
@@ -35,7 +31,7 @@ class StandardMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = Timeline()
+        self.clock = timeline
         self.circles = []
         self.last_spawn = 0
         self.judge = ""
@@ -84,7 +80,7 @@ class TaikoMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = Timeline()
+        self.clock = timeline
         self.notes = []
         self.last_spawn = 0
         self.judge = ""
@@ -143,7 +139,7 @@ class ManiaMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = Timeline()
+        self.clock = timeline
         self.notes = []
         self.last_spawn = 0
         self.judge = ""
@@ -196,7 +192,7 @@ class CTBMode(BaseMode):
     name = "ctb"
 
     def reset(self):
-        self.clock = Timeline()
+        self.clock = timeline
         self.x = WIDTH//2
         self.fruits = []
         self.last_spawn = 0
