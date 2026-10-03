@@ -1,8 +1,14 @@
+import pygame
+from timeline import Timeline
+import random
+import sys
+
+pygame.init()
+
 
 # ---------------- SETUP ----------------
 WIDTH, HEIGHT = 900, 500
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-clock = pygame.time.Clock()
 FONT = pygame.font.SysFont("Arial", 20)
 
 # ---------------- CLOCK ----------------
@@ -29,7 +35,7 @@ class StandardMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = GameClock()
+        self.clock = Timeline()
         self.circles = []
         self.last_spawn = 0
         self.judge = ""
@@ -78,7 +84,7 @@ class TaikoMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = GameClock()
+        self.clock = Timeline()
         self.notes = []
         self.last_spawn = 0
         self.judge = ""
@@ -137,7 +143,7 @@ class ManiaMode(BaseMode):
     HIT_WINDOW = 0.15
 
     def reset(self):
-        self.clock = GameClock()
+        self.clock = Timeline()
         self.notes = []
         self.last_spawn = 0
         self.judge = ""
@@ -190,7 +196,7 @@ class CTBMode(BaseMode):
     name = "ctb"
 
     def reset(self):
-        self.clock = GameClock()
+        self.clock = Timeline()
         self.x = WIDTH//2
         self.fruits = []
         self.last_spawn = 0
@@ -252,7 +258,6 @@ while True:
     mode.draw()
     screen.blit(FONT.render(f"Mode: {mode.name} (1–4)", True, (255,255,255)), (10, HEIGHT-25))
     pygame.display.flip()
-    clock.tick(60)
 
 def agreement(query):
     return input(f"{query}\n> ")

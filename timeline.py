@@ -1,7 +1,10 @@
+import time
+
 class Timeline:
     def __init__(self):
-        self.time = 0
+        self.started = time.monotonic_ns()
 
-    def advance(self, dt):
-        self.time += dt
-
+    def now(self):
+        current = time.monotonic_ns()
+        elapsed = current - self.started
+        return elapsed
