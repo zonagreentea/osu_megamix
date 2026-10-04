@@ -1,0 +1,17 @@
+class Map:
+    def __init__(self, source):
+        self.source = source
+        self.data = self.read()
+
+    def read(self):
+        with open(self.source, "rb") as file:
+            return file.read()
+
+    def output(self):
+        return self.data
+
+    def text(self):
+        return self.data.decode("utf-8", errors="surrogateescape")
+
+    def size(self):
+        return len(self.data)

@@ -32,17 +32,6 @@ def open_source(source):
     return process.stdout
 
 
-def condense(beatmap):
-    process = subprocess.run(
-        ["python3", "condenser.py"],
-        input=beatmap,
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return process.stdout
-
-
 def mix(events, gamemode="osu"):
     process = subprocess.run(
         ["./mix", gamemode],
@@ -55,9 +44,7 @@ def mix(events, gamemode="osu"):
 
 
 def run(source, gamemode="osu"):
-    beatmap = open_source(source)
-    events = condense(beatmap)
-    return mix(events, gamemode)
+    return source
 
 
 if __name__ == "__main__":
