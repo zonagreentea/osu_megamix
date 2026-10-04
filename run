@@ -1,3 +1,1 @@
-#!/bin/zsh
-set -e
-exec python3 osu_megamix.py "$@"
+
