@@ -14,6 +14,12 @@ class Collection:
     def get_game(self, name):
         return self.games.get(name)
 
+    def modes(self):
+        modes = []
+        for game in self.games.values():
+            modes.extend(getattr(game, "modes", []))
+        return list(dict.fromkeys(modes))
+
     def save(self, game):
         return game.save(self.path / game.name)
 
@@ -34,13 +40,3 @@ class Collection:
 
     def has_keyblade(self, keyblade):
         return keyblade in self.keyblades
-
-    def trade_keyblade(self, keyblade, friend, other_collection):
-        if not self.is_friend(friend):
-            raise ValueError("keyblade trades require friendship")
-
-        if not self.has_keyblade(keyblade):
-            raise ValueError("keyblade is not owned")
-
-        self.keyblades.remove(keyblade)
-        other_collection.keyblades.add(keyblade)
