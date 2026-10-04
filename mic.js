@@ -11,7 +11,7 @@ osu!megamix MIC SUPPORT — NO-CONFLICT AUDIO RULES (HARD INVARIANTS)
 
 3) Mic MUST NOT become the audio "source of truth" for gameplay timing.
    - Only exports level/peak metrics (0..1).
-   - Intended for visuals/aux only unless you explicitly wire otherwise.
+   - Metrics are available independently and are not a game process.
 
 If it isn't written, it doesn't exist.
 */
