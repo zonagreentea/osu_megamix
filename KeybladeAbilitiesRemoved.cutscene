@@ -1,0 +1,42 @@
+PORT_APPROVAL APPROVED
+APPROVED_PORT "7"
+APPROVED_PORT "07"
+APPROVED_PORT "77"
+APPROVED_PORT "777"
+APPROVED_PORT "4"
+
+CUTSCENE KeybladeAbilitiesRemoved
+
+SCENE DREAM
+Mickey floats down toward Kingdom Key, the black area beneath the white stained-glass structure.
+Mickey accidentally drops his Keyblade from above the structure.
+A jewelry box appears high in the sky, looming over Mickey.
+Heartless appear around him.
+Mickey looks scared.
+Mickey wakes up. It was a dream.
+
+SCENE TEA
+Donald and Goofy arrive later to share a cup of tea with Mickey.
+Kairi enters, bows to King Mickey, and hands him an envelope.
+King Mickey makes a goofy face.
+SPLASH ART APPEARS
+
+SCENE GAMEPLAY INTRO
+CUT TO GAMEPLAY
+CHARACTERS Sora, Kairi, Mickey
+STAGE Kingdom Key
+MOVESET Sora, Kairi, Mickey
+TITLE APPEARS
+
+SCENE RETURN HOME
+King Mickey returns home with his Keyblade.
+King Mickey closes the jewelry box with his Keyblade.
+END CUTSCENE
+
+AFTER CUTSCENE
+DISPLAY_LIMIT USER_KEYBLADE 1
+FLAG REMOVE_KEYBLADE_ABILITIES
+FLAG_SCOPE Implemented Keyblade gameplay enhancements and boosts only
+
+OUTPUT "KEYBLADE_ABILITIES_REMOVED"
+END
