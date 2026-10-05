@@ -162,7 +162,7 @@ Run options:
 1) Host from your Mac/PC:
    - On Mac/Linux: run app/tools/mix_server.py
    - Then open on iPhone (same Wi-Fi) using your computer's LAN IP:
-     http://<LAN-IP>:8000/index.html?mix=/Users/.../osu!megamix.mix
+     http://<LAN-IP>:8000/index.html?mix=<PROJECT_ROOT>/osu!megamix.mix
 
 2) Use iSH (Alpine Linux on iOS) or similar to run python3 locally (advanced).
 3) Add to Home Screen (PWA):
@@ -194,7 +194,7 @@ Fast path:
    cd ~/storage/downloads/osu_megamix/app
    python3 tools/mix_server.py 8000 127.0.0.1
 5) Open in Chrome:
-   http://127.0.0.1:8000/index.html?mix=/data/data/com.termux/files/home/storage/downloads/osu_megamix/app/osu!megamix.mix
+   http://127.0.0.1:8000/index.html?mix=<PROJECT_ROOT>/osu!megamix.mix
 
 Absolute mix stays absolute. The gateway endpoint serves it.
 TXT

@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+import sys
+
+def run(args):
+    if args:
+        print(" ".join(args))
+    else:
+        print("run")
+
+if __name__ == "__main__":
+    run(sys.argv[1:])
