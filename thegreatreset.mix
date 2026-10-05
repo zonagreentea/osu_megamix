@@ -1,0 +1,16 @@
+CUTSCENE MickeyHeartless
+
+    DEFEAT Mickey Heartless
+
+    SPAWN JewelryBox ABOVE Mickey
+    SHADOW JewelryBox Mickey
+
+    WAIT UNTIL Mickey SEES JewelryBox
+
+    FIND KEYHOLE JewelryBox
+
+    THROW Keyblade Mickey TO Keyhole
+
+    OPEN JewelryBox
+
+    CHAOS
