@@ -1,0 +1,28 @@
+class HitObject:
+    def __init__(self, conditions, inputs):
+        self.conditions = conditions
+        self.inputs = inputs
+
+    def hit(self, abilities=None):
+        abilities = abilities or set()
+        return all(
+            self.inputs.get(condition) == required
+            or condition in abilities
+            for condition, required in self.conditions.items()
+        )
+
+
+def ability(name, condition, conditions, inputs, mode="osu!"):
+    hitobject = HitObject(conditions, inputs)
+
+    without = hitobject.hit()
+    with_ability = hitobject.hit({condition})
+
+    balanced = not without and with_ability
+
+    return {
+        "name": name,
+        "mode": mode,
+        "bypass": condition,
+        "balanced": balanced,
+    }
