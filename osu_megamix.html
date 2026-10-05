@@ -22,6 +22,7 @@ canvas { display:block; margin:0 auto; background:#111; }
     <canvas id="titleCanvas" width="400" height="400"></canvas>
 </div>
 <div id="modeDisplay"></div>
+<div id="pauseDisplay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:bold;pointer-events:none;">PAUSED</div>
 <canvas id="gameCanvas"></canvas>
 
 <script>
@@ -80,6 +81,14 @@ let modeSwitchInterval = rand(15000, 30000);
 let combo = 0;
 let score = 0;
 
+// ----------------------
+// Pause / Escape State
+// ----------------------
+let gameStarted = false;
+let paused = false;
+let lastPauseTap = 0;
+const DOUBLE_TAP_WINDOW = 350;
+
 // Objects
 let osuObjects = [];
 let taikoObjects = [];
@@ -108,9 +117,72 @@ function choose(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 // Start Game
 // ----------------------
 function startGame(){
+    gameStarted = true;
+    paused = false;
+    lastPauseTap = 0;
     audio.play();
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
+}
+
+function enterPause(){
+    if(!gameStarted) return;
+    paused = true;
+    audio.pause();
+    document.getElementById("pauseDisplay").style.display = "flex";
+}
+
+function resumeGame(){
+    if(!gameStarted) return;
+    paused = false;
+    lastTime = performance.now();
+    document.getElementById("pauseDisplay").style.display = "none";
+    audio.play().catch(()=>{});
+}
+
+function exitGameLayer(){
+    gameStarted = false;
+    paused = false;
+    lastPauseTap = 0;
+
+    audio.pause();
+    document.getElementById("pauseDisplay").style.display = "none";
+    document.getElementById("titleScreen").style.display = "flex";
+    modeDiv.textContent = "";
+
+    // Return to the main screen without destroying runtime state.
+}
+
+function leaveGame(){
+    // Browsers only allow window.close() for script-opened windows.
+    // Fall back to navigating back when this is a normal tab.
+    if(window.opener){
+        window.close();
+    } else if(history.length > 1){
+        history.back();
+    } else {
+        document.body.innerHTML = "";
+    }
+}
+
+function handlePauseInput(){
+    if(!gameStarted) return;
+
+    const now = performance.now();
+
+    if(now - lastPauseTap <= DOUBLE_TAP_WINDOW){
+        lastPauseTap = 0;
+        exitGameLayer();
+        return;
+    }
+
+    lastPauseTap = now;
+
+    if(paused){
+        resumeGame();
+    } else {
+        enterPause();
+    }
 }
 
 // ----------------------
@@ -227,6 +299,13 @@ function drawCatch(){
 // ----------------------
 let lastTime = 0;
 function gameLoop(now){
+    if(!gameStarted) return;
+
+    if(paused){
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
     const delta = now - lastTime;
     lastTime = now;
     ctx.clearRect(0,0,width,height);
@@ -262,6 +341,23 @@ function gameLoop(now){
 // Input
 // ----------------------
 document.addEventListener("keydown", e=>{
+    if(e.repeat) return;
+
+    if(e.key === "Escape"){
+        // Escape only leaves from the main/title screen.
+        if(!gameStarted){
+            leaveGame();
+        }
+        return;
+    }
+
+    if(e.key === "Pause" || e.code === "Pause"){
+        handlePauseInput();
+        return;
+    }
+
+    if(paused) return;
+
     if(currentMode==="osu"){
         // check clicks in game
     }
