@@ -1,52 +1,55 @@
-# osu!megamix
+# osu_megamix
 
 > a wonderful game with you in mind
 
-osu!megamix is a game about **music, input, time, and play**.
+**osu_megamix** is the backend and development project for **osu!megamix**.
 
-It is built around **Run**, a simple programming language.
+It provides the runtime, language, compiler, and tools used to build and run the game.
 
-```text
-play.py → run → play
+## What it does
+
+osu_megamix works with **Run**, a simple programming language built around:
+
+* input
+* logic
+* output
+* time
+
+`.mix` and `.run` files contain programs and game content.
+
+`mixc` compiles `.mix` content into runtime data.
+
+`run` is the canonical runtime.
+
+## How to use it
+
+From the project directory:
+
+```sh
+./run
 ```
 
-**play.py** is the door.
+To compile a `.mix` file:
 
-**run** is the language.
-
-**play** is what happens.
-
-That's it.
-
----
-
-## Run
-
-Run is the language used by osu!megamix.
-
-Programs can be written in `.run` and `.mix`.
-
-The project keeps things small:
-
-* simple input
-* simple logic
-* simple output
-* continuous play
-
----
-
-## 4.0.0
-
-4.0.0 is the beginning of the simple architecture.
-
-**Open the door.**
-
-```text
-play.py
+```sh
+./mixc compile <file.mix>
 ```
 
-MIT licensed.
+The basic flow is:
 
-> a wonderful game with you in mind
+```text
+.mix / .run
+    ↓
+  mixc
+    ↓
+ runtime data
+    ↓
+   run
+    ↓
+ osu!megamix
+```
+
+**osu_megamix builds.
+osu!megamix plays.**
 
 — ball
