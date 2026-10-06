@@ -1,0 +1,5 @@
+if 07 then output PASS_IF
+if 0 then output FAIL_IF
+not 0
+if not 0 then output PASS_NOT
+if 0 then output SHOULD_NOT_APPEAR

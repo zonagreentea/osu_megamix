@@ -34,7 +34,7 @@ def play_menu():
 
 
 def multi_menu():
-    return Menu("Multi", ["Standard", "Megamix", "Collection", "Back"])
+    return Menu("Multi", ["Regular Lobby", "Megamix Lobby", "Collection Lobby", "RP Lobby (E10+)"])
 
 
 def collection_menu():

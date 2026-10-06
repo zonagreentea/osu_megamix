@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+
+import sys
+from pathlib import Path
+
+
+class RunError(Exception):
+    pass
+
+
+class Run:
+    def __init__(self):
+        self.variables = {}
+        self.output = []
+
+    def emit(self, value):
+        self.output.append(str(value))
+        print(value)
+
+    def evaluate(self, tokens):
+        if not tokens:
+            return False
+
+        if tokens[0] == "not":
+            return not self.evaluate(tokens[1:])
+
+        if tokens[0] == "if":
+            tokens = tokens[1:]
+
+        if "then" in tokens:
+            index = tokens.index("then")
+            condition = tokens[:index]
+            action = tokens[index + 1:]
+            if self.evaluate(condition):
+                return self.execute(action)
+            return False
+
+        if len(tokens) == 1:
+            value = tokens[0]
+            if value in self.variables:
+                return bool(self.variables[value])
+            return value not in ("0", "false", "False", "no", "none", "")
+
+        return bool(tokens)
+
+    def execute(self, tokens):
+        if not tokens:
+            return False
+
+        command = tokens[0]
+        args = tokens[1:]
+
+        if command == "run":
+            if not args:
+                self.emit("run")
+                return True
+
+            source = Path(args[0])
+            return self.load(source)
+
+        if command == "input":
+            value = input()
+            self.variables["input"] = value
+            return value
+
+        if command == "output":
+            self.emit(" ".join(args))
+            return True
+
+        if command == "set":
+            if len(args) < 2:
+                raise RunError("set requires a name and value")
+            self.variables[args[0]] = " ".join(args[1:])
+            return True
+
+        if command == "if":
+            return self.evaluate(tokens)
+
+        if command == "not":
+            return self.evaluate(tokens)
+
+        if command in ("0", "1", "true", "false", "True", "False"):
+            return self.evaluate(tokens)
+
+        self.emit(" ".join(tokens))
+        return True
+
+    def load(self, path):
+        if not path.exists():
+            raise RunError(f"source not found: {path}")
+
+        if path.suffix not in (".mix", ".run"):
+            raise RunError(f"unsupported source type: {path.suffix}")
+
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            tokens = line.split()
+            self.execute(tokens)
+
+        return True
+
+
+def main(argv):
+    runtime = Run()
+
+    if len(argv) == 1:
+        runtime.emit("run")
+        return 0
+
+    source = Path(argv[1])
+
+    try:
+        runtime.load(source)
+    except RunError as exc:
+        print(f"run: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
