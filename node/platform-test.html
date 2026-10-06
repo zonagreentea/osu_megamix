@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>osu_megamix node test</title>
+<style>
+body { font: 14px monospace; margin: 24px; }
+pre { white-space: pre-wrap; }
+.pass { }
+.fail { font-weight: bold; }
+</style>
+</head>
+<body>
+<h1>osu_megamix node</h1>
+<pre id="state"></pre>
+<pre id="tests"></pre>
+
+<script src="core.js"></script>
+<script src="platform/html.js"></script>
+<script>
+(() => {
+  const node = new OsuMegamixNode(OsuMegamixHTMLPlatform);
+  const state = document.getElementById("state");
+  const tests = document.getElementById("tests");
+
+  function render(s) {
+    state.textContent =
+`NODE
+-----
+AUTHORITY: LOCAL
+PLATFORM:  HTML
+STATUS:    ${s.status}
+MODE:      ${s.mode}
+PAUSED:    ${s.paused}
+NETWORK:   ${s.network}
+SEQUENCE:  ${s.sequence}`;
+  }
+
+  node.subscribe(render);
+
+  node.setNetwork(
+    navigator.onLine ? "ONLINE" : "OFFLINE"
+  );
+
+  OsuMegamixHTMLPlatform.network.onChange(status => {
+    node.setNetwork(status);
+  });
+
+  OsuMegamixHTMLPlatform.input.onKey(event => {
+    if (event.key === "Escape") node.request("escape");
+    if (event.key.toLowerCase() === "p") {
+      node.request(node.state.paused ? "resume" : "pause");
+    }
+  });
+
+  const results = node.test();
+
+  tests.textContent =
+    "TEST HARNESS\n------------\n" +
+    results.map(r =>
+      `${r.result.padEnd(4)} ${r.name} — ${r.reason}`
+    ).join("\n") +
+    `\n\nTOTAL: ${results.length}` +
+    `\nPASS: ${results.filter(r => r.result === "PASS").length}` +
+    `\nFAIL: ${results.filter(r => r.result === "FAIL").length}`;
+})();
+</script>
+</body>
+</html>
