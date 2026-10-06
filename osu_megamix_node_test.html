@@ -375,7 +375,19 @@ document.addEventListener("keydown", e=>{
     }
 });
 
+function updateGameCursor(){
+
+    const gameplay = ["osu", "taiko", "catch", "mania"].includes(currentMode);
+
+    document.documentElement.style.cursor = gameplay ? "none" : "";
+
+    document.body.style.cursor = gameplay ? "none" : "";
+
+}
+
 document.addEventListener("mousemove", e=>{
+
+    updateGameCursor();
     if(currentMode==="catch"){
         catcherX = e.clientX;
     }
