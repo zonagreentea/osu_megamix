@@ -1,55 +1,18 @@
-# osu_megamix
+# osu!megamix v5.0.1
+
+**The runtime release.**
+
+`run` is now the canonical runtime entry for osu!megamix, providing a single doorway into the game.
+
+This release also brings tablet input into the universal input layer, allowing tablet events to flow through the same input architecture as the rest of the game.
+
+### Highlights
+
+* Finalized `run` as the runtime entry
+* Added tablet input processing
+* Unified tablet events with the universal input layer
+* Cleaned up development backup artifacts
+
+**One entry. One runtime. One game.**
 
 > a wonderful game with you in mind
-
-**osu_megamix** is the backend and development project for **osu!megamix**.
-
-It provides the runtime, language, compiler, and tools used to build and run the game.
-
-## What it does
-
-osu_megamix works with **Run**, a simple programming language built around:
-
-* input
-* logic
-* output
-* time
-
-`.mix` and `.run` files contain programs and game content.
-
-`mixc` compiles `.mix` content into runtime data.
-
-`run` is the canonical runtime.
-
-## How to use it
-
-From the project directory:
-
-```sh
-./run
-```
-
-To compile a `.mix` file:
-
-```sh
-./mixc compile <file.mix>
-```
-
-The basic flow is:
-
-```text
-.mix / .run
-    ↓
-  mixc
-    ↓
- runtime data
-    ↓
-   run
-    ↓
- osu!megamix
-```
-
-**osu_megamix builds.
-osu!megamix plays.**
-
-— ball
