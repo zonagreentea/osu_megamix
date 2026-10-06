@@ -2,94 +2,41 @@
 import os
 import sys
 import subprocess
+from pathlib import Path
 
-def runtime(path):
-    if os.path.isfile(path):
-        try:
-            with open(path, "rb") as f:
-                head = f.read(256).decode("utf-8", "ignore")
-
-            if head.startswith("#!"):
-                first = head.splitlines()[0]
-
-                if "python" in first:
-                    return ["python3"]
-                if "node" in first:
-                    return ["node"]
-                if "zsh" in first:
-                    return ["zsh"]
-                if "bash" in first:
-                    return ["bash"]
-                if "sh" in first:
-                    return ["sh"]
-
-        except OSError:
-            pass
-
-        ext = os.path.splitext(path)[1].lower()
-
-        if ext == ".py":
-            return ["python3"]
-        if ext == ".js":
-            return ["node"]
-        if ext == ".zsh":
-            return ["zsh"]
-        if ext == ".sh":
-            return ["bash"]
-        if ext in (".html", ".htm"):
-            return ["open"]
-
-    return None
+ROOT = Path(__file__).resolve().parent
+os.chdir(ROOT)
 
 def main():
-    if len(sys.argv) < 2:
-        print("run: file → adapt → execute")
-        return 0
+    args = sys.argv[1:]
 
-    if len(sys.argv) >= 3 and sys.argv[1] == "--detect":
-        target = sys.argv[2]
-        command = runtime(target)
+    if args:
+        target = Path(args[0])
+        if target.exists():
+            if target.suffix == ".py":
+                raise SystemExit(subprocess.call([sys.executable, str(target), *args[1:]]))
+            if target.suffix in {".html", ".htm"}:
+                opener = "open.zsh"
+                raise SystemExit(subprocess.call(["./" + opener, str(target), *args[1:]]))
+            raise SystemExit(subprocess.call([str(target), *args[1:]]))
 
-        if command is None:
-            print("none")
-            return 1
+    candidates = [
+        "osu_megamix.py",
+        "osu_megamix.html",
+        "osu_megamix_node_test.html",
+    ]
 
-        print(" ".join(command))
-        return 0
+    for name in candidates:
+        target = ROOT / name
+        if not target.exists():
+            continue
+        if target.suffix == ".py":
+            raise SystemExit(subprocess.call([sys.executable, str(target)]))
+        if target.suffix == ".html":
+            raise SystemExit(subprocess.call(["./open.zsh", str(target)]))
 
-    if len(sys.argv) >= 3 and sys.argv[1] == "--detect":
-        target = sys.argv[2]
-        command = runtime(target)
-
-        if command is None:
-            print("none")
-            return 1
-
-        print(" ".join(command))
-        return 0
-
-    target = sys.argv[1]
-    args = sys.argv[2:]
-
-    if not os.path.exists(target):
-        print(f"run: not found: {target}", file=sys.stderr)
-        return 1
-
-    command = runtime(target)
-
-    if command is None:
-        if os.access(target, os.X_OK):
-            command = [target]
-        else:
-            print(f"run: no compatible runtime for: {target}", file=sys.stderr)
-            return 1
-
-    if command == ["open"]:
-        process = subprocess.Popen(["open", target, *args])
-    else:
-        process = subprocess.Popen([*command, target, *args])
-
-    return process.wait()
+    print("run: no playable runtime found", file=sys.stderr)
+    return 1
 
 if __name__ == "__main__":
     raise SystemExit(main())
