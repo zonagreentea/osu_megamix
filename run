@@ -1,11 +1,192 @@
 #!/usr/bin/env python3
+
+"""
+run — the osu!megamix execution glue.
+
+Contract:
+
+    file -> run -> execute
+
+run identifies a file and hands it to the appropriate executor.
+"""
+
+from pathlib import Path
+import shutil
+import subprocess
 import sys
 
-def run(args):
-    if args:
-        print(" ".join(args))
-    else:
-        print("run")
+
+class RunError(Exception):
+    pass
+
+
+class MixExecutor:
+    """Minimal local executor for .mix and .run source."""
+
+    def __init__(self):
+        self.variables = {}
+
+    def emit(self, value):
+        print(value)
+
+    def truth(self, value):
+        value = str(value)
+        if value in ("0", "false", "False", "no", "none", ""):
+            return False
+        if value in self.variables:
+            return bool(self.variables[value])
+        return True
+
+    def evaluate(self, tokens):
+        if not tokens:
+            return False
+
+        if tokens[0] == "not":
+            return not self.evaluate(tokens[1:])
+
+        if tokens[0] == "if":
+            tokens = tokens[1:]
+
+        if "then" in tokens:
+            index = tokens.index("then")
+            condition = tokens[:index]
+            action = tokens[index + 1:]
+
+            if self.evaluate(condition):
+                return self.execute(action)
+
+            return False
+
+        if len(tokens) == 1:
+            return self.truth(tokens[0])
+
+        return True
+
+    def execute(self, tokens):
+        if not tokens:
+            return False
+
+        command = tokens[0]
+        args = tokens[1:]
+
+        if command == "if":
+            return self.evaluate(tokens)
+
+        if command == "not":
+            return self.evaluate(tokens)
+
+        if command in ("0", "1", "true", "false", "True", "False"):
+            return self.evaluate(tokens)
+
+        if command == "output":
+            self.emit(" ".join(args))
+            return True
+
+        if command == "input":
+            value = input()
+            self.variables["input"] = value
+            return True
+
+        if command == "set":
+            if len(args) < 2:
+                raise RunError("set requires a name and value")
+            self.variables[args[0]] = " ".join(args[1:])
+            return True
+
+        if command == "run":
+            if not args:
+                self.emit("run")
+                return True
+
+            target = Path(args[0])
+            return Run().execute_file(target, args[1:])
+
+        self.emit(" ".join(tokens))
+        return True
+
+    def execute_file(self, path, args=None):
+        path = Path(path)
+
+        if not path.exists():
+            raise RunError(f"source not found: {path}")
+
+        for raw in path.read_text(encoding="utf-8").splitlines():
+            line = raw.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            self.execute(line.split())
+
+        return 0
+
+
+class Run:
+    """The glue between a file and its executor."""
+
+    def execute_file(self, path, args=None):
+        path = Path(path).expanduser()
+
+        if not path.exists():
+            raise RunError(f"file not found: {path}")
+
+        if path.is_dir():
+            raise RunError(f"cannot execute directory: {path}")
+
+        args = list(args or [])
+        suffix = path.suffix.lower()
+
+        if suffix in (".mix", ".run"):
+            return MixExecutor().execute_file(path, args)
+
+        if suffix == ".py":
+            return subprocess.run(
+                [sys.executable, str(path), *args],
+                check=False,
+            ).returncode
+
+        if suffix == ".js":
+            node = shutil.which("node")
+            if not node:
+                raise RunError("node is not installed")
+            return subprocess.run(
+                [node, str(path), *args],
+                check=False,
+            ).returncode
+
+        if suffix in (".html", ".htm"):
+            if sys.platform != "darwin":
+                raise RunError("HTML execution currently requires macOS")
+            return subprocess.run(
+                ["open", str(path)],
+                check=False,
+            ).returncode
+
+        if path.stat().st_mode & 0o111:
+            return subprocess.run(
+                [str(path), *args],
+                check=False,
+            ).returncode
+
+        raise RunError(f"no executor for file type: {path.suffix or '<none>'}")
+
+
+def main(argv):
+    runtime = Run()
+
+    # No file means: execute the canonical game.
+    if len(argv) == 1:
+        target = Path("osu_megamix.html")
+        if not target.exists():
+            raise RunError("canonical game not found: osu_megamix.html")
+        return runtime.execute_file(target)
+
+    return runtime.execute_file(argv[1], argv[2:])
+
 
 if __name__ == "__main__":
-    run(sys.argv[1:])
+    try:
+        raise SystemExit(main(sys.argv))
+    except RunError as exc:
+        print(f"run: {exc}", file=sys.stderr)
+        raise SystemExit(1)
