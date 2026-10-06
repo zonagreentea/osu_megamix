@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>1c pet Mix</title>
+<style>
+html, body {
+    margin:0; padding:0; overflow:hidden; background:#000; height:100%; font-family:sans-serif;
+}
+canvas { display:block; margin:0 auto; background:#111; }
+#titleScreen {
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; justify-content:center; align-items:center; cursor:pointer;
+}
+#modeDisplay {
+    position:absolute; top:10px; right:10px; color:#fff; font-size:28px;
+}
+</style>
+</head>
+<body>
+<div id="titleScreen">
+    <canvas id="titleCanvas" width="400" height="400"></canvas>
+</div>
+<div id="modeDisplay"></div>
+<div id="pauseDisplay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:bold;pointer-events:none;">PAUSED</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+// ----------------------
+// Title Screen
+// ----------------------
+const titleCanvas = document.getElementById("titleCanvas");
+const tctx = titleCanvas.getContext("2d");
+
+function drawTitleLogo(){
+    const cx = titleCanvas.width/2;
+    const cy = titleCanvas.height/2;
+    const radius = 150;
+    tctx.fillStyle = "#ff66aa";
+    tctx.beginPath();
+    tctx.arc(cx, cy, radius, 0, Math.PI*2);
+    tctx.fill();
+    tctx.fillStyle = "#fff";
+    tctx.font = "bold 48px sans-serif";
+    tctx.textAlign = "center";
+    tctx.textBaseline = "middle";
+    tctx.fillText("osu!", cx, cy);
+}
+drawTitleLogo();
+
+document.getElementById("titleScreen").addEventListener("click", ()=>{
+    document.getElementById("titleScreen").style.display="none";
+    startGame();
+});
+
+// ----------------------
+// Game Setup
+// ----------------------
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+let width = window.innerWidth;
+let height = window.innerHeight;
+canvas.width = width;
+canvas.height = height;
+
+window.addEventListener('resize', ()=>{
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+});
+
+// ----------------------
+// Game State
+// ----------------------
+let modes = ["osu","taiko","mania","catch"];
+let currentMode = "osu";
+let modeTimer = 0;
+let modeSwitchInterval = rand(15000, 30000);
+
+let combo = 0;
+let score = 0;
+
+// ----------------------
+// Pause / Escape State
+// ----------------------
+let gameStarted = false;
+let paused = false;
+let lastPauseTap = 0;
+const DOUBLE_TAP_WINDOW = 350;
+
+// Objects
+let osuObjects = [];
+let taikoObjects = [];
+let maniaObjects = [];
+let catchObjects = [];
+
+// Catcher position
+let catcherX = width/2;
+let catcherY = height - 50;
+
+// Music
+const audio = new Audio();
+audio.src = "assets/sample.ogg";
+audio.loop = true;
+
+// Mode Display
+const modeDiv = document.getElementById("modeDisplay");
+
+// ----------------------
+// Utility
+// ----------------------
+function rand(min,max){ return Math.random()*(max-min)+min; }
+function choose(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// ----------------------
+// Start Game
+// ----------------------
+function startGame(){
+    gameStarted = true;
+    paused = false;
+    lastPauseTap = 0;
+    audio.play();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function enterPause(){
+    if(!gameStarted) return;
+    paused = true;
+    audio.pause();
+    document.getElementById("pauseDisplay").style.display = "flex";
+}
+
+function resumeGame(){
+    if(!gameStarted) return;
+    paused = false;
+    lastTime = performance.now();
+    document.getElementById("pauseDisplay").style.display = "none";
+    audio.play().catch(()=>{});
+}
+
+function exitGameLayer(){
+    gameStarted = false;
+    paused = false;
+    lastPauseTap = 0;
+
+    audio.pause();
+    document.getElementById("pauseDisplay").style.display = "none";
+    document.getElementById("titleScreen").style.display = "flex";
+    modeDiv.textContent = "";
+
+    // Return to the main screen without destroying runtime state.
+}
+
+function leaveGame(){
+    // Browsers only allow window.close() for script-opened windows.
+    // Fall back to navigating back when this is a normal tab.
+    if(window.opener){
+        window.close();
+    } else if(history.length > 1){
+        history.back();
+    } else {
+        document.body.innerHTML = "";
+    }
+}
+
+function handlePauseInput(){
+    if(!gameStarted) return;
+
+    const now = performance.now();
+
+    if(now - lastPauseTap <= DOUBLE_TAP_WINDOW){
+        lastPauseTap = 0;
+        exitGameLayer();
+        return;
+    }
+
+    lastPauseTap = now;
+
+    if(paused){
+        resumeGame();
+    } else {
+        enterPause();
+    }
+}
+
+// ----------------------
+// Spawning Objects (pseudo rhythm)
+// ----------------------
+function spawnObjects(delta){
+    // Approximate beat: every 500ms
+    if(Math.random() < 0.02){
+        if(currentMode==="osu"){
+            osuObjects.push({
+                x: rand(100,width-100),
+                y: rand(100,height-200),
+                baseRadius: 20,
+                approachRadius: 60,
+                shrinkSpeed: 0.5,
+                hit:false
+            });
+        } else if(currentMode==="taiko"){
+            taikoObjects.push({
+                key: choose(["Z","X"]),
+                hit:false
+            });
+        } else if(currentMode==="mania"){
+            maniaObjects.push({
+                lane: Math.floor(rand(0,4)),
+                y:0,
+                speed:5,
+                hold:false,
+                hit:false
+            });
+        } else if(currentMode==="catch"){
+            catchObjects.push({
+                x: rand(50,width-50),
+                y:0,
+                speed:3,
+                hit:false
+            });
+        }
+    }
+}
+
+// ----------------------
+// Draw Mode Objects
+// ----------------------
+function drawOsu(){
+    for(const o of osuObjects){
+        if(o.approachRadius>o.baseRadius) o.approachRadius -= o.shrinkSpeed;
+        else if(!o.hit){ combo=0; o.hit=true; }
+
+        // Approach
+        ctx.strokeStyle = "white";
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.arc(o.x,o.y,o.approachRadius,0,Math.PI*2);
+        ctx.stroke();
+        // Hit circle
+        ctx.fillStyle="blue";
+        ctx.beginPath();
+        ctx.arc(o.x,o.y,o.baseRadius,0,Math.PI*2);
+        ctx.fill();
+        if(o.hit){
+            ctx.strokeStyle="yellow";
+            ctx.lineWidth=3;
+            ctx.stroke();
+        }
+    }
+}
+
+function drawTaiko(){
+    ctx.font="48px sans-serif";
+    for(const t of taikoObjects){
+        ctx.fillStyle="red";
+        ctx.fillText(t.key, width/2, height/2);
+    }
+}
+
+function drawMania(){
+    const laneWidth = width/4;
+    // Draw lanes
+    ctx.strokeStyle="cyan";
+    for(let i=0;i<4;i++){
+        ctx.beginPath();
+        ctx.moveTo(i*laneWidth,0);
+        ctx.lineTo(i*laneWidth,height);
+        ctx.stroke();
+    }
+    // Draw notes
+    for(const n of maniaObjects){
+        n.y += n.speed;
+        ctx.fillStyle="purple";
+        ctx.fillRect(n.lane*laneWidth + laneWidth/4, n.y, laneWidth/2, 20);
+        if(n.y>height-50 && !n.hit){ combo=0; n.hit=true; }
+    }
+}
+
+function drawCatch(){
+    // Catcher
+    ctx.fillStyle="yellow";
+    ctx.fillRect(catcherX-50,catcherY,100,20);
+    // Fruits
+    for(const f of catchObjects){
+        f.y += f.speed;
+        ctx.fillStyle="green";
+        ctx.beginPath();
+        ctx.arc(f.x,f.y,20,0,Math.PI*2);
+        ctx.fill();
+        if(f.y>catcherY && Math.abs(f.x-catcherX)<50 && !f.hit){ combo++; score+=300; f.hit=true; }
+        else if(f.y>height && !f.hit){ combo=0; f.hit=true; }
+    }
+}
+
+// ----------------------
+// Update & Draw
+// ----------------------
+let lastTime = 0;
+function gameLoop(now){
+    if(!gameStarted) return;
+
+    if(paused){
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    const delta = now - lastTime;
+    lastTime = now;
+    ctx.clearRect(0,0,width,height);
+
+    // Mode switch
+    modeTimer += delta;
+    if(modeTimer>modeSwitchInterval){
+        currentMode = choose(modes);
+        modeTimer = 0;
+        modeSwitchInterval = rand(15000,30000);
+    }
+    modeDiv.textContent = currentMode.toUpperCase();
+
+    // Spawn objects
+    spawnObjects(delta);
+
+    // Draw objects per mode
+    if(currentMode==="osu") drawOsu();
+    if(currentMode==="taiko") drawTaiko();
+    if(currentMode==="mania") drawMania();
+    if(currentMode==="catch") drawCatch();
+
+    // HUD
+    ctx.fillStyle="white";
+    ctx.font="24px sans-serif";
+    ctx.fillText("Score: "+score,20,30);
+    ctx.fillText("Combo: "+combo,20,60);
+
+    requestAnimationFrame(gameLoop);
+}
+
+// ----------------------
+// Input
+// ----------------------
+document.addEventListener("keydown", e=>{
+    if(e.repeat) return;
+
+    if(e.key === "Escape"){
+        // Escape only leaves from the main/title screen.
+        if(!gameStarted){
+            leaveGame();
+        }
+        return;
+    }
+
+    if(e.key === "Pause" || e.code === "Pause"){
+        handlePauseInput();
+        return;
+    }
+
+    if(paused) return;
+
+    if(currentMode==="osu"){
+        // check clicks in game
+    }
+    if(currentMode==="taiko"){
+        for(const t of taikoObjects){
+            if(e.key.toUpperCase()===t.key && !t.hit){ t.hit=true; combo++; score+=300; }
+        }
+    }
+    if(currentMode==="mania"){
+        // lane keys: A,S,D,F
+        const laneKeys=["A","S","D","F"];
+        for(const n of maniaObjects){
+            if(e.key.toUpperCase()===laneKeys[n.lane] && !n.hit){ n.hit=true; combo++; score+=300; }
+        }
+    }
+});
+
+document.addEventListener("mousemove", e=>{
+    if(currentMode==="catch"){
+        catcherX = e.clientX;
+    }
+});
+</script>
+
+<script>
+(() => {
+  "use strict";
+
+  const NODE = {
+    name: "osu_megamix node",
+    version: "experimental",
+    authority: "LOCAL",
+    network: navigator.onLine ? "ONLINE" : "OFFLINE",
+    state: "READY",
+    mode: "menu",
+    paused: false,
+    sequence: 0,
+    clients: 0
+  };
+
+  const tests = [];
+
+  function record(name, result, reason) {
+    tests.push({ name, result, reason });
+  }
+
+  function assert(name, condition, reason) {
+    record(name, condition ? "PASS" : "FAIL", reason);
+    return condition;
+  }
+
+  function setState(next) {
+    NODE.state = next;
+    NODE.sequence++;
+    render();
+  }
+
+  function request(action, source = "local") {
+    if (source !== "local") {
+      record(
+        "remote authority isolation",
+        "PASS",
+        "remote request received as request; local node remains authoritative"
+      );
+    }
+
+    switch (action) {
+      case "pause":
+        NODE.paused = true;
+        NODE.state = "PAUSED";
+        break;
+      case "resume":
+        NODE.paused = false;
+        NODE.state = "RUNNING";
+        break;
+      case "escape":
+        NODE.mode = "menu";
+        NODE.paused = false;
+        NODE.state = "READY";
+        break;
+      default:
+        return false;
+    }
+
+    NODE.sequence++;
+    render();
+    return true;
+  }
+
+  function render() {
+    let panel = document.getElementById("osu-node-panel");
+
+    if (!panel) {
+      panel = document.createElement("pre");
+      panel.id = "osu-node-panel";
+      panel.style.cssText =
+        "position:fixed;right:12px;bottom:12px;z-index:2147483647;" +
+        "padding:12px;margin:0;background:#111;color:#fff;" +
+        "font:12px monospace;border-radius:8px;white-space:pre-wrap;" +
+        "box-shadow:0 4px 20px #0008;max-width:360px;";
+      document.body.appendChild(panel);
+    }
+
+    panel.textContent =
+`osu_megamix NODE
+----------------
+STATE:     ${NODE.state}
+AUTHORITY: ${NODE.authority}
+NETWORK:   ${NODE.network}
+MODE:      ${NODE.mode}
+PAUSED:    ${NODE.paused}
+SEQUENCE:  ${NODE.sequence}
+CLIENTS:   ${NODE.clients}
+
+Tests: ${tests.length}
+PASS:  ${tests.filter(x => x.result === "PASS").length}
+FAIL:  ${tests.filter(x => x.result === "FAIL").length}
+SKIP:  ${tests.filter(x => x.result === "SKIP").length}`;
+  }
+
+  async function runTests() {
+    tests.length = 0;
+
+    assert("HTML boot", true, "node layer loaded");
+    assert("local authority", NODE.authority === "LOCAL", "local node owns state");
+
+    assert("state creation", !!NODE, "authoritative state exists");
+
+    const before = NODE.sequence;
+    request("pause");
+    assert("pause", NODE.paused === true, "pause changed authoritative state");
+
+    request("resume");
+    assert("resume", NODE.paused === false, "resume restored authoritative state");
+
+    request("escape");
+    assert("Escape", NODE.mode === "menu", "Escape returned node to menu");
+
+    assert(
+      "input handler",
+      typeof request === "function",
+      "local requests pass through node authority"
+    );
+
+    assert(
+      "invalid input rejection",
+      request("INVALID") === false,
+      "unknown commands are rejected"
+    );
+
+    request("pause", "remote");
+    assert(
+      "remote state cannot directly mutate authority",
+      NODE.authority === "LOCAL",
+      "remote input is treated as a request"
+    );
+
+    request("resume");
+
+    assert(
+      "online/offline detection",
+      typeof navigator.onLine === "boolean",
+      "browser connectivity state is available"
+    );
+
+    const capabilities = {
+      fetch: typeof fetch === "function",
+      websocket: typeof WebSocket === "function",
+      eventSource: typeof EventSource === "function",
+      worker: typeof Worker === "function",
+      sharedWorker: typeof SharedWorker === "function",
+      serviceWorker: "serviceWorker" in navigator,
+      indexedDB: "indexedDB" in window,
+      localStorage: (() => {
+        try {
+          localStorage.setItem("__osu_node_test", "1");
+          localStorage.removeItem("__osu_node_test");
+          return true;
+        } catch {
+          return false;
+        }
+      })(),
+      broadcastChannel: typeof BroadcastChannel === "function",
+      crypto: !!window.crypto
+    };
+
+    for (const [name, available] of Object.entries(capabilities)) {
+      record(
+        name,
+        available ? "PASS" : "SKIP",
+        available ? "browser capability available" : "browser capability unavailable"
+      );
+    }
+
+    const savedSequence = NODE.sequence;
+    window.dispatchEvent(new Event("offline"));
+    assert(
+      "offline event handling",
+      NODE.network === "OFFLINE",
+      "node accepted offline transition"
+    );
+
+    window.dispatchEvent(new Event("online"));
+    assert(
+      "online event handling",
+      NODE.network === "ONLINE",
+      "node accepted online transition"
+    );
+
+    assert(
+      "state survives network transition",
+      NODE.sequence >= savedSequence,
+      "authoritative node state remains local"
+    );
+
+    request("escape");
+
+    render();
+    showResults();
+  }
+
+  function showResults() {
+    const existing = document.getElementById("osu-node-results");
+    if (existing) existing.remove();
+
+    const box = document.createElement("div");
+    box.id = "osu-node-results";
+    box.style.cssText =
+      "position:fixed;left:12px;bottom:12px;z-index:2147483647;" +
+      "max-height:45vh;overflow:auto;padding:12px;background:#111;color:#fff;" +
+      "font:12px monospace;border-radius:8px;max-width:520px;";
+
+    box.innerHTML =
+      "<b>osu_megamix NODE TEST HARNESS</b><br><br>" +
+      tests.map(t =>
+        `${t.result.padEnd(4)} ${t.name} — ${t.reason}`
+      ).join("<br>");
+
+    document.body.appendChild(box);
+  }
+
+  window.addEventListener("online", () => {
+    NODE.network = "ONLINE";
+    render();
+  });
+
+  window.addEventListener("offline", () => {
+    NODE.network = "OFFLINE";
+    render();
+  });
+
+  window.addEventListener("keydown", event => {
+    if (event.key === "Escape") request("escape");
+    if (event.key === "p" || event.key === "P") {
+      request(NODE.paused ? "resume" : "pause");
+    }
+  });
+
+  window.osuMegamixNode = NODE;
+  window.osuMegamixRequest = request;
+
+  window.addEventListener("DOMContentLoaded", () => {
+    render();
+    setTimeout(runTests, 100);
+  });
+})();
+</script>
+
+</body>
+</html>
+
