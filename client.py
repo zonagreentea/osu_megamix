@@ -1,27 +1,14 @@
 #!/usr/bin/env python3
-import signal
+import os
 import sys
-import time
+import subprocess
 
-running = True
-
-def stop(_signum, _frame):
-    global running
-    running = False
+ROOT = os.path.dirname(os.path.abspath(__file__))
+RUN = os.path.join(ROOT, "run")
 
 def main():
-    global running
-
-    signal.signal(signal.SIGINT, stop)
-    signal.signal(signal.SIGTERM, stop)
-
-    print("osu!megamix client online")
-
-    while running:
-        time.sleep(0.25)
-
-    print("osu!megamix client offline")
-    return 0
+    target = sys.argv[1] if len(sys.argv) > 1 else "osu_megamix.html"
+    return subprocess.call([RUN, target, *sys.argv[2:]])
 
 if __name__ == "__main__":
     raise SystemExit(main())
