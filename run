@@ -1,192 +1,95 @@
 #!/usr/bin/env python3
-
-"""
-run — the osu!megamix execution glue.
-
-Contract:
-
-    file -> run -> execute
-
-run identifies a file and hands it to the appropriate executor.
-"""
-
-from pathlib import Path
-import shutil
-import subprocess
+import os
 import sys
+import subprocess
 
+def runtime(path):
+    if os.path.isfile(path):
+        try:
+            with open(path, "rb") as f:
+                head = f.read(256).decode("utf-8", "ignore")
 
-class RunError(Exception):
-    pass
+            if head.startswith("#!"):
+                first = head.splitlines()[0]
 
+                if "python" in first:
+                    return ["python3"]
+                if "node" in first:
+                    return ["node"]
+                if "zsh" in first:
+                    return ["zsh"]
+                if "bash" in first:
+                    return ["bash"]
+                if "sh" in first:
+                    return ["sh"]
 
-class MixExecutor:
-    """Minimal local executor for .mix and .run source."""
+        except OSError:
+            pass
 
-    def __init__(self):
-        self.variables = {}
+        ext = os.path.splitext(path)[1].lower()
 
-    def emit(self, value):
-        print(value)
+        if ext == ".py":
+            return ["python3"]
+        if ext == ".js":
+            return ["node"]
+        if ext == ".zsh":
+            return ["zsh"]
+        if ext == ".sh":
+            return ["bash"]
+        if ext in (".html", ".htm"):
+            return ["open"]
 
-    def truth(self, value):
-        value = str(value)
-        if value in ("0", "false", "False", "no", "none", ""):
-            return False
-        if value in self.variables:
-            return bool(self.variables[value])
-        return True
+    return None
 
-    def evaluate(self, tokens):
-        if not tokens:
-            return False
-
-        if tokens[0] == "not":
-            return not self.evaluate(tokens[1:])
-
-        if tokens[0] == "if":
-            tokens = tokens[1:]
-
-        if "then" in tokens:
-            index = tokens.index("then")
-            condition = tokens[:index]
-            action = tokens[index + 1:]
-
-            if self.evaluate(condition):
-                return self.execute(action)
-
-            return False
-
-        if len(tokens) == 1:
-            return self.truth(tokens[0])
-
-        return True
-
-    def execute(self, tokens):
-        if not tokens:
-            return False
-
-        command = tokens[0]
-        args = tokens[1:]
-
-        if command == "if":
-            return self.evaluate(tokens)
-
-        if command == "not":
-            return self.evaluate(tokens)
-
-        if command in ("0", "1", "true", "false", "True", "False"):
-            return self.evaluate(tokens)
-
-        if command == "output":
-            self.emit(" ".join(args))
-            return True
-
-        if command == "input":
-            value = input()
-            self.variables["input"] = value
-            return True
-
-        if command == "set":
-            if len(args) < 2:
-                raise RunError("set requires a name and value")
-            self.variables[args[0]] = " ".join(args[1:])
-            return True
-
-        if command == "run":
-            if not args:
-                self.emit("run")
-                return True
-
-            target = Path(args[0])
-            return Run().execute_file(target, args[1:])
-
-        self.emit(" ".join(tokens))
-        return True
-
-    def execute_file(self, path, args=None):
-        path = Path(path)
-
-        if not path.exists():
-            raise RunError(f"source not found: {path}")
-
-        for raw in path.read_text(encoding="utf-8").splitlines():
-            line = raw.strip()
-
-            if not line or line.startswith("#"):
-                continue
-
-            self.execute(line.split())
-
+def main():
+    if len(sys.argv) < 2:
+        print("run: file → adapt → execute")
         return 0
 
+    if len(sys.argv) >= 3 and sys.argv[1] == "--detect":
+        target = sys.argv[2]
+        command = runtime(target)
 
-class Run:
-    """The glue between a file and its executor."""
+        if command is None:
+            print("none")
+            return 1
 
-    def execute_file(self, path, args=None):
-        path = Path(path).expanduser()
+        print(" ".join(command))
+        return 0
 
-        if not path.exists():
-            raise RunError(f"file not found: {path}")
+    if len(sys.argv) >= 3 and sys.argv[1] == "--detect":
+        target = sys.argv[2]
+        command = runtime(target)
 
-        if path.is_dir():
-            raise RunError(f"cannot execute directory: {path}")
+        if command is None:
+            print("none")
+            return 1
 
-        args = list(args or [])
-        suffix = path.suffix.lower()
+        print(" ".join(command))
+        return 0
 
-        if suffix in (".mix", ".run"):
-            return MixExecutor().execute_file(path, args)
+    target = sys.argv[1]
+    args = sys.argv[2:]
 
-        if suffix == ".py":
-            return subprocess.run(
-                [sys.executable, str(path), *args],
-                check=False,
-            ).returncode
+    if not os.path.exists(target):
+        print(f"run: not found: {target}", file=sys.stderr)
+        return 1
 
-        if suffix == ".js":
-            node = shutil.which("node")
-            if not node:
-                raise RunError("node is not installed")
-            return subprocess.run(
-                [node, str(path), *args],
-                check=False,
-            ).returncode
+    command = runtime(target)
 
-        if suffix in (".html", ".htm"):
-            if sys.platform != "darwin":
-                raise RunError("HTML execution currently requires macOS")
-            return subprocess.run(
-                ["open", str(path)],
-                check=False,
-            ).returncode
+    if command is None:
+        if os.access(target, os.X_OK):
+            command = [target]
+        else:
+            print(f"run: no compatible runtime for: {target}", file=sys.stderr)
+            return 1
 
-        if path.stat().st_mode & 0o111:
-            return subprocess.run(
-                [str(path), *args],
-                check=False,
-            ).returncode
+    if command == ["open"]:
+        process = subprocess.Popen(["open", target, *args])
+    else:
+        process = subprocess.Popen([*command, target, *args])
 
-        raise RunError(f"no executor for file type: {path.suffix or '<none>'}")
-
-
-def main(argv):
-    runtime = Run()
-
-    # No file means: execute the canonical game.
-    if len(argv) == 1:
-        target = Path("osu_megamix.html")
-        if not target.exists():
-            raise RunError("canonical game not found: osu_megamix.html")
-        return runtime.execute_file(target)
-
-    return runtime.execute_file(argv[1], argv[2:])
-
+    return process.wait()
 
 if __name__ == "__main__":
-    try:
-        raise SystemExit(main(sys.argv))
-    except RunError as exc:
-        print(f"run: {exc}", file=sys.stderr)
-        raise SystemExit(1)
+    raise SystemExit(main())
