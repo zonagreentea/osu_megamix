@@ -1,55 +1,67 @@
-# osu_megamix
+# osu!megamix v5.1.0
 
-> a wonderful game with you in mind
+**a wonderful game with you in mind**
 
-**osu_megamix** is the backend and development project for **osu!megamix**.
+osu!megamix is a game built around one idea:
 
-It provides the runtime, language, compiler, and tools used to build and run the game.
+**everything should lead back to the player.**
 
-## What it does
-
-osu_megamix works with **Run**, a simple programming language built around:
-
-* input
-* logic
-* output
-* time
-
-`.mix` and `.run` files contain programs and game content.
-
-`mixc` compiles `.mix` content into runtime data.
-
-`run` is the canonical runtime.
-
-## How to use it
-
-From the project directory:
+## Start the game
 
 ```sh
 ./run
 ```
 
-To compile a `.mix` file:
+That is the entry point.
 
-```sh
-./mixc compile <file.mix>
-```
+`run` is the canonical runtime entry for osu!megamix. It is the glue between the project, its clients, its nodes, and the game itself.
 
-The basic flow is:
+## Built to keep playing
 
-```text
-.mix / .run
-    ↓
-  mixc
-    ↓
- runtime data
-    ↓
-   run
-    ↓
- osu!megamix
-```
+osu!megamix is designed **offline-first**.
 
-**osu_megamix builds.
-osu!megamix plays.**
+When connected, nodes can communicate and participate in the wider game. When disconnected, the local game remains useful instead of becoming a shell waiting for a server.
 
-— ball
+The network adds capability. It does not define whether the game exists.
+
+## Universal input
+
+Different players use different devices.
+
+osu!megamix routes input through a universal input layer so keyboards, tablets, controllers, and future devices can become part of the same game without the game needing to care where the input originated.
+
+## Nodes
+
+A node is a player-side instance of the game.
+
+Nodes are intended to be lightweight, portable, and capable of operating independently while participating in multiplayer when a connection is available.
+
+The player should experience **the game**, not the machinery underneath it.
+
+## The megamix
+
+osu!megamix brings different game experiences together into one larger experience.
+
+The goal is not simply to put games next to each other.
+
+The goal is to make them feel like they belong together.
+
+## Philosophy
+
+- **One entry point.**
+- **One runtime.**
+- **Universal input.**
+- **Offline-first.**
+- **Nodes for players.**
+- **Servers for shared authority.**
+- **The player comes first.**
+
+The architecture can be complicated.
+
+**The game should not be.**
+
+---
+
+## License
+
+MIT
