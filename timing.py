@@ -1,6 +1,7 @@
-"""Musical timing, centered windows, and hold-note judgement for osu!megamix."""
+"""Musical timing, centered judgement windows, and hold-note timing."""
 
 from dataclasses import dataclass
+from typing import Optional, Sequence, Tuple
 
 
 @dataclass(frozen=True)
@@ -12,53 +13,87 @@ class TimingWindow:
 
     @property
     def interval(self) -> float:
+        """Return the total width of the window in seconds."""
         return self.beat_duration / self.subdivision
 
     @property
     def total(self) -> float:
+        """Return the total width of the window in seconds."""
         return self.interval
 
     @property
     def early(self) -> float:
+        """Return the maximum early offset in seconds."""
         return self.interval / 2
 
     @property
     def late(self) -> float:
+        """Return the maximum late offset in seconds."""
         return self.interval / 2
 
     def error(self, input_time: float, target_time: float) -> float:
         """Return signed timing error: negative early, positive late."""
         return input_time - target_time
 
+    def distance(self, input_time: float, target_time: float) -> float:
+        """Return absolute musical timing distance in seconds."""
+        return abs(self.error(input_time, target_time))
+
     def contains(self, input_time: float, target_time: float) -> bool:
         """Return whether input lands inside the centered window."""
-        return abs(self.error(input_time, target_time)) <= self.interval / 2
+        return self.distance(input_time, target_time) <= self.interval / 2
 
-    def judgement_value(
-        self,
-        input_time: float,
-        target_time: float,
-        perfect_unit: float,
-        max_value: int | None = None,
-    ) -> int | None:
-        """Return a symmetric iterative judgement value.
 
-        Early and late inputs at the same distance from the target produce
-        the same value. The perfect unit is the first tier, with each
-        additional tier adding one more perfect unit.
-        """
-        if perfect_unit <= 0:
-            raise ValueError("perfect_unit must be greater than zero")
+@dataclass(frozen=True)
+class JudgementWindow:
+    """A musical window with an independently configurable output value."""
 
-        distance = abs(self.error(input_time, target_time))
-        value = 1 if distance == 0 else int((distance + perfect_unit - 1e-15) / perfect_unit)
+    subdivision: int
+    value: int
 
-        if max_value is not None:
-            if max_value <= 0:
-                raise ValueError("max_value must be greater than zero")
-            value = min(value, max_value)
+    def __post_init__(self) -> None:
+        if self.subdivision <= 0:
+            raise ValueError("subdivision must be greater than zero")
 
-        return value
+
+@dataclass(frozen=True)
+class Judgement:
+    """The result of a musical timing judgement."""
+
+    subdivision: int
+    value: int
+    distance: float
+
+
+def judge(
+    input_time: float,
+    target_time: float,
+    bpm: float,
+    windows: Sequence[JudgementWindow],
+) -> Optional[Judgement]:
+    """Judge an input against nested musical timing windows.
+
+    Windows are checked from narrowest to widest. The first matching
+    window wins, while its configured value is returned unchanged.
+    """
+
+    beat = beat_duration(bpm)
+
+    ordered = sorted(windows, key=lambda window: window.subdivision, reverse=True)
+
+    for window in ordered:
+        total = beat / window.subdivision
+        half = total / 2
+        distance = abs(input_time - target_time)
+
+        if distance <= half:
+            return Judgement(
+                subdivision=window.subdivision,
+                value=window.value,
+                distance=distance,
+            )
+
+    return None
 
 
 @dataclass(frozen=True)
@@ -93,6 +128,7 @@ def beat_duration(bpm: float) -> float:
     """Return one beat in seconds."""
     if bpm <= 0:
         raise ValueError("BPM must be greater than zero")
+
     return 60.0 / bpm
 
 
@@ -100,6 +136,7 @@ def timing_window(bpm: float, subdivision: int) -> TimingWindow:
     """Create a centered timing window from BPM and subdivision."""
     if subdivision <= 0:
         raise ValueError("subdivision must be greater than zero")
+
     return TimingWindow(beat_duration(bpm), subdivision)
 
 
@@ -128,3 +165,21 @@ def hold_timing(
         start=NoteTiming(start_time, window),
         end=NoteTiming(end_time, window),
     )
+
+
+@dataclass(frozen=True)
+class TimedHit:
+    """A hit target whose judgement is resolved against a timeline."""
+
+    target_time: float
+    bpm: float
+    windows: Sequence[JudgementWindow]
+
+    def judge(self, input_time: float) -> Optional[Judgement]:
+        """Judge an input timestamp against this target."""
+        return judge(
+            input_time=input_time,
+            target_time=self.target_time,
+            bpm=self.bpm,
+            windows=self.windows,
+        )
