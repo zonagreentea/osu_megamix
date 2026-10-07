@@ -34,6 +34,32 @@ class TimingWindow:
         """Return whether input lands inside the centered window."""
         return abs(self.error(input_time, target_time)) <= self.interval / 2
 
+    def judgement_value(
+        self,
+        input_time: float,
+        target_time: float,
+        perfect_unit: float,
+        max_value: int | None = None,
+    ) -> int | None:
+        """Return a symmetric iterative judgement value.
+
+        Early and late inputs at the same distance from the target produce
+        the same value. The perfect unit is the first tier, with each
+        additional tier adding one more perfect unit.
+        """
+        if perfect_unit <= 0:
+            raise ValueError("perfect_unit must be greater than zero")
+
+        distance = abs(self.error(input_time, target_time))
+        value = 1 if distance == 0 else int((distance + perfect_unit - 1e-15) / perfect_unit)
+
+        if max_value is not None:
+            if max_value <= 0:
+                raise ValueError("max_value must be greater than zero")
+            value = min(value, max_value)
+
+        return value
+
 
 @dataclass(frozen=True)
 class NoteTiming:
