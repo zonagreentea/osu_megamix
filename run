@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 
 def main():
+    subprocess.Popen(["./ball"])
     args = sys.argv[1:]
 
     if args:
