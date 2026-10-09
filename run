@@ -8,8 +8,16 @@ ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 
 def main():
-    subprocess.Popen(["./ball"])
     args = sys.argv[1:]
+    if args and args[0] == "--code":
+        if len(args) < 3:
+            print("run: --code requires a language and source", file=sys.stderr)
+            return 2
+        language = args[1].lower()
+        if language not in {"python", "python3"}:
+            print(f"run: unsupported code language: {args[1]}", file=sys.stderr)
+            return 2
+        raise SystemExit(subprocess.call([sys.executable, "-c", args[2], *args[3:]]))
 
     if args:
         target = Path(args[0])
