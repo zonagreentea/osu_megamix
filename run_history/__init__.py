@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+"""Compatibility entry point for recorded or delegated play commands."""
 
 from play import play
 import sys
@@ -9,4 +9,4 @@ def run(process):
 
 
 if __name__ == "__main__":
-    run(" ".join(sys.argv[1:]))
+    raise SystemExit(run(sys.argv[1:]))

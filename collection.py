@@ -1,6 +1,34 @@
 from pathlib import Path
 
 
+# Populate these when the game's official keyblade catalogue is defined.
+KEYBLADES = ()
+COMPLETION_KEYBLADE = None
+
+
+def collection(
+    profile_id,
+    keyblades=(),
+    required_keyblades=KEYBLADES,
+    completion_keyblade=COMPLETION_KEYBLADE,
+):
+    """Return a profile's keyblade collection and completion status."""
+    collected = tuple(dict.fromkeys(keyblades))
+    required = tuple(dict.fromkeys(required_keyblades))
+    owned = set(collected)
+
+    complete = bool(required) and set(required).issubset(owned)
+
+    return {
+        "profile_id": profile_id,
+        "keyblades": collected,
+        "complete": complete,
+        "completion_keyblade": (
+            completion_keyblade if complete else None
+        ),
+    }
+
+
 class Collection:
     def __init__(self, path="collection"):
         self.path = Path(path)
@@ -34,6 +62,18 @@ class Collection:
 
     def has_keyblade(self, keyblade):
         return keyblade in self.keyblades
+
+    def profile_collection(
+        self,
+        profile_id,
+        required_keyblades=KEYBLADES,
+    ):
+        """Export this collection as profile-ready data."""
+        return collection(
+            profile_id,
+            keyblades=self.keyblades,
+            required_keyblades=required_keyblades,
+        )
 
     def trade_keyblade(self, keyblade, friend, other_collection):
         if not self.is_friend(friend):

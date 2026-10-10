@@ -66,7 +66,46 @@ class RPLobby(Lobby):
     def __init__(self):
         super().__init__("rp", proximity_voice=True)
 
-    def create_character(self, player, character):
+    def create_character(
+        self,
+        player,
+        character,
+        *,
+        fictional=None,
+        real_people=None,
+        scope="rp character portrayal",
+        consents=(),
+    ):
+        """Create a character only after its portrayal category is explicit."""
+        from portrayal_consent import authorize_portrayal
+
+        if isinstance(character, dict):
+            if fictional is None and "fictional" in character:
+                fictional = character["fictional"]
+            if real_people is None and "real_people" in character:
+                real_people = character["real_people"]
+            scope = character.get("scope", scope)
+
+        if real_people is not None:
+            if isinstance(real_people, str):
+                real_people = (real_people,)
+            else:
+                real_people = tuple(real_people)
+            if fictional is True:
+                raise ValueError(
+                    "Character cannot be both fictional and a real-person portrayal."
+                )
+            if not authorize_portrayal(real_people, scope, tuple(consents)):
+                raise PermissionError(
+                    "Real-person portrayal requires explicit, active consent "
+                    "for every person and this exact scope."
+                )
+        elif fictional is not True:
+            raise ValueError(
+                "Explicitly classify the character as fictional=True or "
+                "provide real_people and matching consents."
+            )
+
         self.join(player)
         return {
             "mode": "rp",
@@ -74,8 +113,8 @@ class RPLobby(Lobby):
             "player": player,
             "character": character,
             "gameplay": True,
-            "voice_chat": True,
-            "proximity_voice": True,
+            "voice_chat": self.voice_chat,
+            "proximity_voice": self.proximity_voice,
         }
 
 
