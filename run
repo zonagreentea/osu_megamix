@@ -1,13 +1,60 @@
 #!/usr/bin/env python3
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 
+
+def require_compiled_launcher():
+    compiled = ROOT / "dist" / "run"
+    if compiled.exists():
+        return compiled
+    return None
+
+
+def run_signed_update_gate():
+    update_server = os.environ.get("MEGAMIX_UPDATE_SERVER")
+    signing_key = os.environ.get("MEGAMIX_SIGNING_KEY")
+    if not update_server and not signing_key:
+        return 0
+    if not update_server or not signing_key:
+        print("run: signed update requires both MEGAMIX_UPDATE_SERVER and MEGAMIX_SIGNING_KEY", file=sys.stderr)
+        return 1
+
+    script = ROOT / "signed_update_check.py"
+    if not script.exists():
+        print("run: signed update gate missing", file=sys.stderr)
+        return 1
+
+    node_id = os.environ.get("MEGAMIX_NODE_ID", "default-node")
+    cmd = [
+        sys.executable,
+        str(script),
+        "--server",
+        update_server,
+        "--node-id",
+        node_id,
+        "--key",
+        signing_key,
+    ]
+    return subprocess.call(cmd)
+
+
 def main():
+    compiled = require_compiled_launcher()
+    if compiled is not None:
+        if run_signed_update_gate() != 0:
+            print("run: mandatory signed update failed; startup blocked.", file=sys.stderr)
+            return 1
+        raise SystemExit(subprocess.call([str(compiled)] + sys.argv[1:]))
+
+    if run_signed_update_gate() != 0:
+        print("run: mandatory signed update failed; startup blocked.", file=sys.stderr)
+        return 1
+
     args = sys.argv[1:]
     if args and args[0] == "--code":
         if len(args) < 3:
@@ -46,6 +93,7 @@ def main():
 
     print("run: no playable runtime found", file=sys.stderr)
     return 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
