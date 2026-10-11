@@ -1,4 +1,4 @@
-# osu!megamix v6.0.0
+# osu!megamix 00 - beginnings v11.0.0
 
 **a wonderful game with you in mind**
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from event_handler import Event, EventHandler
+
 
 @dataclass(frozen=True)
 class Attachment:
@@ -44,6 +46,7 @@ class UniversalInterface:
     """
 
     def __init__(self) -> None:
+        self.events = EventHandler()
         self._attachments: dict[str, Attachment] = {}
         self._inputs: list[str] = []
         self._outputs: list[str] = []
@@ -145,6 +148,26 @@ class UniversalInterface:
             (attachment.name, value)
             for attachment in self.sources(capability)
         ]
+
+    def capture(
+        self,
+        source: str,
+        value: Any,
+        time: int = None,
+    ) -> Event:
+        """Capture a value from an attached input through the event spine."""
+        attachment = self._attachments.get(source)
+        if attachment is None:
+            raise ValueError("Input source is not attached.")
+
+        if "input" not in attachment.capabilities:
+            raise ValueError("Attachment does not provide input.")
+
+        return self.events.capture(value, time=time)
+
+    def next_events(self) -> tuple[Event, ...]:
+        """Return the earliest coincident events."""
+        return self.events.next_batch()
 
     def snapshot(self) -> dict[str, tuple[str, ...]]:
         return {

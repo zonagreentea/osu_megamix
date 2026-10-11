@@ -12,13 +12,44 @@
       <div class="title">osu! mode</div>
       <a class="back-btn" href="../../index.html">Back</a>
     </div>
+    <div style="padding: 12px 0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <label for="planFile">Megamix plan (.json)</label>
+      <input id="planFile" type="file" accept=".json,application/json" />
+      <span id="planStatus" role="status">Choose a generated plan to begin.</span>
+    </div>
     <canvas id="gameCanvas" width="960" height="540"></canvas>
   </div>
 
   <script type="module">
     import { GameEngine } from '../../lib/game-engine.js';
+
     const game = new GameEngine({ canvasId: 'gameCanvas', mode: 'osu' });
-    game.start();
+    const fileInput = document.getElementById('planFile');
+    const status = document.getElementById('planStatus');
+    let started = false;
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+
+      status.textContent = 'Loading beatmap timeline…';
+
+      try {
+        const plan = JSON.parse(await file.text());
+        const eventCount = game.loadPlan(plan);
+
+        if (!started) {
+          game.start();
+          started = true;
+        }
+
+        status.textContent =
+          `Loaded ${eventCount} events · ${plan.segments.length} segments · ` +
+          `${(plan.duration_ms / 1000).toFixed(2)} seconds`;
+      } catch (error) {
+        status.textContent = `Could not load plan: ${error.message}`;
+      }
+    });
   </script>
 </body>
 </html>
