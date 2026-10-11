@@ -45,6 +45,8 @@ jobs:
 
       - name: Prepare artifacts
         shell: bash
+        env:
+          MEGAMIX_SIGNING_KEY: ${{ secrets.MEGAMIX_SIGNING_KEY }}
         run: |
           set -euo pipefail
           test -d dist/osu\!megamix.mix || { echo "dist/osu!megamix.mix missing"; ls -lah dist || true; exit 1; }
@@ -55,6 +57,25 @@ jobs:
           # include platform archives if packager created them
           ls -lah dist || true
 
+          # add detached signatures to all release artifacts when a key is supplied
+          if [ -n "${MEGAMIX_SIGNING_KEY:-}" ]; then
+            find dist -type f \( -iname '*.zip' -o -iname '*.tar.gz' \) -print0 | xargs -0 -r python3 sign_release.py
+          else
+            echo "MEGAMIX_SIGNING_KEY not set; skipping release signatures"
+          fi
+
+      - name: Verify signed artifacts
+        shell: bash
+        env:
+          MEGAMIX_SIGNING_KEY: ${{ secrets.MEGAMIX_SIGNING_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${MEGAMIX_SIGNING_KEY:-}" ]; then
+            find dist -type f \( -iname '*.zip' -o -iname '*.tar.gz' \) -print0 | xargs -0 -r python3 verify_release.py --verify
+          else
+            echo "MEGAMIX_SIGNING_KEY not set; skipping verification"
+          fi
+
       - name: Upload build artifacts (for release job)
         uses: actions/upload-artifact@v4
         with:
@@ -64,6 +85,7 @@ jobs:
             dist/osu_megamix_mac.zip
             dist/osu_megamix_windows.zip
             dist/osu_megamix_linux.tar.gz
+            dist/*.sig
 
   release:
     needs: [build]
@@ -84,6 +106,7 @@ jobs:
       - name: Create/update stable release + upload assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MEGAMIX_SIGNING_KEY: ${{ secrets.MEGAMIX_SIGNING_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -100,3 +123,448 @@ jobs:
 
           # Print final asset list
           gh release view "$TAG" --json assets -q ".assets[].name"
+
+
+# Optional local usage:
+#   export MEGAMIX_SIGNING_KEY="$(openssl rand -hex 32)"
+#   python3 sign_release.py dist/osu_megamix_universal_*.tar.gz dist/osu_megamix_linux.tar.gz
+#   python3 verify_release.py --verify dist/osu_megamix_universal_*.tar.gz dist/osu_megamix_linux.tar.gz
+#
+# Use the same key for both the release workflow and any binary update client that checks signatures.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
