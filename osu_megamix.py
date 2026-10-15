@@ -27,7 +27,7 @@ MODES_DISPLAY = [
 ]
 
 MODES_INTERNAL = [
-    "red-charizard",
+    "charizard-red",
     "osu!",
     "taiko",
     "catch",
@@ -174,7 +174,7 @@ def session():
 
     rc_log(
         f"Loaded {len(beatmaps)} beatmaps "
-        "(Red-Charizard aware!)"
+        "(Charizard-Red aware!)"
     )
 
     selected_display, selected_internal = select_mode()
@@ -187,7 +187,7 @@ def session():
     score = Score()
     timeline = Timeline()
 
-    if selected_internal == "red-charizard":
+    if selected_internal == "charizard-red":
         if beatmaps:
             rc_log(
                 "osu!megamix MEGAMIX starting: "
@@ -210,7 +210,7 @@ def session():
         else:
             rc_log(
                 "No beatmaps found for osu!megamix "
-                "(Red-Charizard sad)."
+                "(Charizard-Red sad)."
             )
     else:
         rc_log(f"Starting {selected_display} session...")

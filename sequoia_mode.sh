@@ -4,7 +4,7 @@ echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sketch-free] 🚀 Brixton&Maxton SEQUOIA M
 while true; do
     CHANGES=$(find . -type f \( -name "*.py" -o -name "*.cpp" -o -name "*.c" -o -name "*.h" -o -name "*.json" -o -name "*.txt" \) -newer .last_run 2>/dev/null)
     if [ "$CHANGES" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sketch-free] 🔥 Detected changes, triggering full Red-Charizard workflow..."
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [sketch-free] 🔥 Detected changes, triggering full Charizard-Red workflow..."
 
         # Clear & backup
         rm -rf builddir build *.o *.log *.tmp *.zip *.mix
@@ -12,7 +12,7 @@ while true; do
 
         # Git full-fluff push
         git add -A
-        git commit -am "💥 osu!megamix 5.1.5 Red-Charizard FULL-FLUFF PUSH" 2>/dev/null
+        git commit -am "💥 osu!megamix 5.1.5 Charizard-Red FULL-FLUFF PUSH" 2>/dev/null
         git stash push -u -m "pre-rebase stash" 2>/dev/null
         git pull --rebase origin main
         git stash pop 2>/dev/null

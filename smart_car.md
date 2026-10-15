@@ -18,5 +18,5 @@
 **Date:** 2026-01-14
 **Effect:** Boss resolved permanently for Shizuka’s canon timeline
 
-## Red-Charizard Rule
+## Charizard-Red Rule
 If munnies are required to win after Smart Car is purchased, the system is broken.
