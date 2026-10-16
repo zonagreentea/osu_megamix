@@ -18,7 +18,7 @@ class RPLobbyConsentTests(unittest.TestCase):
 
     def test_explicitly_fictional_character_is_allowed(self):
         result = RPLobby().create_character(
-            "player-a", {"name": "Nova"}, fictional=True
+            "player-a", {"name": "Nova", "real_life_event": False, "event_classification": "fictional"}, fictional=True
         )
         self.assertTrue(result["character_created"])
 
@@ -27,7 +27,7 @@ class RPLobbyConsentTests(unittest.TestCase):
         with self.assertRaises(PermissionError):
             lobby.create_character(
                 "player-a",
-                {"name": "Portrayal"},
+                {"name": "Portrayal", "real_life_event": False, "event_classification": "fictional"},
                 real_people=("person-a",),
                 scope="RP scene",
             )
@@ -38,7 +38,7 @@ class RPLobbyConsentTests(unittest.TestCase):
         consent = Consent("person-a", "RP scene", explicit=True)
         result = lobby.create_character(
             "player-a",
-            {"name": "Portrayal"},
+            {"name": "Portrayal", "real_life_event": False, "event_classification": "fictional"},
             real_people=("person-a",),
             scope="RP scene",
             consents=(consent,),
@@ -55,7 +55,7 @@ class RPLobbyConsentTests(unittest.TestCase):
                 with self.assertRaises(PermissionError):
                     lobby.create_character(
                         "player-a",
-                        {"name": "Portrayal"},
+                        {"name": "Portrayal", "real_life_event": False, "event_classification": "fictional"},
                         real_people=("person-a",),
                         scope="RP scene",
                         consents=(consent,),

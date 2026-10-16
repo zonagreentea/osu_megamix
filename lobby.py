@@ -1,3 +1,4 @@
+from portrayal_policy import validate_portrayal
 from voice import voice_for
 from dataclasses import dataclass, field
 
@@ -77,6 +78,7 @@ class RPLobby(Lobby):
         consents=(),
     ):
         """Create a character only after its portrayal category is explicit."""
+        validate_portrayal(character)
         from portrayal_consent import authorize_portrayal
 
         if isinstance(character, dict):
