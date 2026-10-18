@@ -76,8 +76,9 @@ class APIServer(SimpleHTTPRequestHandler):
                 # pack
                 homework.pack_homework(Path(hw), dest)
                 # verify
-                unpack_dir = Path(tempfile.mkdtemp(prefix="grade-"))
-                homework.unpack_homework(dest, unpack_dir, verify=True)
+                with tempfile.TemporaryDirectory(prefix="grade-") as temp:
+                    unpack_dir = Path(temp) / "verified"
+                    homework.unpack_homework(dest, unpack_dir, verify=True)
                 # success
                 report = {
                     "ok": True,

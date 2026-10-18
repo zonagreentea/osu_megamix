@@ -1,4 +1,9 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
+
+from megamix_generator import generate_mix
 
 from universal_client import ClientState, UniversalClient, load_plan_file
 
@@ -6,6 +11,33 @@ from universal_client import ClientState, UniversalClient, load_plan_file
 class UniversalClientTests(unittest.TestCase):
     def setUp(self):
         self.client = UniversalClient()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+
+        root = Path(self.temp_dir.name)
+        beatmap = root / "fixture.map"
+        beatmap.write_text(
+            "# beat_number | seconds | key\n"
+            "1 0.0 a\n"
+            "2 0.5 b\n"
+            "3 1.0 c\n"
+            "4 1.5 d\n"
+            "5 2.0 e\n"
+            "6 2.5 f\n",
+            encoding="utf-8",
+        )
+
+        plan = generate_mix(
+            [beatmap],
+            modes=("osu", "taiko", "osu"),
+            segment_ms=1000,
+        )
+
+        self.plan_path = root / "osu-megamix-plan.json"
+        self.plan_path.write_text(
+            json.dumps(plan),
+            encoding="utf-8",
+        )
 
     def test_attachment_capabilities(self):
         self.client.attach("keyboard", "input", "keys")
@@ -45,7 +77,7 @@ class UniversalClientTests(unittest.TestCase):
         self.assertEqual(self.client.state, ClientState.STOPPED)
 
     def test_loads_real_generated_plan(self):
-        plan = load_plan_file("/tmp/osu-megamix-plan.json")
+        plan = load_plan_file(self.plan_path)
         count = self.client.load_plan(plan)
         self.assertEqual(count, 6)
         self.assertTrue(self.client.snapshot()["plan_loaded"])
@@ -59,7 +91,7 @@ class UniversalClientTests(unittest.TestCase):
         from universal_client import load_plan_file
 
         client = UniversalClient()
-        client.load_plan(load_plan_file("/tmp/osu-megamix-plan.json"))
+        client.load_plan(load_plan_file(self.plan_path))
         events = client.playback_events()
 
         mode_changes = [
@@ -93,7 +125,7 @@ class UniversalClientTests(unittest.TestCase):
         from universal_client import ClientState, load_plan_file
 
         client = UniversalClient()
-        client.load_plan(load_plan_file("/tmp/osu-megamix-plan.json"))
+        client.load_plan(load_plan_file(self.plan_path))
         now = [0]
         batches = []
 

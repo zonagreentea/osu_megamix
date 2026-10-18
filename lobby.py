@@ -79,7 +79,6 @@ class RPLobby(Lobby):
     ):
         """Create a character only after its portrayal category is explicit."""
         validate_portrayal(character)
-        from portrayal_consent import authorize_portrayal
 
         if isinstance(character, dict):
             if fictional is None and "fictional" in character:
@@ -88,24 +87,16 @@ class RPLobby(Lobby):
                 real_people = character["real_people"]
             scope = character.get("scope", scope)
 
+        # Game characters must remain fictional.
+        # Real-person consent does not override this game-content boundary.
         if real_people is not None:
-            if isinstance(real_people, str):
-                real_people = (real_people,)
-            else:
-                real_people = tuple(real_people)
-            if fictional is True:
-                raise ValueError(
-                    "Character cannot be both fictional and a real-person portrayal."
-                )
-            if not authorize_portrayal(real_people, scope, tuple(consents)):
-                raise PermissionError(
-                    "Real-person portrayal requires explicit, active consent "
-                    "for every person and this exact scope."
-                )
-        elif fictional is not True:
             raise ValueError(
-                "Explicitly classify the character as fictional=True or "
-                "provide real_people and matching consents."
+                "Real-person portrayals are not permitted in game RP."
+            )
+
+        if fictional is not True:
+            raise ValueError(
+                "RP characters must be explicitly fictional."
             )
 
         self.join(player)
