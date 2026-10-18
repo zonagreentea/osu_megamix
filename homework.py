@@ -112,35 +112,11 @@ def pack_homework(src_dir: Path, dest_file: Path) -> None:
 
 
 def unpack_homework(archive_file: Path, dest_dir: Path, verify: bool = True) -> Path:
-    archive_file = Path(archive_file)
-    dest_dir = Path(dest_dir)
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(archive_file, "r") as zf:
-        names = zf.namelist()
-        # safety: reject any unsafe names
-        for name in names:
-            if not is_safe_archive_name(name):
-                raise ValueError(f"unsafe archive entry: {name}")
-        # extract to temp
-        zf.extractall(dest_dir)
-        if verify:
-            if INTEGRITY_FILENAME not in names:
-                raise ValueError("missing integrity information")
-            expected = zf.read(INTEGRITY_FILENAME).decode("utf-8")
-            # recompute
-            files = [n for n in names if n != INTEGRITY_FILENAME]
-            files = sorted(files)
-            h = hashlib.sha256()
-            for rel in files:
-                full = dest_dir / rel
-                if full.is_dir():
-                    continue
-                with open(full, "rb") as fh:
-                    data = fh.read()
-                h.update(rel.encode("utf-8") + b"\0" + data)
-            if h.hexdigest() != expected:
-                raise ValueError("integrity check failed")
-    return dest_dir
+    """Validate and extract an archive without exposing partial contents."""
+    from security_homework import unpack_homework as secure_unpack
+
+    return secure_unpack(archive_file, dest_dir, verify=verify)
+
 
 
 # CLI helpers

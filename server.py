@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 import json
+import hmac
 import os
 from pathlib import Path
 import urllib
@@ -17,14 +18,64 @@ class APIServer(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
 
-    def _read_json(self):
-        length = int(self.headers.get('Content-Length', 0))
+    # ULTRA_FLOW_API_GUARD_V1
+    MAX_JSON_BYTES = 1024 * 1024
+
+    def _request_guard(self):
+        # Reject browser requests from other origins before authentication.
+        origin = self.headers.get("Origin")
+        if origin:
+            from urllib.parse import urlsplit
+            try:
+                parsed = urlsplit(origin)
+                host = parsed.hostname
+                port = parsed.port
+                valid = (parsed.scheme == "http" and
+                         host in ("localhost", "127.0.0.1") and
+                         port == self.server.server_port and
+                         parsed.username is None and parsed.password is None and
+                         parsed.path in ("", "/") and not parsed.query and not parsed.fragment)
+            except ValueError:
+                valid = False
+            if not valid:
+                self._send_json({"ok": False, "reason": "origin denied"}, 403)
+                return None
+        # Validate size before reading, even for unauthenticated clients.
+        raw_length = self.headers.get("Content-Length")
+        try:
+            length = int(raw_length) if raw_length is not None else -1
+        except ValueError:
+            length = -1
+        if length > self.MAX_JSON_BYTES:
+            # Reject oversized bodies without retaining them in memory.
+            # Drain bounded chunks before replying to avoid Windows resets.
+            remaining = length
+            while remaining:
+                chunk = self.rfile.read(min(65536, remaining))
+                if not chunk:
+                    break
+                remaining -= len(chunk)
+            self._send_json({"ok": False, "reason": "request too large"}, 413)
+            return None
+        if length < 0 or self.headers.get("Transfer-Encoding"):
+            self._send_json({"ok": False, "reason": "invalid request length"}, 400)
+            return None
+        # Fail closed when no token is configured. Never use a hard-coded secret.
+        token = os.environ.get("OSU_MEGAMIX_API_TOKEN", "")
+        authorization = self.headers.get("Authorization", "")
+        expected = "Bearer " + token
+        if not token or len(token) < 32 or not hmac.compare_digest(authorization, expected):
+            self._send_json({"ok": False, "reason": "unauthorized"}, 401)
+            return None
+        return length
+
+    def _read_json(self, length):
         if length == 0:
             return None
-        raw = self.rfile.read(length)
         try:
-            return json.loads(raw.decode('utf-8'))
-        except Exception:
+            data = json.loads(self.rfile.read(length).decode("utf-8"))
+            return data if isinstance(data, dict) else None
+        except (UnicodeDecodeError, ValueError):
             return None
 
     def _send_json(self, obj, code=200):
@@ -38,7 +89,14 @@ class APIServer(SimpleHTTPRequestHandler):
     def do_POST(self):
         # Local-only API: check, grade, run, share
         path = urllib.parse.urlparse(self.path).path
-        body = self._read_json() or {}
+        if path not in ("/check", "/grade", "/run", "/share"):
+            return self._send_json({"ok": False, "reason": "unknown endpoint"}, 404)
+        length = self._request_guard()
+        if length is None:
+            return
+        body = self._read_json(length)
+        if body is None:
+            return self._send_json({"ok": False, "reason": "JSON object required"}, 400)
 
         if path == "/check":
             # expects {"homework_path": "...", "target": "macos"}
@@ -62,7 +120,6 @@ class APIServer(SimpleHTTPRequestHandler):
                 return self._send_json({"ok": False, "reason": "homework_path and target required"}, 400)
             try:
                 import homework
-                from pathlib import Path
                 out_dir.mkdir(parents=True, exist_ok=True)
                 manifest = None
                 # perform compatibility check
@@ -76,8 +133,9 @@ class APIServer(SimpleHTTPRequestHandler):
                 # pack
                 homework.pack_homework(Path(hw), dest)
                 # verify
-                unpack_dir = Path(tempfile.mkdtemp(prefix="grade-"))
-                homework.unpack_homework(dest, unpack_dir, verify=True)
+                with tempfile.TemporaryDirectory(prefix="grade-") as temp:
+                    unpack_dir = Path(temp) / "verified"
+                    homework.unpack_homework(dest, unpack_dir, verify=True)
                 # success
                 report = {
                     "ok": True,
