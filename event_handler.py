@@ -1,6 +1,8 @@
 """Universal event capture, adjustment, and timed dispatch."""
 
 from dataclasses import dataclass
+from heapq import heappop, heappush
+from itertools import count
 from time import monotonic_ns
 from typing import Any, Callable, Optional
 
@@ -13,10 +15,19 @@ class Event:
 
 
 class EventHandler:
-    """Capture values, adjust them, and dispatch coincident events together."""
+    """Dispatch events by timestamp, preserving submission order on ties."""
 
     def __init__(self):
-        self.pending: list[Event] = []
+        self._queue = []
+        self._sequence = count()
+
+    @property
+    def pending(self) -> list[Event]:
+        """Compatibility snapshot in original submission order.
+
+        Reading this property costs O(n log n); the dispatch path does not.
+        """
+        return [event for _, _, event in sorted(self._queue, key=lambda item: item[1])]
 
     def capture(self, value: Any, time: Optional[int] = None) -> Event:
         """Capture a value, timestamping it unless time is supplied."""
@@ -39,23 +50,17 @@ class EventHandler:
         """Queue an event without interpreting its value."""
         if not isinstance(event, Event):
             raise TypeError("submit expects an Event")
-        self.pending.append(event)
+        heappush(self._queue, (event.time, next(self._sequence), event))
 
     def next_batch(self) -> tuple[Event, ...]:
         """Return all earliest-time events in stable submission order."""
-        if not self.pending:
+        if not self._queue:
             return ()
-
-        earliest = min(event.time for event in self.pending)
-        batch = tuple(
-            event for event in self.pending
-            if event.time == earliest
-        )
-        self.pending = [
-            event for event in self.pending
-            if event.time != earliest
-        ]
-        return batch
+        earliest = self._queue[0][0]
+        batch = []
+        while self._queue and self._queue[0][0] == earliest:
+            batch.append(heappop(self._queue)[2])
+        return tuple(batch)
 
     def dispatch(
         self,
@@ -67,13 +72,12 @@ class EventHandler:
             return None
         return handler(batch)
 
-
     def drain(
         self,
         handler: Callable[[tuple[Event, ...]], Any],
     ) -> tuple[Any, ...]:
         """Dispatch batches until the queue is empty."""
         results = []
-        while self.pending:
+        while self._queue:
             results.append(self.dispatch(handler))
         return tuple(results)
