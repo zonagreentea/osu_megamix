@@ -60,7 +60,17 @@ class Replay:
     def events_at(self, time):
         """Return all events at a coincident timestamp, in insertion order."""
         time = _validate_time(time)
-        return tuple(event for event in self.events if event["time"] == time)
+        lo, hi = 0, len(self.events)
+        while lo < hi:
+            mid = (lo + hi) // 2
+            if self.events[mid]["time"] < time:
+                lo = mid + 1
+            else:
+                hi = mid
+        start = lo
+        while lo < len(self.events) and self.events[lo]["time"] == time:
+            lo += 1
+        return tuple(self.events[start:lo])
 
     def playback(self):
         """Yield a copy of each recorded event in original order."""
@@ -79,13 +89,14 @@ class Replay:
             "events": self.events,
         }
 
-    def save(self, path):
+    def save(self, path, *, compact=False):
         """Atomically save a replay as JSON."""
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
         payload = json.dumps(
             self.to_dict(),
-            indent=2,
+            indent=None if compact else 2,
+            separators=(",", ":") if compact else None,
             ensure_ascii=False,
             allow_nan=False,
         )
