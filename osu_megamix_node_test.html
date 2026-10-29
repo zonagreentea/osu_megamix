@@ -15,12 +15,59 @@ canvas { display:block; margin:0 auto; background:#111; }
 #modeDisplay {
     position:absolute; top:10px; right:10px; color:#fff; font-size:28px;
 }
+
+/* Halloween Lightweight Edition */
+#titleScreen {
+    background: radial-gradient(circle, #30132e 0%, #100712 70%, #050307 100%);
+    color: #fff;
+    text-align: center;
+}
+
+#halloweenTitle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#halloweenLogo {
+    width: min(58vw, 300px);
+    height: auto;
+    filter: drop-shadow(0 0 14px #ff7a2f66);
+}
+
+#halloweenTitle h1 {
+    margin: 0;
+    color: #ff85ba;
+    font-size: clamp(26px, 5vw, 44px);
+}
+
+#halloweenTitle p {
+    margin: 0;
+    color: #ffad57;
+    letter-spacing: 5px;
+    font-weight: bold;
+}
+
+#halloweenTitle small {
+    margin-top: 20px;
+    color: #ddd;
+    letter-spacing: 3px;
+}
+
 </style>
   <link rel="icon" type="image/png" href="assets/icons/osu_megamix_halloween.png">
 </head>
 <body>
 <div id="titleScreen">
-    <canvas id="titleCanvas" width="400" height="400"></canvas>
+    <div id="halloweenTitle">
+    <img id="halloweenLogo"
+         src="assets/icons/osu_megamix_halloween.png"
+         alt="osu!megamix Halloween">
+    <h1>osu!megamix</h1>
+    <p>HALLOWEEN EDITION</p>
+    <small>CLICK TO START</small>
+</div>
 </div>
 <div id="modeDisplay"></div>
 <div id="pauseDisplay" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#fff;font-size:48px;font-weight:bold;pointer-events:none;">PAUSED</div>
@@ -30,24 +77,7 @@ canvas { display:block; margin:0 auto; background:#111; }
 // ----------------------
 // Title Screen
 // ----------------------
-const titleCanvas = document.getElementById("titleCanvas");
-const tctx = titleCanvas.getContext("2d");
-
-function drawTitleLogo(){
-    const cx = titleCanvas.width/2;
-    const cy = titleCanvas.height/2;
-    const radius = 150;
-    tctx.fillStyle = "#ff66aa";
-    tctx.beginPath();
-    tctx.arc(cx, cy, radius, 0, Math.PI*2);
-    tctx.fill();
-    tctx.fillStyle = "#fff";
-    tctx.font = "bold 48px sans-serif";
-    tctx.textAlign = "center";
-    tctx.textBaseline = "middle";
-    tctx.fillText("osu!", cx, cy);
-}
-drawTitleLogo();
+// Halloween title artwork is rendered by HTML and CSS.
 
 document.getElementById("titleScreen").addEventListener("click", ()=>{
     document.getElementById("titleScreen").style.display="none";
