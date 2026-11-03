@@ -1,9 +1,10 @@
-DEFAULT_INPUT = {
-    "move": "move",
-    "interact": "interact",
-    "pointer": "pointer",
-    "pause": "pause",
-}
+"""Compatibility entry point for src.input.config."""
 
-def get_config():
-    return DEFAULT_INPUT.copy()
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.input.config", run_name="__main__")
+else:
+    import importlib
+    import sys
+
+    sys.modules[__name__] = importlib.import_module("src.input.config")
