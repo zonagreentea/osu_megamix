@@ -1,6 +1,10 @@
-from clock import Clock
+"""Compatibility entry point for src.gameplay.timeline."""
 
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.gameplay.timeline", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-class Timeline(Clock):
-    def __init__(self):
-        super().__init__("monotonic")
+    sys.modules[__name__] = importlib.import_module("src.gameplay.timeline")

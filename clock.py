@@ -1,28 +1,10 @@
-import time
+"""Compatibility entry point for src.core.clock."""
 
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.core.clock", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-class Clock:
-    def __init__(self, source="monotonic"):
-        sources = {
-            "monotonic": time.monotonic_ns,
-            "wall": time.time_ns,
-        }
-
-        if source not in sources:
-            raise ValueError("Unknown clock source")
-
-        self.source = source
-        self._read = sources[source]
-        self.start_ns = self._read()
-
-    def now_ns(self):
-        return self._read() - self.start_ns
-
-    def now(self):
-        return self.now_ns() / 1_000_000_000
-
-    def timestamp_ns(self):
-        return self._read()
-
-    def reset(self):
-        self.start_ns = self._read()
+    sys.modules[__name__] = importlib.import_module("src.core.clock")

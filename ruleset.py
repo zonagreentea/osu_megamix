@@ -1,6 +1,10 @@
-class Ruleset:
-    def __init__(self, mode):
-        self.name = f"osu!mix - {mode} mode"
+"""Compatibility entry point for src.gameplay.ruleset."""
 
-    def start(self):
-        print(f"{self.name} started")
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.gameplay.ruleset", run_name="__main__")
+else:
+    import importlib
+    import sys
+
+    sys.modules[__name__] = importlib.import_module("src.gameplay.ruleset")

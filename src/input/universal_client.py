@@ -8,7 +8,7 @@ from time import monotonic_ns, sleep
 from typing import Callable
 from typing import Any, Dict, FrozenSet, Optional
 
-from event_handler import Event, EventHandler
+from src.core.events import Event, EventHandler
 
 
 class ClientState(str, Enum):

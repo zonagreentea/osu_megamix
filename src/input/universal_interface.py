@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
-from event_handler import Event, EventHandler
+from src.core.events import Event, EventHandler
 
 
 @dataclass(frozen=True)
