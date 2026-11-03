@@ -83,10 +83,12 @@ class DeviceLink:
 
     def __init__(
         self,
-        host: str = "0.0.0.0",
+        host: str = "127.0.0.1",
         port: int = 5051,
         on_input: Optional[Callable[[InputEvent], None]] = None,
     ):
+        if host != "127.0.0.1":
+            raise ValueError("Remote device listening is disabled")
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.bind((host, port))
         self._socket.setblocking(False)
