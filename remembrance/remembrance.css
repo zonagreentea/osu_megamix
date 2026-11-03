@@ -1,0 +1,49 @@
+html, body {
+    margin: 0;
+    width: 100%;
+    min-height: 100%;
+    background: #000000;
+    color: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-sizing: border-box;
+    padding: 24px;
+}
+
+#poppy {
+    width: 180px;
+    max-width: 50vw;
+    max-height: 35vh;
+    object-fit: contain;
+}
+
+h1 {
+    font-size: 30px;
+    font-weight: 400;
+    letter-spacing: 2px;
+}
+
+p {
+    color: #aaaaaa;
+}
+
+button {
+    margin-top: 24px;
+    padding: 12px 24px;
+    color: white;
+    background: black;
+    border: 1px solid #555555;
+    cursor: pointer;
+}
+
+button:disabled {
+    display: none;
+}
