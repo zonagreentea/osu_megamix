@@ -1,23 +1,10 @@
-from moderation import moderator
+"""Compatibility entry point for src.social.chat."""
 
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.social.chat", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-class Chat:
-    def __init__(self):
-        self.messages = []
-
-    def send(self, player, message):
-        result = moderator.check(player, message)
-
-        if not result.allowed:
-            return result
-
-        entry = {
-            "player": player,
-            "message": message,
-        }
-
-        self.messages.append(entry)
-        return result
-
-    def history(self):
-        return list(self.messages)
+    sys.modules[__name__] = importlib.import_module("src.social.chat")
