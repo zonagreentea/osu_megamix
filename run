@@ -24,7 +24,7 @@ def run_signed_update_gate():
         print("run: signed update requires both MEGAMIX_UPDATE_SERVER and MEGAMIX_SIGNING_KEY", file=sys.stderr)
         return 1
 
-    script = ROOT / "signed_update_check.py"
+    script = ROOT / "tools" / "signed_update_check.py"
     if not script.exists():
         print("run: signed update gate missing", file=sys.stderr)
         return 1

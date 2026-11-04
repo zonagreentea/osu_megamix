@@ -1,42 +1,10 @@
-import tkinter as tk
-from tkinter import filedialog
-from pathlib import Path
-import shutil
+"""Compatibility entry point for tools.download."""
 
-music = Path("music")
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("tools.download", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-def upload():
-    file = filedialog.askopenfilename(title="Upload")
-
-    if file:
-        source = Path(file)
-        music.mkdir(exist_ok=True)
-        shutil.copy2(source, music / source.name)
-
-def download():
-    file = filedialog.askopenfilename(
-        title="Download",
-        initialdir=music
-    )
-
-    if file:
-        destination = filedialog.asksaveasfilename(
-            title="Save as",
-            initialfile=Path(file).name
-        )
-
-        if destination:
-            shutil.copy2(file, destination)
-
-root = tk.Tk()
-root.title("osu!megamix")
-
-tk.Button(root, text="Upload", command=upload).pack(
-    padx=40, pady=10
-)
-
-tk.Button(root, text="Download", command=download).pack(
-    padx=40, pady=10
-)
-
-root.mainloop()
+    sys.modules[__name__] = importlib.import_module("tools.download")
