@@ -2,7 +2,7 @@
 import zipfile
 from pathlib import Path
 
-from test_security_homework import HomeworkSecurityTests
+from .test_security_homework import HomeworkSecurityTests
 from security_homework import unpack_homework
 
 
