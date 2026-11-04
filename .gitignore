@@ -10,3 +10,8 @@ builddir/
 
 __pycache__/
 *.pyc
+game.js.before-square-removal
+osu_megamix_node_test.html.before-halloween
+timeline.py.backup*
+playerbase_history.txt
+zero-waste-report.json
