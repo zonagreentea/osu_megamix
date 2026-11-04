@@ -81,6 +81,8 @@ def connect(host: str, port: int) -> Communication:
 
 
 def listen(host: str = "127.0.0.1", port: int = 0) -> tuple[Communication, tuple[str, int]]:
+    if host != "127.0.0.1":
+        raise ValueError("Remote listening is disabled")
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     server.bind((host, port))
