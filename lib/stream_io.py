@@ -1,62 +1,41 @@
-"""Lossless binary stream transfer for osu!megamix."""
+"""osu!megamix binary I/O core."""
 
-import hashlib
-import sys
-
-BUFFER_SIZE = 65536
+import os
 
 
-def transfer(source, destination, chunk_size=BUFFER_SIZE):
-    if chunk_size <= 0:
-        raise ValueError("chunk_size must be positive")
+def read(fd, size=65536):
+    while True:
+        try:
+            return os.read(fd, size)
+        except InterruptedError:
+            continue
 
-    digest = hashlib.sha256()
+
+def write(fd, data):
+    view = memoryview(data)
+    total = 0
+
+    while total < len(view):
+        try:
+            count = os.write(fd, view[total:])
+        except InterruptedError:
+            continue
+
+        if count <= 0:
+            raise OSError("Output stopped")
+
+        total += count
+
+    return total
+
+
+def transfer(source_fd, target_fd, size=65536):
     total = 0
 
     while True:
-        data = source.read(chunk_size)
-
-        if data is None:
-            raise OSError("Input returned no data")
+        data = read(source_fd, size)
 
         if not data:
-            break
+            return total
 
-        view = memoryview(data)
-
-        while view:
-            written = destination.write(view)
-
-            if written is None or written <= 0:
-                raise OSError("Incomplete output")
-
-            if written > len(view):
-                raise OSError("Invalid write count")
-
-            digest.update(view[:written])
-            total += written
-            view = view[written:]
-
-    destination.flush()
-
-    return {
-        "bytes": total,
-        "sha256": digest.hexdigest(),
-    }
-
-
-def main():
-    result = transfer(
-        sys.stdin.buffer,
-        sys.stdout.buffer
-    )
-
-    print(
-        f"Transferred {result['bytes']} bytes\n"
-        f"SHA-256: {result['sha256']}",
-        file=sys.stderr
-    )
-
-
-if __name__ == "__main__":
-    main()
+        total += write(target_fd, data)
