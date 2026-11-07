@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lest We Forget — osu_megamix</title>
+<link rel="stylesheet" href="remembrance.css">
+<script src="remembrance.js" defer></script>
+</head>
+<body>
+<main>
+  <img id="poppy" src="poppy.png" alt="Red remembrance poppy">
+  <h1>Lest We Forget</h1>
+  <p>November 11, 2026</p>
+  <p id="status" role="status" aria-live="polite"></p>
+</main>
+
+<!-- REMEMBRANCE_POEMS_START -->
+<aside class="remembrance-poem remembrance-poem-left">
+  <h2>In Flanders Fields</h2>
+  <p class="remembrance-author">John McCrae</p>
+  <pre>In Flanders fields the poppies blow
+Between the crosses, row on row,
+That mark our place; and in the sky
+The larks, still bravely singing, fly
+Scarce heard amid the guns below.
+
+We are the Dead. Short days ago
+We lived, felt dawn, saw sunset glow,
+Loved and were loved, and now we lie,
+In Flanders fields.
+
+Take up our quarrel with the foe:
+To you from failing hands we throw
+The torch; be yours to hold it high.
+If ye break faith with us who die
+We shall not sleep, though poppies grow
+In Flanders fields.</pre>
+</aside>
+<aside class="remembrance-poem remembrance-poem-right">
+  <h2>Where The Wind Blows</h2>
+  <p class="remembrance-author">Jace Russel Simon</p>
+  <pre>To fly a kite, the wind shall blow,
+
+To free the minds of those below,
+
+To see a sorrow, sorrow throw,
+
+To pick apart the wind a-blow,
+
+We search our minds for ways to fly,
+
+A kite perhaps, but not on by,
+
+The kite it flies among the valley,
+
+Below where the wind blows.</pre>
+</aside>
+<!-- REMEMBRANCE_POEMS_END -->
+
+</body>
+</html>
