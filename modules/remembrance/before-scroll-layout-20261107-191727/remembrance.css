@@ -1,0 +1,156 @@
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+    background: black;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+.memorial-page {
+    min-height: 100vh;
+    max-width: 1700px;
+    margin: auto;
+    padding: 40px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 48px;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+}
+
+#poppy {
+    width: 180px;
+    max-width: 50vw;
+    max-height: 35vh;
+    height: auto;
+    object-fit: contain;
+}
+
+main h1 {
+    font-size: 30px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+main p {
+    color: #aaa;
+    margin: 0;
+}
+
+.memorial-poems {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 40px;
+    align-items: start;
+}
+
+.remembrance-poem {
+    position: static;
+    transform: none;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.remembrance-poem h2 {
+    margin: 0;
+    font-size: clamp(18px, 1.6vw, 26px);
+    font-weight: normal;
+}
+
+.remembrance-author {
+    margin: 0;
+    color: #aaa;
+    font-size: 15px;
+}
+
+.remembrance-poem pre {
+    width: 100%;
+    margin: 0;
+    font-family: inherit;
+    font-size: clamp(12px, 1vw, 16px);
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    text-align: center;
+    word-spacing: normal;
+}
+
+@media (max-width: 1000px) {
+    .memorial-page {
+        justify-content: flex-start;
+        padding: 32px 20px 64px;
+    }
+
+    .memorial-poems {
+        grid-template-columns: 1fr;
+        max-width: 680px;
+        gap: 56px;
+    }
+
+    .remembrance-poem pre {
+        font-size: clamp(13px, 3.2vw, 17px);
+    }
+}
+
+/* Natural page scrolling on every screen size */
+html {
+    height: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+body.remembrance-grid {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+}
+
+.memorial-page {
+    height: auto !important;
+    min-height: 100vh;
+    justify-content: flex-start !important;
+    overflow: visible !important;
+}
+
+.memorial-poems {
+    height: auto !important;
+    overflow: visible !important;
+}
+
+.remembrance-poem {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+.remembrance-poem pre {
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+@media (max-width: 1000px) {
+    .memorial-poems {
+        grid-template-columns: 1fr;
+    }
+}

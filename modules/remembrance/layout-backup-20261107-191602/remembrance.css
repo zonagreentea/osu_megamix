@@ -1,0 +1,134 @@
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+.memorial-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-width: 1800px;
+    margin: auto;
+    padding: 36px clamp(20px, 4vw, 70px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: safe center;
+    gap: clamp(32px, 5vh, 64px);
+}
+
+main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+}
+
+#poppy {
+    width: 180px;
+    max-width: 50vw;
+    max-height: 35vh;
+    height: auto;
+    object-fit: contain;
+}
+
+main h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 400;
+    letter-spacing: 2px;
+}
+
+main p {
+    margin: 0;
+    color: #aaa;
+}
+
+.memorial-poems {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    gap: clamp(24px, 3vw, 56px);
+}
+
+.remembrance-poem {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.remembrance-poem h2 {
+    margin: 0;
+    font-size: clamp(18px, 1.6vw, 26px);
+    font-weight: normal;
+}
+
+.remembrance-author {
+    margin: 0;
+    color: #aaa;
+    font-size: 15px;
+}
+
+.remembrance-poem pre {
+    width: 100%;
+    margin: 0;
+    font-family: inherit;
+    font-size: clamp(12px, 1vw, 16px);
+    line-height: 1.65;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    text-align: center;
+    word-spacing: normal;
+}
+
+button {
+    margin-top: 24px;
+    padding: 12px 24px;
+    color: white;
+    background: black;
+    border: 1px solid #555;
+    cursor: pointer;
+}
+
+button:disabled { display: none; }
+
+@media (max-width: 1000px) {
+    .memorial-page {
+        justify-content: flex-start;
+        padding: 32px 20px 64px;
+        gap: 48px;
+    }
+
+    .memorial-poems {
+        grid-template-columns: 1fr;
+        max-width: 680px;
+        gap: 56px;
+    }
+
+    .remembrance-poem h2 {
+        font-size: clamp(21px, 5vw, 28px);
+    }
+
+    .remembrance-poem pre {
+        font-size: clamp(13px, 3.2vw, 17px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}

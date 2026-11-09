@@ -1,0 +1,454 @@
+
+html, body {
+    margin: 0;
+    min-height: 100%;
+    background: #000;
+    color: #fff;
+}
+
+body.remembrance-grid {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(20px, 3vw, 48px);
+    align-items: center;
+    justify-items: center;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 32px;
+    box-sizing: border-box;
+}
+
+.remembrance-poem,
+.remembrance-grid main {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.remembrance-poem {
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.remembrance-poem h2 {
+    font-size: clamp(18px, 1.6vw, 26px);
+    font-weight: normal;
+    margin: 0 0 16px;
+}
+
+.remembrance-author {
+    color: #aaa;
+    margin: 0 0 24px;
+}
+
+.remembrance-poem pre {
+    font-family: inherit;
+    font-size: clamp(12px, 1vw, 16px);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-align: center;
+    margin: 0;
+}
+
+.remembrance-grid main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+}
+
+#poppy {
+    display: block;
+    width: 180px;
+    max-width: 100%;
+    max-height: 35vh;
+    object-fit: contain;
+}
+
+.remembrance-grid main h1 {
+    font-size: 30px;
+    font-weight: 400;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+.remembrance-grid main p {
+    color: #aaa;
+    margin: 0;
+}
+
+@media (max-width: 800px) {
+    body.remembrance-grid {
+        grid-template-columns: 1fr;
+        padding: 32px 20px;
+    }
+}
+
+/* Align poppy with the vertical center of both poems */
+@media (min-width: 801px) {
+    .remembrance-grid main {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        transform: translateY(55px);
+    }
+
+    .remembrance-grid #poppy {
+        display: block;
+        width: 180px;
+        height: auto;
+        margin: 0 auto;
+    }
+
+    .remembrance-grid main h1,
+    .remembrance-grid main p {
+        text-align: center;
+        margin: 0;
+    }
+}
+
+/* Align poem tops with the middle of Lest We Forget */
+@media (min-width: 801px) {
+    body.remembrance-grid {
+        align-items: center;
+    }
+
+    .remembrance-grid main {
+        transform: none;
+        position: relative;
+        justify-content: center;
+    }
+
+    .remembrance-grid main h1 {
+        position: relative;
+    }
+}
+
+@media (min-width: 801px) {
+    .remembrance-grid main {
+        transform: translateY(var(--memorial-offset, 0px));
+    }
+}
+
+/* Lower central memorial by 60px */
+@media (min-width: 801px) {
+    .remembrance-grid main {
+        transform: translateY(calc(var(--memorial-offset, 0px) + 60px));
+    }
+}
+
+/* Stable central memorial positioning */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(120px) !important;
+    }
+}
+
+/* Fine-tuned memorial position */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(80px) !important;
+    }
+}
+
+/* Adjust central memorial upward */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(0px) !important;
+    }
+}
+
+/* Raise the central memorial */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(-40px) !important;
+    }
+}
+
+/* Fine-tuned central memorial alignment */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(-20px) !important;
+    }
+}
+
+/* Midpoint alignment */
+@media (min-width: 801px) {
+    body.remembrance-grid main {
+        transform: translateY(-10px) !important;
+    }
+}
+
+/* Center both poems alongside the complete memorial */
+@media (min-width: 801px) {
+    body.remembrance-grid {
+        align-items: center;
+    }
+
+    body.remembrance-grid main {
+        transform: none !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+    }
+
+    body.remembrance-grid .remembrance-poem {
+        height: auto;
+        min-height: 0;
+        align-self: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    body.remembrance-grid .remembrance-poem pre {
+        text-align: center !important;
+        text-align-last: center !important;
+        word-spacing: normal !important;
+    }
+}
+
+/* Symmetrical horizontal memorial alignment */
+@media (min-width: 801px) {
+    body.remembrance-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        column-gap: clamp(24px, 3vw, 48px);
+        justify-items: center;
+        width: 100%;
+        max-width: 1600px;
+        margin-inline: auto;
+        box-sizing: border-box;
+    }
+
+    body.remembrance-grid > .remembrance-poem,
+    body.remembrance-grid > main {
+        width: 100%;
+        min-width: 0;
+        margin-inline: auto;
+        box-sizing: border-box;
+    }
+
+    body.remembrance-grid .remembrance-poem {
+        text-align: center;
+        align-items: center;
+    }
+
+    body.remembrance-grid .remembrance-poem pre {
+        width: 100%;
+        margin-inline: auto;
+        text-align: center !important;
+        text-align-last: center !important;
+    }
+
+    body.remembrance-grid main {
+        align-items: center;
+        text-align: center;
+    }
+}
+
+/* Center poems between the poppy and screen edges */
+@media (min-width: 801px) {
+    body.remembrance-grid {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        max-width: none;
+        width: 100%;
+        min-height: 100vh;
+        padding: 32px 0;
+        box-sizing: border-box;
+    }
+
+    body.remembrance-grid > main {
+        order: 2;
+        flex: 0 0 240px;
+        width: 240px;
+        margin: 0;
+        transform: none !important;
+    }
+
+    body.remembrance-grid > .remembrance-poem-left {
+        order: 1;
+    }
+
+    body.remembrance-grid > .remembrance-poem-right {
+        order: 3;
+    }
+
+    body.remembrance-grid > .remembrance-poem {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        margin: 0;
+        padding: 0 12px;
+        box-sizing: border-box;
+        align-self: center;
+        text-align: center;
+    }
+
+    body.remembrance-grid .remembrance-poem pre {
+        width: 100%;
+        text-align: center !important;
+        text-align-last: center !important;
+        word-spacing: normal !important;
+    }
+}
+
+
+/* RESPONSIVE REMEMBRANCE LAYOUT */
+
+/* Prevent unwanted horizontal scrolling */
+html {
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+body.remembrance-grid {
+    overflow-x: hidden;
+}
+
+/* Keep the original desktop composition */
+@media (min-width: 1001px) {
+    body.remembrance-grid {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    body.remembrance-grid > main {
+        order: 2;
+        flex: 0 0 clamp(220px, 22vw, 300px);
+        width: auto;
+    }
+
+    body.remembrance-grid > .remembrance-poem-left {
+        order: 1;
+    }
+
+    body.remembrance-grid > .remembrance-poem-right {
+        order: 3;
+    }
+
+    body.remembrance-grid > .remembrance-poem {
+        flex: 1 1 0;
+        min-width: 0;
+        padding: 24px;
+    }
+}
+
+/* Phones and tablets: memorial first */
+@media (max-width: 1000px) {
+    body.remembrance-grid {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        max-width: none;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: clamp(32px, 7vw, 64px) 20px;
+        gap: clamp(48px, 8vw, 80px);
+    }
+
+    body.remembrance-grid > main {
+        order: 0;
+        flex: none;
+        width: 100%;
+        max-width: 560px;
+        height: auto;
+        min-height: 0;
+        transform: none !important;
+        gap: 18px;
+    }
+
+    body.remembrance-grid #poppy {
+        width: clamp(120px, 30vw, 180px);
+        height: auto;
+        max-height: none;
+    }
+
+    body.remembrance-grid main h1 {
+        font-size: clamp(24px, 5vw, 34px);
+        line-height: 1.3;
+        text-align: center;
+    }
+
+    body.remembrance-grid > .remembrance-poem-left {
+        order: 1;
+    }
+
+    body.remembrance-grid > .remembrance-poem-right {
+        order: 2;
+    }
+
+    body.remembrance-grid > .remembrance-poem {
+        flex: none;
+        width: 100%;
+        max-width: 640px;
+        height: auto;
+        min-height: 0;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 14px;
+        overflow: visible;
+    }
+
+    body.remembrance-grid .remembrance-poem h2 {
+        font-size: clamp(21px, 4vw, 28px);
+        line-height: 1.3;
+    }
+
+    body.remembrance-grid .remembrance-poem pre {
+        width: 100%;
+        font-size: clamp(13px, 2.5vw, 17px);
+        line-height: 1.9;
+        text-align: center !important;
+        text-align-last: center !important;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        word-spacing: normal !important;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 380px) {
+    body.remembrance-grid {
+        padding-inline: 14px;
+    }
+
+    body.remembrance-grid .remembrance-poem pre {
+        font-size: 12.5px;
+        line-height: 1.8;
+    }
+}
+
+/* Respect accessibility preferences */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
