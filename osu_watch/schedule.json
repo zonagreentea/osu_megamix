@@ -1,0 +1,8 @@
+{
+  "programs": [
+    {"id":"megamix","kind":"show","title":"Megamix Showcase","subtitle":"Procedural channel ident and gameplay showcase placeholder","duration_seconds":600},
+    {"id":"pulse","kind":"show","title":"Rhythm Pulse","subtitle":"Original generative rhythm visuals","duration_seconds":300},
+    {"id":"break","kind":"ident","title":"osu!watch Station Break","subtitle":"Station ident — no sponsor booked","duration_seconds":60},
+    {"id":"highlights","kind":"show","title":"Community Spotlight","subtitle":"Future opt-in community highlights","duration_seconds":480}
+  ]
+}
