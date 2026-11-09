@@ -23,7 +23,7 @@ body.remembrance-grid {
     width: 100%;
     max-width: 900px;
     margin: 0 auto;
-    padding: 0 24px 15vh;
+    padding: 0 24px 0;
 }
 
 main {
@@ -77,7 +77,7 @@ main p {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 20px;
+    gap: 0;
     text-align: center;
     font-family: Georgia, "Times New Roman", serif;
     overflow: visible;
@@ -137,5 +137,235 @@ button:disabled { display: none; }
     *, *::before, *::after {
         animation: none !important;
         transition: none !important;
+    }
+}
+
+
+/* Cohesive memorial poem typography */
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 36px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    font-variant-ligatures: none;
+}
+
+.remembrance-poem {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    justify-content: center;
+}
+
+
+/* Final memorial spacing */
+.memorial-page {
+    padding-bottom: 0;
+}
+
+.remembrance-poem {
+    min-height: 100dvh;
+    height: auto;
+    padding-block: 48px;
+    gap: 0;
+}
+
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 32px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .remembrance-poem {
+        padding-block: 32px;
+    }
+}
+
+
+/* Final memorial spacing */
+.memorial-page {
+    padding-bottom: 0;
+}
+
+.remembrance-poem {
+    min-height: 100dvh;
+    height: auto;
+    padding-block: 48px;
+    gap: 0;
+}
+
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 32px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .remembrance-poem {
+        padding-block: 32px;
+    }
+}
+
+
+/* Unified memorial spacing */
+:root {
+    --memorial-spacing: 24px;
+}
+
+main {
+    gap: var(--memorial-spacing);
+}
+
+main h1,
+main p {
+    margin: 0;
+}
+
+.remembrance-poem {
+    gap: var(--memorial-spacing);
+}
+
+.remembrance-poem h2,
+.remembrance-author,
+.remembrance-poem pre {
+    margin: 0;
+}
+
+.remembrance-poem h2 {
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* Keep the last poem from leaving an empty screen */
+.remembrance-poem:last-child {
+    min-height: 0;
+    padding-bottom: 24px;
+}
+
+
+/* Unified memorial spacing */
+:root {
+    --memorial-spacing: 24px;
+}
+
+main {
+    gap: var(--memorial-spacing);
+}
+
+main h1,
+main p {
+    margin: 0;
+}
+
+.remembrance-poem {
+    gap: var(--memorial-spacing);
+}
+
+.remembrance-poem h2,
+.remembrance-author,
+.remembrance-poem pre {
+    margin: 0;
+}
+
+.remembrance-poem h2 {
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* Keep the last poem from leaving an empty screen */
+.remembrance-poem:last-child {
+    min-height: 0;
+    padding-bottom: 24px;
+}
+
+
+/* Four independent memorial sections */
+main,
+.remembrance-poem,
+.remembrance-poem:last-child {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    padding-block: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    margin: 0;
+}
+
+.memorial-poems {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.remembrance-poem h2,
+.remembrance-author,
+.remembrance-poem pre {
+    margin: 0;
+}
+
+.remembrance-poem pre {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.memorial-page {
+    padding-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    main,
+    .remembrance-poem,
+    .remembrance-poem:last-child {
+        padding-block: 32px;
     }
 }
