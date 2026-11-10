@@ -199,6 +199,6 @@ wss.on("connection", (ws) => {
   send(ws, { type:"hello", v:1, id: ws.id });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "127.0.0.1", () => {
   console.log(`chat relay listening on :${PORT}`);
 });

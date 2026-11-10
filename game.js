@@ -21,12 +21,7 @@ function gameLoop() {
     
     ctx.clearRect(0,0,canvas.width,canvas.height);
     
-    // Draw gameplay elements here
-    ctx.fillStyle = "#f00";
-    ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 50, 50);
 
-    // Random fail simulation (for demo)
-    if (Math.random() < 0.001 && currentMode === 'mix') bustToMegamix();
 
     requestAnimationFrame(gameLoop);
 }

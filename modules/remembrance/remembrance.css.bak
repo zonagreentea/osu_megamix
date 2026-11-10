@@ -1,38 +1,110 @@
+
 html, body {
     margin: 0;
+    padding: 0;
     width: 100%;
     min-height: 100%;
-    background: #000000;
-    color: #ffffff;
+    background: #000;
+    color: #fff;
+    overflow-x: hidden;
+    overflow-y: auto;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body.remembrance-grid {
+    display: block;
+    height: auto;
+}
+
+.memorial-page {
+    display: block;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 0;
 }
 
 main {
     min-height: 100vh;
+    min-height: 100dvh;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 20px;
     text-align: center;
-    box-sizing: border-box;
-    padding: 24px;
 }
 
 #poppy {
-    width: 180px;
-    max-width: 50vw;
+    display: block;
+    width: 200px;
+    max-width: 60vw;
+    height: auto;
     max-height: 35vh;
     object-fit: contain;
 }
 
-h1 {
-    font-size: 30px;
+main h1 {
+    margin: 0;
+    font-size: clamp(26px, 5vw, 36px);
     font-weight: 400;
     letter-spacing: 2px;
 }
 
-p {
-    color: #aaaaaa;
+main p {
+    margin: 0;
+    color: #aaa;
+}
+
+.memorial-poems {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.remembrance-poem {
+    position: static;
+    transform: none;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    max-height: none;
+    padding: 80px 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    text-align: center;
+    font-family: Georgia, "Times New Roman", serif;
+    overflow: visible;
+}
+
+.remembrance-poem h2 {
+    margin: 0;
+    font-size: clamp(24px, 4vw, 34px);
+    font-weight: normal;
+}
+
+.remembrance-author {
+    margin: 0;
+    color: #aaa;
+    font-size: 16px;
+}
+
+.remembrance-poem pre {
+    width: 100%;
+    margin: 12px 0 0;
+    font-family: inherit;
+    font-size: clamp(14px, 2.4vw, 18px);
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    text-align: center;
+    word-spacing: normal;
 }
 
 button {
@@ -40,10 +112,214 @@ button {
     padding: 12px 24px;
     color: white;
     background: black;
-    border: 1px solid #555555;
+    border: 1px solid #555;
     cursor: pointer;
 }
 
-button:disabled {
-    display: none;
+button:disabled { display: none; }
+
+@media (max-width: 600px) {
+    .memorial-page {
+        padding-inline: 16px;
+    }
+
+    .remembrance-poem {
+        padding: 64px 0;
+    }
+
+    .remembrance-poem pre {
+        font-size: clamp(13px, 3.5vw, 16px);
+        line-height: 1.7;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+
+/* Cohesive memorial poem typography */
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 36px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    font-variant-ligatures: none;
+}
+
+.remembrance-poem {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
+    justify-content: center;
+}
+
+
+/* Final memorial spacing */
+.memorial-page {
+    padding-bottom: 0;
+}
+
+.remembrance-poem {
+    min-height: 100dvh;
+    height: auto;
+    padding-block: 48px;
+    gap: 0;
+}
+
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 32px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .remembrance-poem {
+        padding-block: 32px;
+    }
+}
+
+
+/* Final memorial spacing */
+.memorial-page {
+    padding-bottom: 0;
+}
+
+.remembrance-poem {
+    min-height: 100dvh;
+    height: auto;
+    padding-block: 48px;
+    gap: 0;
+}
+
+.remembrance-poem h2 {
+    margin: 0 0 16px;
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    margin: 0 0 32px;
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    margin: 0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 600px) {
+    .remembrance-poem {
+        padding-block: 32px;
+    }
+}
+
+
+/* Unified memorial spacing */
+:root {
+    --memorial-spacing: 24px;
+}
+
+main {
+    gap: var(--memorial-spacing);
+}
+
+main h1,
+main p {
+    margin: 0;
+}
+
+.remembrance-poem {
+    gap: var(--memorial-spacing);
+}
+
+.remembrance-poem h2,
+.remembrance-author,
+.remembrance-poem pre {
+    margin: 0;
+}
+
+.remembrance-poem h2 {
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* Keep the last poem from leaving an empty screen */
+.remembrance-poem:last-child {
+    min-height: 0;
+    padding-bottom: 24px;
+}
+
+
+/* Unified memorial spacing */
+:root {
+    --memorial-spacing: 24px;
+}
+
+main {
+    gap: var(--memorial-spacing);
+}
+
+main h1,
+main p {
+    margin: 0;
+}
+
+.remembrance-poem {
+    gap: var(--memorial-spacing);
+}
+
+.remembrance-poem h2,
+.remembrance-author,
+.remembrance-poem pre {
+    margin: 0;
+}
+
+.remembrance-poem h2 {
+    line-height: 1.25;
+}
+
+.remembrance-author {
+    line-height: 1.5;
+}
+
+.remembrance-poem pre {
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+/* Keep the last poem from leaving an empty screen */
+.remembrance-poem:last-child {
+    min-height: 0;
+    padding-bottom: 24px;
 }
