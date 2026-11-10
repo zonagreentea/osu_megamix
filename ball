@@ -1,2 +1,5 @@
 #!/bin/zsh
-:
+emulate -L zsh
+setopt errexit nounset pipefail
+ROOT="${0:A:h}"
+exec python3 "$ROOT/ball_client.py" "$@"

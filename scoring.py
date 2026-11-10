@@ -1,39 +1,10 @@
-"""Score handling for osu!megamix."""
+"""Compatibility entry point for src.gameplay.scoring."""
 
-from timing import Judgement
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.gameplay.scoring", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-
-class Score:
-    """Track score, combo, and health from timing judgements."""
-
-    def __init__(self):
-        self.combo = 0
-        self.health = 100
-        self.points = 0
-
-    def hit(self, judgement=None):
-        """Apply a hit, optionally using a musical timing judgement."""
-        self.combo += 1
-
-        if judgement is None:
-            value = 300
-        else:
-            value = judgement.value
-
-        self.points += value
-        self.health = min(100, self.health + 2)
-
-        return value
-
-    def miss(self):
-        """Apply a miss."""
-        self.combo = 0
-        self.health = max(0, self.health - 10)
-
-    def apply(self, judgement):
-        """Apply a timing judgement or miss."""
-        if judgement is None:
-            self.miss()
-            return 0
-
-        return self.hit(judgement)
+    sys.modules[__name__] = importlib.import_module("src.gameplay.scoring")

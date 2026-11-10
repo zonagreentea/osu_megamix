@@ -1,29 +1,10 @@
-from lobby import create_lobby
+"""Compatibility entry point for src.social.multiplayer."""
 
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.social.multiplayer", run_name="__main__")
+else:
+    import importlib
+    import sys
 
-MODES = {
-    1: "regular",
-    2: "megamix",
-    3: "collection",
-    4: "rp",
-}
-
-
-def create_multi_lobby(choice):
-    if isinstance(choice, int):
-        try:
-            choice = MODES[choice]
-        except KeyError:
-            raise ValueError("multi lobby choice must be 1, 2, 3, or 4")
-
-    return create_lobby(choice)
-
-
-def describe_lobby(lobby):
-    return {
-        "mode": lobby.mode,
-        "voice_chat": lobby.voice_chat,
-        "proximity_voice": lobby.proximity_voice,
-        "players": list(lobby.players),
-        "started": lobby.started,
-    }
+    sys.modules[__name__] = importlib.import_module("src.social.multiplayer")

@@ -1,2 +1,10 @@
-def translate(raw_input, config):
-    return config.get(raw_input, raw_input)
+"""Compatibility entry point for src.input.interface."""
+
+if __name__ == "__main__":
+    import runpy
+    runpy.run_module("src.input.interface", run_name="__main__")
+else:
+    import importlib
+    import sys
+
+    sys.modules[__name__] = importlib.import_module("src.input.interface")
