@@ -12,9 +12,17 @@
   <button onclick="startMode('taiko')">Taiko</button>
   <button onclick="startMode('catch')">Catch</button>
   <button onclick="startMode('mania')">Mania</button>
-  <button onclick="location.href='games/tetris_ltm/index.html'">Tetris LTM</button>
+  <button id="tetris-ltm-button" hidden onclick="location.href=\'games/tetris_ltm/index.html\'">Tetris LTM</button>
 </div>
 <canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+function updateTetrisLtmMenu() {
+  const date = new Intl.DateTimeFormat('en-CA', {timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  document.getElementById('tetris-ltm-button').hidden = date !== '2026-11-12';
+}
+updateTetrisLtmMenu();
+setInterval(updateTetrisLtmMenu, 1000);
+</script>
 <script type="module" src="main.js"></script>
 </body>
 </html>
