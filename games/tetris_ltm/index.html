@@ -58,28 +58,39 @@ triple:['Очень хорошо!','Very good!'],
 tetris:['Четыре линии!','Four lines!'],
 over:['Попробуем ещё раз.','Let’s try again.']
 };
-let subtitleTimer=0;
+// Recording contains more phrases than gameplay events. Adjust these cue boundaries after listening.
+// These are preliminary timestamps detected from pauses in the supplied 49.37-second recording.
+const VOICE_CUES={
+  single:[17.25,18.23],
+  double:[20.66,21.28],
+  triple:[24.10,24.94],
+  tetris:[27.27,28.35],
+  over:[31.07,31.35]
+};
+const voiceAudio=new Audio('./audio/osu_tetris_voicelines.m4a');
+voiceAudio.preload='auto';
+let subtitleTimer=0,voiceTimer=0;
 function clearVoice(){
   clearTimeout(subtitleTimer);
+  clearTimeout(voiceTimer);
   $('subtitle').textContent='';
-  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+  voiceAudio.pause();
 }
 function sayRussian(key){
-  if(!eventActive())return;
-  const line=VOICE_LINES[key];
-  if(!line)return;
+  if(!eventActive()||key==='start')return;
+  const line=VOICE_LINES[key],cue=VOICE_CUES[key];
+  if(!line||!cue)return;
   clearVoice();
   const subtitleMode=$('subtitle-mode').value;
   if(subtitleMode!=='off')$('subtitle').textContent=subtitleMode==='ru'?line[0]:line[1];
   subtitleTimer=setTimeout(()=>$('subtitle').textContent='',2600);
-  if(!$('voices-enabled').checked||!('speechSynthesis' in window))return;
-  const utterance=new SpeechSynthesisUtterance(line[0]);
-  utterance.lang='ru-RU';utterance.rate=.92;utterance.volume=.8;
-  const russian=window.speechSynthesis.getVoices().find(v=>v.lang.toLowerCase().startsWith('ru'));
-  if(russian)utterance.voice=russian;
-  window.speechSynthesis.speak(utterance);
+  if(!$('voices-enabled').checked)return;
+  voiceAudio.currentTime=cue[0];
+  voiceAudio.play().then(()=>{
+    voiceTimer=setTimeout(()=>voiceAudio.pause(),Math.max(0,(cue[1]-cue[0])*1000));
+  }).catch(err=>console.warn('Voice playback unavailable:',err));
 }
-$('voices-enabled').addEventListener('change',()=>{if(!$('voices-enabled').checked&&'speechSynthesis' in window)window.speechSynthesis.cancel()});
+$('voices-enabled').addEventListener('change',()=>{if(!$('voices-enabled').checked)clearVoice()});
 $('subtitle-mode').addEventListener('change',()=>{$('subtitle').textContent=''});
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),16777619)}return h>>>0}
 function random(){rng^=rng<<13;rng^=rng>>>17;rng^=rng<<5;return(rng>>>0)/4294967296}
@@ -100,7 +111,7 @@ grid.forEach((row,y)=>row.forEach((v,x)=>{if(v)cell(x,y,v)}));
 if(piece)for(const [x,y] of piece.cells){let Y=piece.y+y;if(Y>=0)cell(piece.x+x,Y,piece.type)}
 ctx.strokeStyle='#34413b';ctx.lineWidth=.5;for(let x=0;x<=10;x++){ctx.beginPath();ctx.moveTo(x*30,0);ctx.lineTo(x*30,600);ctx.stroke()}for(let y=0;y<=20;y++){ctx.beginPath();ctx.moveTo(0,y*30);ctx.lineTo(300,y*30);ctx.stroke()}}
 function tick(t){if(!eventActive()&&playing){playing=false;paused=false;clearVoice();}if(!last)last=t;let dt=Math.min(t-last,100);last=t;if(playing&&!paused){elapsed+=dt;const interval=Math.max(90,800-Math.floor(lines/10)*65);while(elapsed>=interval&&playing){drop();elapsed-=interval}}draw();raf=requestAnimationFrame(tick)}
-function start(){if(!eventActive())return;clearVoice();rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece();sayRussian('start')}
+function start(){if(!eventActive())return;clearVoice();rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece()}
 $('map').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;const content=await file.text();seed=hash(content.replace(/\r\n/g,'\n'));$('mapname').textContent=file.name+' · seed '+seed.toString(16).padStart(8,'0');start()});
 $('start').onclick=start;
 function toggle(){if(!eventActive()||!playing)return;paused=!paused;if(paused)clearVoice();$('status').textContent=paused?'Paused':'Playing';last=0}
