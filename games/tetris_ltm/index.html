@@ -16,7 +16,26 @@ button,input{margin:6px;padding:9px}kbd{background:#2c3934;padding:3px}#status{m
 <button id="start">Start / Restart</button><button id="pause">Pause</button>
 <p><kbd>←</kbd> <kbd>→</kbd> Move · <kbd>↑</kbd> Rotate · <kbd>↓</kbd> Soft drop · <kbd>Space</kbd> Hard drop · <kbd>P</kbd> Pause</p>
 </main>
+<script>
+const tetrisEventDate = () => new Intl.DateTimeFormat('en-CA', {timeZone:'America/Toronto',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+function enforceTetrisEvent() {
+  const active = tetrisEventDate() === '2026-11-12';
+  document.querySelector('main').hidden = !active;
+  let notice = document.getElementById('ltm-unavailable');
+  if (!notice) {
+    notice = document.createElement('main');
+    notice.id = 'ltm-unavailable';
+    notice.innerHTML = '<h1>Tetris LTM</h1><p>This limited-time mode is available only on November 12, 2026 (Eastern Time).</p><a href="../../index__osu_web.html">Return to Megamix</a>';
+    document.body.appendChild(notice);
+  }
+  notice.hidden = active;
+  return active;
+}
+enforceTetrisEvent();
+setInterval(enforceTetrisEvent, 1000);
+</script>
 <script type="module">
+const eventActive = () => tetrisEventDate() === "2026-11-12";
 const SHAPES={
 I:[[0,0],[1,0],[2,0],[3,0]],O:[[0,0],[1,0],[0,1],[1,1]],
 T:[[0,0],[1,0],[2,0],[1,1]],S:[[1,0],[2,0],[0,1],[1,1]],
@@ -32,24 +51,24 @@ function nextType(){if(!bag.length){bag=Object.keys(SHAPES);for(let i=bag.length
 let upcoming='';
 function newPiece(){const type=upcoming||nextType();upcoming=nextType();$('next').textContent=upcoming;piece={type,x:3,y:0,cells:SHAPES[type].map(p=>[...p])};if(!valid(piece)){playing=false;$('status').textContent='Game over';}}
 function valid(p){return p.cells.every(([x,y])=>{let X=p.x+x,Y=p.y+y;return X>=0&&X<10&&Y<20&&(Y<0||!grid[Y][X])})}
-function move(dx,dy){if(!playing||paused)return false;let p={...piece,x:piece.x+dx,y:piece.y+dy};if(valid(p)){piece=p;return true}return false}
-function rotate(){if(!playing||paused||piece.type==='O')return;const cells=piece.cells.map(([x,y])=>[-y,x]);let minX=Math.min(...cells.map(c=>c[0])),minY=Math.min(...cells.map(c=>c[1]));const normalized=cells.map(([x,y])=>[x-minX,y-minY]);for(const kick of [0,-1,1,-2,2]){let p={...piece,x:piece.x+kick,cells:normalized};if(valid(p)){piece=p;break}}}
+function move(dx,dy){if(!eventActive()||!playing||paused)return false;let p={...piece,x:piece.x+dx,y:piece.y+dy};if(valid(p)){piece=p;return true}return false}
+function rotate(){if(!eventActive()||!playing||paused||piece.type==='O')return;const cells=piece.cells.map(([x,y])=>[-y,x]);let minX=Math.min(...cells.map(c=>c[0])),minY=Math.min(...cells.map(c=>c[1]));const normalized=cells.map(([x,y])=>[x-minX,y-minY]);for(const kick of [0,-1,1,-2,2]){let p={...piece,x:piece.x+kick,cells:normalized};if(valid(p)){piece=p;break}}}
 function lock(){for(const [x,y] of piece.cells){const X=piece.x+x,Y=piece.y+y;if(Y<0){playing=false;$('status').textContent='Game over';return}grid[Y][X]=piece.type}
 let cleared=0;for(let y=19;y>=0;){if(grid[y].every(Boolean)){grid.splice(y,1);grid.unshift(Array(10).fill(null));cleared++}else y--}
 lines+=cleared;score+=[0,100,300,500,800][cleared]||0;$('lines').textContent=lines;$('score').textContent=score;newPiece()}
 function drop(){if(!move(0,1))lock()}
-function hardDrop(){if(!playing||paused)return;let n=0;while(move(0,1))n++;score+=2*n;$('score').textContent=score;lock()}
+function hardDrop(){if(!eventActive()||!playing||pausedreturn;let n=0;while(move(0,1))n++;score+=2*n;$('score').textContent=score;lock()}
 function draw(){ctx.clearRect(0,0,300,600);ctx.fillStyle='#161c1a';ctx.fillRect(0,0,300,600);
 function cell(x,y,type){ctx.fillStyle=COLORS[type];ctx.fillRect(x*30+1,y*30+1,28,28)}
 grid.forEach((row,y)=>row.forEach((v,x)=>{if(v)cell(x,y,v)}));
 if(piece)for(const [x,y] of piece.cells){let Y=piece.y+y;if(Y>=0)cell(piece.x+x,Y,piece.type)}
 ctx.strokeStyle='#34413b';ctx.lineWidth=.5;for(let x=0;x<=10;x++){ctx.beginPath();ctx.moveTo(x*30,0);ctx.lineTo(x*30,600);ctx.stroke()}for(let y=0;y<=20;y++){ctx.beginPath();ctx.moveTo(0,y*30);ctx.lineTo(300,y*30);ctx.stroke()}}
-function tick(t){if(!last)last=t;let dt=Math.min(t-last,100);last=t;if(playing&&!paused){elapsed+=dt;const interval=Math.max(90,800-Math.floor(lines/10)*65);while(elapsed>=interval&&playing){drop();elapsed-=interval}}draw();raf=requestAnimationFrame(tick)}
-function start(){rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece()}
+function tick(t){if(!eventActive()){playing=false;paused=false;}if(!last)last=t;let dt=Math.min(t-last,100);last=t;if(playing&&!paused){elapsed+=dt;const interval=Math.max(90,800-Math.floor(lines/10)*65);while(elapsed>=interval&&playing){drop();elapsed-=interval}}draw();raf=requestAnimationFrame(tick)}
+function start(){if(!eventActive())return;rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece()}
 $('map').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;const content=await file.text();seed=hash(content.replace(/\r\n/g,'\n'));$('mapname').textContent=file.name+' · seed '+seed.toString(16).padStart(8,'0');start()});
 $('start').onclick=start;
-function toggle(){if(!playing)return;paused=!paused;$('status').textContent=paused?'Paused':'Playing';last=0}
+function toggle(){if(!eventActive()||!playing)return;paused=!paused;$('status').textContent=paused?'Paused':'Playing';last=0}
 $('pause').onclick=toggle;
-window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code))e.preventDefault();if(e.repeat&&['Space','ArrowUp','KeyP'].includes(e.code))return;switch(e.code){case 'ArrowLeft':move(-1,0);break;case 'ArrowRight':move(1,0);break;case 'ArrowDown':if(move(0,1)){score++;$('score').textContent=score}else if(playing&&!paused)lock();break;case 'ArrowUp':rotate();break;case 'Space':hardDrop();break;case 'KeyP':toggle()}draw()});
+window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code))e.preventDefault();if(e.repeat&&['Space','ArrowUp','KeyP'].includes(e.code))return;switch(e.code){case 'ArrowLeft':move(-1,0);break;case 'ArrowRight':move(1,0);break;case 'ArrowDown':if(eventActive()&&move(0,1)){score++;$('score').textContent=score}else if(playing&&!paused)lock();break;case 'ArrowUp':rotate();break;case 'Space':hardDrop();break;case 'KeyP':toggle()}draw()});
 grid=Array.from({length:20},()=>Array(10).fill(null));raf=requestAnimationFrame(tick);
 </script>
