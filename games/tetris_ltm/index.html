@@ -4,7 +4,7 @@
 <style>
 body{margin:0;background:#101410;color:#fff;font:16px system-ui;text-align:center}main{max-width:720px;margin:auto;padding:20px}
 canvas{background:#161c1a;border:2px solid #737e7a;max-width:90vw;height:auto}
-button,input{margin:6px;padding:9px}kbd{background:#2c3934;padding:3px}#status{min-height:1.5em}
+button,input{margin:6px;padding:9px}kbd{background:#2c3934;padding:3px}#status{min-height:1.5em}#subtitle{min-height:2.5em;font-size:1.1em;font-weight:600}#voice-options{margin:12px auto}#voice-options label{display:inline-block;margin:4px 9px}
 </style>
 <main><h1>osu!megamix · Tetris LTM</h1>
 <p>Fixed 7-bag sequence per beatmap. Load the same .osu file for identical pieces.</p>
@@ -13,6 +13,11 @@ button,input{margin:6px;padding:9px}kbd{background:#2c3934;padding:3px}#status{m
 <canvas id="board" width="300" height="600"></canvas>
 <p>Score <b id="score">0</b> · Lines <b id="lines">0</b> · Next <b id="next">—</b></p>
 <p id="status">Choose a beatmap, then press Start.</p>
+<div id="voice-options" aria-label="Russian voice settings">
+<label><input id="voices-enabled" type="checkbox" checked> Russian voices</label>
+<label>Subtitles <select id="subtitle-mode"><option value="en">English</option><option value="ru">Russian</option><option value="off">Off</option></select></label>
+</div>
+<p id="subtitle" role="status" aria-live="polite"></p>
 <button id="start">Start / Restart</button><button id="pause">Pause</button>
 <p><kbd>←</kbd> <kbd>→</kbd> Move · <kbd>↑</kbd> Rotate · <kbd>↓</kbd> Soft drop · <kbd>Space</kbd> Hard drop · <kbd>P</kbd> Pause</p>
 </main>
@@ -45,29 +50,60 @@ const COLORS={I:'#2186e8',O:'#f28c28',T:'#7d8794',S:'#32b85a',Z:'#222831',J:'#23
 const canvas=document.getElementById('board'),ctx=canvas.getContext('2d');
 const $=id=>document.getElementById(id);
 let seed=0x4d454741, rng=seed,bag=[],grid=[],piece=null,score=0,lines=0,playing=false,paused=false,elapsed=0,last=0,raf=0;
+const VOICE_LINES={
+start:['Начнём!','Let’s begin!'],
+single:['Отлично!','Excellent!'],
+double:['Вот так!','That’s it!'],
+triple:['Очень хорошо!','Very good!'],
+tetris:['Четыре линии!','Four lines!'],
+over:['Попробуем ещё раз.','Let’s try again.']
+};
+let subtitleTimer=0;
+function clearVoice(){
+  clearTimeout(subtitleTimer);
+  $('subtitle').textContent='';
+  if('speechSynthesis' in window)window.speechSynthesis.cancel();
+}
+function sayRussian(key){
+  if(!eventActive())return;
+  const line=VOICE_LINES[key];
+  if(!line)return;
+  clearVoice();
+  const subtitleMode=$('subtitle-mode').value;
+  if(subtitleMode!=='off')$('subtitle').textContent=subtitleMode==='ru'?line[0]:line[1];
+  subtitleTimer=setTimeout(()=>$('subtitle').textContent='',2600);
+  if(!$('voices-enabled').checked||!('speechSynthesis' in window))return;
+  const utterance=new SpeechSynthesisUtterance(line[0]);
+  utterance.lang='ru-RU';utterance.rate=.92;utterance.volume=.8;
+  const russian=window.speechSynthesis.getVoices().find(v=>v.lang.toLowerCase().startsWith('ru'));
+  if(russian)utterance.voice=russian;
+  window.speechSynthesis.speak(utterance);
+}
+$('voices-enabled').addEventListener('change',()=>{if(!$('voices-enabled').checked&&'speechSynthesis' in window)window.speechSynthesis.cancel()});
+$('subtitle-mode').addEventListener('change',()=>{$('subtitle').textContent=''});
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),16777619)}return h>>>0}
 function random(){rng^=rng<<13;rng^=rng>>>17;rng^=rng<<5;return(rng>>>0)/4294967296}
 function nextType(){if(!bag.length){bag=Object.keys(SHAPES);for(let i=bag.length-1;i>0;i--){let j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}}return bag.pop()}
 let upcoming='';
-function newPiece(){const type=upcoming||nextType();upcoming=nextType();$('next').textContent=upcoming;piece={type,x:3,y:0,cells:SHAPES[type].map(p=>[...p])};if(!valid(piece)){playing=false;$('status').textContent='Game over';}}
+function newPiece(){const type=upcoming||nextType();upcoming=nextType();$('next').textContent=upcoming;piece={type,x:3,y:0,cells:SHAPES[type].map(p=>[...p])};if(!valid(piece)){playing=false;$('status').textContent='Game over';sayRussian('over');}}
 function valid(p){return p.cells.every(([x,y])=>{let X=p.x+x,Y=p.y+y;return X>=0&&X<10&&Y<20&&(Y<0||!grid[Y][X])})}
 function move(dx,dy){if(!eventActive()||!playing||paused)return false;let p={...piece,x:piece.x+dx,y:piece.y+dy};if(valid(p)){piece=p;return true}return false}
 function rotate(){if(!eventActive()||!playing||paused||piece.type==='O')return;const cells=piece.cells.map(([x,y])=>[-y,x]);let minX=Math.min(...cells.map(c=>c[0])),minY=Math.min(...cells.map(c=>c[1]));const normalized=cells.map(([x,y])=>[x-minX,y-minY]);for(const kick of [0,-1,1,-2,2]){let p={...piece,x:piece.x+kick,cells:normalized};if(valid(p)){piece=p;break}}}
-function lock(){for(const [x,y] of piece.cells){const X=piece.x+x,Y=piece.y+y;if(Y<0){playing=false;$('status').textContent='Game over';return}grid[Y][X]=piece.type}
+function lock(){for(const [x,y] of piece.cells){const X=piece.x+x,Y=piece.y+y;if(Y<0){playing=false;$('status').textContent='Game over';sayRussian('over');return}grid[Y][X]=piece.type}
 let cleared=0;for(let y=19;y>=0;){if(grid[y].every(Boolean)){grid.splice(y,1);grid.unshift(Array(10).fill(null));cleared++}else y--}
-lines+=cleared;score+=[0,100,300,500,800][cleared]||0;$('lines').textContent=lines;$('score').textContent=score;newPiece()}
+if(cleared)sayRussian(['','single','double','triple','tetris'][cleared]);lines+=cleared;score+=[0,100,300,500,800][cleared]||0;$('lines').textContent=lines;$('score').textContent=score;newPiece()}
 function drop(){if(!move(0,1))lock()}
-function hardDrop(){if(!eventActive()||!playing||pausedreturn;let n=0;while(move(0,1))n++;score+=2*n;$('score').textContent=score;lock()}
+function hardDrop(){if(!eventActive()||!playing||paused)return;let n=0;while(move(0,1))n++;score+=2*n;$('score').textContent=score;lock()}
 function draw(){ctx.clearRect(0,0,300,600);ctx.fillStyle='#161c1a';ctx.fillRect(0,0,300,600);
 function cell(x,y,type){ctx.fillStyle=COLORS[type];ctx.fillRect(x*30+1,y*30+1,28,28)}
 grid.forEach((row,y)=>row.forEach((v,x)=>{if(v)cell(x,y,v)}));
 if(piece)for(const [x,y] of piece.cells){let Y=piece.y+y;if(Y>=0)cell(piece.x+x,Y,piece.type)}
 ctx.strokeStyle='#34413b';ctx.lineWidth=.5;for(let x=0;x<=10;x++){ctx.beginPath();ctx.moveTo(x*30,0);ctx.lineTo(x*30,600);ctx.stroke()}for(let y=0;y<=20;y++){ctx.beginPath();ctx.moveTo(0,y*30);ctx.lineTo(300,y*30);ctx.stroke()}}
-function tick(t){if(!eventActive()){playing=false;paused=false;}if(!last)last=t;let dt=Math.min(t-last,100);last=t;if(playing&&!paused){elapsed+=dt;const interval=Math.max(90,800-Math.floor(lines/10)*65);while(elapsed>=interval&&playing){drop();elapsed-=interval}}draw();raf=requestAnimationFrame(tick)}
-function start(){if(!eventActive())return;rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece()}
+function tick(t){if(!eventActive()&&playing){playing=false;paused=false;clearVoice();}if(!last)last=t;let dt=Math.min(t-last,100);last=t;if(playing&&!paused){elapsed+=dt;const interval=Math.max(90,800-Math.floor(lines/10)*65);while(elapsed>=interval&&playing){drop();elapsed-=interval}}draw();raf=requestAnimationFrame(tick)}
+function start(){if(!eventActive())return;clearVoice();rng=seed||0x4d454741;bag=[];upcoming='';grid=Array.from({length:20},()=>Array(10).fill(null));score=0;lines=0;elapsed=0;last=0;playing=true;paused=false;$('score').textContent='0';$('lines').textContent='0';$('status').textContent='Playing';newPiece();sayRussian('start')}
 $('map').addEventListener('change',async e=>{const file=e.target.files[0];if(!file)return;const content=await file.text();seed=hash(content.replace(/\r\n/g,'\n'));$('mapname').textContent=file.name+' · seed '+seed.toString(16).padStart(8,'0');start()});
 $('start').onclick=start;
-function toggle(){if(!eventActive()||!playing)return;paused=!paused;$('status').textContent=paused?'Paused':'Playing';last=0}
+function toggle(){if(!eventActive()||!playing)return;paused=!paused;if(paused)clearVoice();$('status').textContent=paused?'Paused':'Playing';last=0}
 $('pause').onclick=toggle;
 window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space'].includes(e.code))e.preventDefault();if(e.repeat&&['Space','ArrowUp','KeyP'].includes(e.code))return;switch(e.code){case 'ArrowLeft':move(-1,0);break;case 'ArrowRight':move(1,0);break;case 'ArrowDown':if(eventActive()&&move(0,1)){score++;$('score').textContent=score}else if(playing&&!paused)lock();break;case 'ArrowUp':rotate();break;case 'Space':hardDrop();break;case 'KeyP':toggle()}draw()});
 grid=Array.from({length:20},()=>Array(10).fill(null));raf=requestAnimationFrame(tick);
