@@ -1,17 +1,37 @@
-*.pyc
-*.o
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Packaging/build outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+*.egg
+*.whl
+
+# Test/tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+htmlcov/
+
+# Local/editor artifacts
 *.log
-builddir/
 *.swp
 .DS_Store
-.DS_Store
-.env
-.venv/
 
-__pycache__/
-*.pyc
-game.js.before-square-removal
-osu_megamix_node_test.html.before-halloween
-timeline.py.backup*
+# Project-specific generated data
 playerbase_history.txt
 zero-waste-report.json
+timeline.py.backup*
