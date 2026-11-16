@@ -5,6 +5,8 @@ import argparse
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
+import secrets
 from pathlib import Path
 import threading
 import time
@@ -21,6 +23,10 @@ MAILBOXES = {}
 BROADCASTER = None
 CLIENT_TTL = 30.0
 MAX_BODY = 1024 * 1024
+
+APPIE_CONTROL_TOKEN = os.environ.get("APPIE_CONTROL_TOKEN", "")
+LASER_EYES = False
+EFFECT_LOCK = threading.Lock()
 
 
 def load_schedule():
@@ -117,6 +123,12 @@ class Handler(SimpleHTTPRequestHandler):
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
     def do_GET(self):
+        if urlsplit(self.path).path == "/api/effects/laser-eyes":
+            with EFFECT_LOCK:
+                enabled = LASER_EYES
+            self.send_json(200, {"enabled": enabled})
+            return
+
         parts = urlsplit(self.path)
         path = parts.path
         query = parse_qs(parts.query)
@@ -195,6 +207,23 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        global LASER_EYES
+
+        if urlsplit(self.path).path == "/api/effects/laser-eyes/toggle":
+            token = self.headers.get("X-Appie-Token", "")
+            if not APPIE_CONTROL_TOKEN or not secrets.compare_digest(
+                token, APPIE_CONTROL_TOKEN
+            ):
+                self.send_json(401, {"error": "Unauthorized"})
+                return
+
+            with EFFECT_LOCK:
+                LASER_EYES = not LASER_EYES
+                enabled = LASER_EYES
+
+            self.send_json(200, {"enabled": enabled})
+            return
+
         global BROADCASTER
 
         path = urlsplit(self.path).path
@@ -303,12 +332,14 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json(404, {"error": "Unknown API endpoint"})
 
 
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="osu!watch broadcast channel"
     )
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
 
     load_schedule()
