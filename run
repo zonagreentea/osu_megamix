@@ -72,8 +72,7 @@ def main():
             if target.suffix == ".py":
                 raise SystemExit(subprocess.call([sys.executable, str(target), *args[1:]]))
             if target.suffix in {".html", ".htm"}:
-                opener = "open.zsh"
-                raise SystemExit(subprocess.call(["./" + opener, str(target), *args[1:]]))
+                raise SystemExit(subprocess.call(["open", str(target)]))
             raise SystemExit(subprocess.call([str(target), *args[1:]]))
 
     candidates = [

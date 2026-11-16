@@ -1,83 +1,329 @@
-"""osu!watch: deterministic 24/7 channel guide and local HTTP viewer (stdlib only)."""
+"""osu!watch: scheduled channel + live WebRTC signaling server (stdlib only)."""
 from __future__ import annotations
+
 import argparse
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
-from urllib.parse import urlsplit
+import threading
+import time
+import uuid
+from urllib.parse import parse_qs, urlsplit
 
 ROOT = Path(__file__).resolve().parent
-SCHEDULE = ROOT / 'schedule.json'
+SCHEDULE = ROOT / "schedule.json"
 EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp()
+
+LIVE_LOCK = threading.Lock()
+CLIENTS = {}
+MAILBOXES = {}
+BROADCASTER = None
+CLIENT_TTL = 30.0
+MAX_BODY = 1024 * 1024
 
 
 def load_schedule():
-    data = json.loads(SCHEDULE.read_text(encoding='utf-8'))
-    programs = data['programs']
-    if not programs or any(not isinstance(p.get('duration_seconds'), int) or isinstance(p.get('duration_seconds'), bool) or p['duration_seconds'] <= 0 for p in programs):
-        raise ValueError('Every program needs a positive integer duration_seconds')
+    data = json.loads(SCHEDULE.read_text(encoding="utf-8"))
+    programs = data["programs"]
+
+    if not programs or any(
+        not isinstance(p.get("duration_seconds"), int)
+        or isinstance(p.get("duration_seconds"), bool)
+        or p["duration_seconds"] <= 0
+        for p in programs
+    ):
+        raise ValueError("Every program needs a positive integer duration_seconds")
+
     for p in programs:
-        if p.get('kind') == 'sponsor' and not p.get('approved', False):
-            raise ValueError('Sponsor segments must be explicitly approved')
+        if p.get("kind") == "sponsor" and not p.get("approved", False):
+            raise ValueError("Sponsor segments must be explicitly approved")
+
     return programs
 
 
 def channel_state(now=None):
     now = datetime.now(timezone.utc).timestamp() if now is None else now
     programs = load_schedule()
-    total = sum(p['duration_seconds'] for p in programs)
+    total = sum(p["duration_seconds"] for p in programs)
     offset = (now - EPOCH) % total
+
     for index, program in enumerate(programs):
-        duration = program['duration_seconds']
+        duration = program["duration_seconds"]
+
         if offset < duration:
             next_program = programs[(index + 1) % len(programs)]
             remaining = duration - offset
-            return {'channel': 'osu!watch 1', 'server_time': now, 'current': program,
-                    'next': next_program, 'elapsed_seconds': offset,
-                    'remaining_seconds': remaining, 'program_started_at': now - offset,
-                    'next_starts_at': now + remaining}
+
+            return {
+                "channel": "osu!watch 1",
+                "server_time": now,
+                "current": program,
+                "next": next_program,
+                "elapsed_seconds": offset,
+                "remaining_seconds": remaining,
+                "program_started_at": now - offset,
+                "next_starts_at": now + remaining,
+            }
+
         offset -= duration
-    raise RuntimeError('Schedule lookup failed')
+
+    raise RuntimeError("Schedule lookup failed")
+
+
+def prune_clients():
+    global BROADCASTER
+
+    now = time.time()
+    expired = [
+        client_id
+        for client_id, client in CLIENTS.items()
+        if now - client["seen"] > CLIENT_TTL
+    ]
+
+    for client_id in expired:
+        CLIENTS.pop(client_id, None)
+        MAILBOXES.pop(client_id, None)
+
+        if BROADCASTER == client_id:
+            BROADCASTER = None
 
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
+    def send_json(self, status, value):
+        payload = json.dumps(value).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(payload)))
+        self.end_headers()
+        self.wfile.write(payload)
+
+    def read_json(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            raise ValueError("Invalid Content-Length")
+
+        if length <= 0:
+            return {}
+
+        if length > MAX_BODY:
+            raise ValueError("Request too large")
+
+        return json.loads(self.rfile.read(length).decode("utf-8"))
+
     def do_GET(self):
-        path = urlsplit(self.path).path
-        if path == '/api/channel':
+        parts = urlsplit(self.path)
+        path = parts.path
+        query = parse_qs(parts.query)
+
+        if path == "/api/channel":
             try:
-                payload = json.dumps(channel_state()).encode('utf-8')
+                self.send_json(200, channel_state())
             except (ValueError, OSError, KeyError) as exc:
-                self.send_error(500, str(exc))
-                return
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.send_header('Cache-Control', 'no-store')
-            self.send_header('Content-Length', str(len(payload)))
-            self.end_headers()
-            self.wfile.write(payload)
+                self.send_json(500, {"error": str(exc)})
             return
-        if path == '/':
-            self.path = '/index.html'
+
+        if path == "/api/live/status":
+            with LIVE_LOCK:
+                prune_clients()
+                viewers = sum(
+                    client["role"] == "viewer"
+                    for client in CLIENTS.values()
+                )
+
+                self.send_json(
+                    200,
+                    {
+                        "broadcasting": (
+                            BROADCASTER is not None
+                            and BROADCASTER in CLIENTS
+                        ),
+                        "viewers": viewers,
+                    },
+                )
+            return
+
+        if path == "/api/live/viewers":
+            client_id = query.get("id", [""])[0]
+
+            with LIVE_LOCK:
+                prune_clients()
+                client = CLIENTS.get(client_id)
+
+                if not client or client["role"] != "broadcaster":
+                    self.send_json(403, {"error": "Not broadcaster"})
+                    return
+
+                client["seen"] = time.time()
+
+                viewers = [
+                    cid
+                    for cid, data in CLIENTS.items()
+                    if data["role"] == "viewer"
+                ]
+
+                self.send_json(200, {"viewers": viewers})
+            return
+
+        if path == "/api/live/inbox":
+            client_id = query.get("id", [""])[0]
+
+            with LIVE_LOCK:
+                prune_clients()
+                client = CLIENTS.get(client_id)
+
+                if not client:
+                    self.send_json(404, {"error": "Unknown client"})
+                    return
+
+                client["seen"] = time.time()
+
+                messages = MAILBOXES.get(client_id, [])
+                MAILBOXES[client_id] = []
+
+                self.send_json(200, {"messages": messages})
+            return
+
+        if path == "/":
+            self.path = "/index.html"
+
         super().do_GET()
+
+    def do_POST(self):
+        global BROADCASTER
+
+        path = urlsplit(self.path).path
+
+        try:
+            body = self.read_json()
+        except (ValueError, json.JSONDecodeError) as exc:
+            self.send_json(400, {"error": str(exc)})
+            return
+
+        if path == "/api/live/register":
+            role = body.get("role")
+
+            if role not in {"broadcaster", "viewer"}:
+                self.send_json(400, {"error": "Invalid role"})
+                return
+
+            client_id = uuid.uuid4().hex
+
+            with LIVE_LOCK:
+                prune_clients()
+
+                if role == "broadcaster":
+                    if BROADCASTER:
+                        CLIENTS.pop(BROADCASTER, None)
+                        MAILBOXES.pop(BROADCASTER, None)
+
+                    BROADCASTER = client_id
+
+                CLIENTS[client_id] = {
+                    "role": role,
+                    "seen": time.time(),
+                }
+                MAILBOXES[client_id] = []
+
+            self.send_json(200, {"id": client_id})
+            return
+
+        if path == "/api/live/send":
+            sender = body.get("from")
+            recipient = body.get("to")
+            message_type = body.get("type")
+            payload = body.get("payload")
+
+            if message_type not in {"offer", "answer"}:
+                self.send_json(400, {"error": "Invalid message type"})
+                return
+
+            with LIVE_LOCK:
+                prune_clients()
+
+                if sender not in CLIENTS:
+                    self.send_json(403, {"error": "Unknown sender"})
+                    return
+
+                if recipient not in CLIENTS:
+                    self.send_json(404, {"error": "Recipient offline"})
+                    return
+
+                CLIENTS[sender]["seen"] = time.time()
+
+                mailbox = MAILBOXES.setdefault(recipient, [])
+
+                mailbox.append(
+                    {
+                        "from": sender,
+                        "type": message_type,
+                        "payload": payload,
+                    }
+                )
+
+                if len(mailbox) > 50:
+                    del mailbox[:-50]
+
+            self.send_json(200, {"ok": True})
+            return
+
+        if path == "/api/live/heartbeat":
+            client_id = body.get("id")
+
+            with LIVE_LOCK:
+                prune_clients()
+
+                if client_id not in CLIENTS:
+                    self.send_json(404, {"error": "Unknown client"})
+                    return
+
+                CLIENTS[client_id]["seen"] = time.time()
+
+            self.send_json(200, {"ok": True})
+            return
+
+        if path == "/api/live/leave":
+            client_id = body.get("id")
+
+            with LIVE_LOCK:
+                CLIENTS.pop(client_id, None)
+                MAILBOXES.pop(client_id, None)
+
+                if BROADCASTER == client_id:
+                    BROADCASTER = None
+
+            self.send_json(200, {"ok": True})
+            return
+
+        self.send_json(404, {"error": "Unknown API endpoint"})
 
 
 def main():
-    parser = argparse.ArgumentParser(description='osu!watch local broadcast channel')
-    parser.add_argument('--host', default='127.0.0.1')
-    parser.add_argument('--port', type=int, default=8765)
+    parser = argparse.ArgumentParser(
+        description="osu!watch broadcast channel"
+    )
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
+
     load_schedule()
+
     with ThreadingHTTPServer((args.host, args.port), Handler) as server:
-        print(f'osu!watch: http://{args.host}:{args.port}', flush=True)
+        print(
+            f"osu!watch: http://{args.host}:{args.port}",
+            flush=True,
+        )
+
         try:
             server.serve_forever()
         except KeyboardInterrupt:
-            print('\nBroadcast server stopped.')
+            print("\nBroadcast server stopped.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
