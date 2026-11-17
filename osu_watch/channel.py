@@ -5,6 +5,9 @@ import argparse
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
+import hmac
+import ipaddress
 from pathlib import Path
 import threading
 import time
@@ -21,6 +24,16 @@ MAILBOXES = {}
 BROADCASTER = None
 CLIENT_TTL = 30.0
 MAX_BODY = 1024 * 1024
+STUDIO_TOKEN = os.environ.get('OSUWATCH_STUDIO_TOKEN', '')
+
+def studio_authorized(address, token):
+    if STUDIO_TOKEN:
+        return hmac.compare_digest(token, STUDIO_TOKEN)
+    try:
+        return ipaddress.ip_address(address).is_loopback
+    except ValueError:
+        return False
+
 
 
 def load_schedule():
@@ -212,16 +225,21 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(400, {"error": "Invalid role"})
                 return
 
+            if role == "broadcaster" and not studio_authorized(
+                self.client_address[0], self.headers.get("X-Studio-Token", "")
+            ):
+                self.send_json(403, {"error": "Studio authorization required"})
+                return
+
             client_id = uuid.uuid4().hex
 
             with LIVE_LOCK:
                 prune_clients()
 
                 if role == "broadcaster":
-                    if BROADCASTER:
-                        CLIENTS.pop(BROADCASTER, None)
-                        MAILBOXES.pop(BROADCASTER, None)
-
+                    if BROADCASTER and BROADCASTER in CLIENTS:
+                        self.send_json(409, {"error": "Broadcaster already active"})
+                        return
                     BROADCASTER = client_id
 
                 CLIENTS[client_id] = {
