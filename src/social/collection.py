@@ -33,11 +33,22 @@ class Collection:
     def __init__(self, path="collection"):
         self.path = Path(path)
         self.games = {}
+        from src.social.collection_registry import GameRegistry
+        self.registry = GameRegistry()
         self.friends = set()
         self.keyblades = set()
 
     def add_game(self, game):
         self.games[game.name] = game
+
+    def register_game(self, game_id, title, launcher):
+        return self.registry.register(game_id, title, launcher)
+
+    def available_games(self):
+        return self.registry.list_games()
+
+    def launch_game(self, game_id, *args, **kwargs):
+        return self.registry.launch(game_id, *args, **kwargs)
 
     def get_game(self, name):
         return self.games.get(name)
