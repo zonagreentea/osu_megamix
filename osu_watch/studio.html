@@ -1,1 +1,82 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>osu!watch — Pro Max Studio</title><link rel="stylesheet" href="/style.css"></head><body><header><strong>◉ osu!watch</strong><nav><a href="/">Channel</a><a href="/studio">Pro Max Studio</a></nav></header><main><div class="eyebrow">PRO MAX STUDIO</div><h1>Make something <em>worth watching.</em></h1><div class="layout"><section class="panel"><h2>Camera preview</h2><video id="preview" autoplay muted playsinline></video><p id="permission" class="muted">Camera and microphone are off.</p><div class="actions"><button id="camera">Enable camera + mic</button><button id="stop">Stop preview</button></div></section><section class="panel"><h2>Production controls</h2><p class="muted">Local device preview only. Public broadcasting requires a separately configured authenticated media transport.</p><div class="pill">● NOT LIVE</div><h2>Audio</h2><p id="audio">Microphone disconnected</p></section></div></main><footer>Permissions are requested only when you enable the preview.</footer><script src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>osu!watch — Pro Max Studio</title>
+<link rel="stylesheet" href="/style.css">
+<style>
+.studio-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.studio-panel{background:#101827;padding:20px;border-radius:16px;margin-bottom:16px}
+.studio-panel button,.studio-panel input,.studio-panel select{margin:5px;padding:8px}
+#program{width:100%;aspect-ratio:16/9;background:#080c1a}
+.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.preview-grid video{width:100%;background:#080c1a}
+.studio-panel label{display:inline-block;margin:6px}
+#status{font-weight:bold}
+@media(max-width:800px){.studio-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><strong>◉ osu!watch</strong><nav><a href="/">Channel</a> <a href="/studio">Pro Max Studio</a></nav></header>
+<main>
+<h1>Pro Max Studio</h1>
+<p id="status" role="status" aria-live="polite">OFF AIR — prepare your studio</p>
+<div class="studio-grid">
+<div>
+<section class="studio-panel">
+<h2>Program output</h2>
+<canvas id="program" width="1280" height="720"></canvas>
+<div>
+<button id="prepare">Prepare Studio</button>
+<button id="go" disabled>Go Live</button>
+<button id="stop" disabled>Stop Broadcast</button>
+</div>
+<p id="viewers">0 viewers</p>
+<p id="stats">Not prepared</p>
+</section>
+<section class="studio-panel">
+<h2>Sources</h2>
+<div>
+<button id="camera">Camera</button>
+<button id="screen">Share Screen</button>
+<button id="pip">Screen + Camera</button>
+<button id="slate">Studio Slate</button>
+</div>
+<div class="preview-grid">
+<div><h3>Camera</h3><video id="cameraPreview" autoplay muted playsinline></video></div>
+<div><h3>Screen</h3><video id="screenPreview" autoplay muted playsinline></video></div>
+</div>
+</section>
+</div>
+<div>
+<section class="studio-panel">
+<h2>Devices</h2>
+<label>Camera <select id="cameraDevice"><option value="">System default</option></select></label>
+<label>Microphone <select id="micDevice"><option value="">System default</option></select></label>
+<label>Quality <select id="quality">
+<option value="720">720p 30fps</option>
+<option value="1080">1080p 30fps</option>
+<option value="1080-60">1080p 60fps</option>
+</select></label>
+</section>
+<section class="studio-panel">
+<h2>Audio Mixer</h2>
+<label>Gain <input id="gain" type="range" min="0" max="200" value="100"><span id="gainValue">100%</span></label>
+<label>Compression <input id="threshold" type="range" min="-60" max="0" value="-24"><span id="thresholdValue">-24 dB</span></label>
+<label><input id="mute" type="checkbox">Mute microphone</label>
+<meter id="level" min="0" max="1" value="0"></meter>
+</section>
+<section class="studio-panel">
+<h2>Broadcast Settings</h2>
+<label>Title <input id="title" value="osu!watch LIVE" maxlength="80"></label>
+<label><input id="overlay" type="checkbox" checked>Show title overlay</label>
+<label>Studio token <input id="token" type="password" autocomplete="off" placeholder="Optional local token"></label>
+<p>Screen sharing starts only after you grant browser permission. Going live is a separate action.</p>
+</section>
+</div>
+</div>
+</main>
+<script src="/studio.js"></script>
+</body>
+</html>
