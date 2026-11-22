@@ -5,6 +5,9 @@ import argparse
 from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import json
+import os
+import hmac
+import ipaddress
 from pathlib import Path
 import threading
 import time
@@ -14,6 +17,20 @@ from urllib.parse import parse_qs, urlsplit
 ROOT = Path(__file__).resolve().parent
 SCHEDULE = ROOT / "schedule.json"
 EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp()
+
+
+STUDIO_TOKEN = os.environ.get("OSUWATCH_STUDIO_TOKEN", "")
+
+def studio_authorized(address, token):
+    try:
+        local = ipaddress.ip_address(address).is_loopback
+    except ValueError:
+        return False
+    if not STUDIO_TOKEN:
+        return local
+    return hmac.compare_digest(
+        str(token), STUDIO_TOKEN
+    )
 
 LIVE_LOCK = threading.Lock()
 CLIENTS = {}
@@ -121,9 +138,23 @@ class Handler(SimpleHTTPRequestHandler):
         path = parts.path
         query = parse_qs(parts.query)
 
+
+        if path == "/api/health":
+            self.send_json(200, {"ok": True, "channel": "osu!watch"})
+            return
+
+        if path == "/studio":
+            self.path = "/studio.html"
+            return super().do_GET()
+
         if path == "/api/channel":
             try:
-                self.send_json(200, channel_state())
+                self.send_json(200, {
+                    **channel_state(),
+                    "ok": True,
+                    "live": False,
+                    "schedule": load_schedule(),
+                })
             except (ValueError, OSError, KeyError) as exc:
                 self.send_json(500, {"error": str(exc)})
             return
@@ -203,6 +234,11 @@ class Handler(SimpleHTTPRequestHandler):
             body = self.read_json()
         except (ValueError, json.JSONDecodeError) as exc:
             self.send_json(400, {"error": str(exc)})
+            return
+
+
+        if path == "/api/live":
+            self.send_json(405, {"error": "Publishing not enabled"})
             return
 
         if path == "/api/live/register":
