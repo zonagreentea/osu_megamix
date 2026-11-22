@@ -43,17 +43,39 @@ def run_signed_update_gate():
     return subprocess.call(cmd)
 
 
-def main():
-    compiled = require_compiled_launcher()
-    if compiled is not None:
-        if run_signed_update_gate() != 0:
-            print("run: mandatory signed update failed; startup blocked.", file=sys.stderr)
-            return 1
-        raise SystemExit(subprocess.call([str(compiled)] + sys.argv[1:]))
+def initialize_bitwise():
+    """Validate the Bitwise runtime before dispatch."""
+    import importlib.util
 
+    path = ROOT / "src" / "bitstream" / "bitwise.py"
+    if not path.is_file():
+        print("run: Bitwise 2.0 module missing", file=sys.stderr)
+        return 1
+
+    try:
+        spec = importlib.util.spec_from_file_location("bitwise", path)
+        if spec is None or spec.loader is None:
+            raise ImportError("Unable to load Bitwise")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    except Exception as exc:
+        print(f"run: Bitwise initialization failed: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+def main():
     if run_signed_update_gate() != 0:
         print("run: mandatory signed update failed; startup blocked.", file=sys.stderr)
         return 1
+
+    if initialize_bitwise() != 0:
+        return 1
+
+    compiled = require_compiled_launcher()
+    if compiled is not None:
+        raise SystemExit(subprocess.call([str(compiled)] + sys.argv[1:]))
 
     args = sys.argv[1:]
     if args and args[0] == "--code":
