@@ -23,11 +23,71 @@ p{margin:0 0 10px}.modes{display:flex;justify-content:center;flex-wrap:wrap;gap:
 .help{font-size:11px;margin-top:10px}
 footer{display:none}#pause{display:none}body.playing #pause{display:inline-block}
 @media(max-width:500px){header{font-size:12px}.actions{gap:3px}.actions button{padding:3px}.brand{font-size:12px}.score{font-size:14px}}
-</style></head><body><div id="app"><header><div><div class="brand">osu!<b>megamix</b></div><div class="sub"></div></div><div class="actions"><a class="link" href="osu_watch/index.html">osu!watch</a><button id="sound" aria-pressed="true">Sound on</button><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu!megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu!megamix</span><span id="status">READY</span></footer></div>
+</style></head><body><div id="app"><header><div><div class="brand">osu!<b>megamix</b></div><div class="sub"></div></div><div class="actions"><a class="link" href="osu_watch/index.html">osu!watch</a><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu!megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu!megamix</span><span id="status">READY</span></footer></div>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('field'),ctx=canvas.getContext('2d');let W=0,H=0,dpr=1,mode='osu',state='menu',sound=true,audio=null,last=0,elapsed=0,spawn=0,notes=[],particles=[],score=0,combo=0,hp=100,hits=0,judged=0,accuracy=100,flash='',flashLife=0,beat=0,catchX=.5,keys=new Set(),nextId=0;
 const colors=['#000','#fff'];
+// Microphone analysis is local-only; audio is never recorded or uploaded.
+let micStream=null,micContext=null,micSource=null,micAnalyser=null,micSamples=null;
+let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity;
+function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;$('micBpm').textContent='-- BPM'}
+function stopMic(){
+ if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
+ if(micSource){try{micSource.disconnect()}catch(e){}micSource=null}
+ micAnalyser=null;micSamples=null;
+ if(micContext){const old=micContext;micContext=null;old.close().catch(()=>{})}
+ resetMicDetection();$('mic').textContent='Mic off';$('mic').setAttribute('aria-pressed','false');
+}
+async function toggleMic(){
+ if(micStarting)return;
+ if(micStream){stopMic();return}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('micBpm').textContent='Mic unavailable (use HTTPS or localhost)';return}
+ micStarting=true;$('mic').textContent='Connecting';
+ let stream=null,context=null;
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false},video:false});
+  context=new(window.AudioContext||window.webkitAudioContext)();
+  const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser();
+  analyser.fftSize=2048;analyser.smoothingTimeConstant=0;
+  source.connect(analyser);await context.resume();
+  micStream=stream;micContext=context;micSource=source;micAnalyser=analyser;micSamples=new Float32Array(analyser.fftSize);
+  resetMicDetection();$('mic').textContent='Mic on';$('mic').setAttribute('aria-pressed','true');$('micBpm').textContent='Listening';
+  stream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(micStream===stream)stopMic()}));
+ }catch(e){
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  if(context)context.close().catch(()=>{});
+  $('mic').textContent='Mic off';$('micBpm').textContent=e.name==='NotAllowedError'?'Mic denied':'Mic error';
+ }finally{micStarting=false}
+}
+$('mic').onclick=toggleMic;
+function sampleMic(now){
+ if(!micAnalyser||now-micLastSample<25)return;
+ micLastSample=now;micAnalyser.getFloatTimeDomainData(micSamples);
+ let sum=0;for(let i=0;i<micSamples.length;i++)sum+=micSamples[i]*micSamples[i];
+ const rms=Math.sqrt(sum/micSamples.length);
+ // Adaptive envelope emphasizes rhythmic attacks rather than constant sound.
+ micEnergy=micEnergy*.65+rms*.35;
+ micBaseline=micBaseline*.97+micEnergy*.03;
+ const attack=micEnergy>Math.max(.012,micBaseline*1.55)&&micEnergy>micBaseline+.008;
+ if(attack&&now-micLastOnset>220){
+  micLastOnset=now;micOnsets.push(now);while(micOnsets.length>24)micOnsets.shift();
+  const intervals=[];
+  for(let i=1;i<micOnsets.length;i++){
+   const gap=micOnsets[i]-micOnsets[i-1];
+   if(gap>=250&&gap<=1200)intervals.push(gap);
+  }
+  if(intervals.length>=4){
+   const sorted=[...intervals].sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)];
+   const close=intervals.filter(x=>Math.abs(x-median)<median*.17);
+   if(close.length>=Math.max(3,Math.ceil(intervals.length*.6))){
+    micBpm=Math.round(60000/median);micLastBeat=now;
+    $('micBpm').textContent=micBpm+' BPM';
+   }
+  }
+ }
+ if(now-micLastOnset>3500){micOnsets=[];micBpm=0;$('micBpm').textContent='Listening'}
+}
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
 function tone(freq=440){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.045,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.12);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.13)}catch(e){}}
 const styles=['osu','taiko','catch','mania'];let megamixStyle='osu',megamixSection=0;function nextMegamixStyle(){const choices=styles.filter(style=>style!==megamixStyle);megamixStyle=choices[Math.floor(Math.random()*choices.length)]}function activeStyle(){return megamixStyle}function noteStyle(n){return n.kind||mode}let osuSequence=0;function reset(){osuSequence=0;demoCursor=0;demoSection=-1;demoMap=[];megamixSection=0;megamixStyle=styles[Math.floor(Math.random()*styles.length)];notes=[];particles=[];score=combo=hits=judged=elapsed=spawn=beat=0;hp=100;accuracy=100;flash='';catchX=.5;nextId=0;update()}
@@ -110,6 +170,6 @@ for(const n of notes){if(n.dead||(mode==='megamix'&&noteStyle(n)!==activeStyle()
  const label=String(n.number),metrics=ctx.measureText(label),offset=(metrics.actualBoundingBoxAscent-metrics.actualBoundingBoxDescent)/2;
  ctx.fillText(label,p.x,p.y+offset)}else if(noteStyle(n)==='taiko'){circle(p.x,p.y,27,'#000')}else if(noteStyle(n)==='catch'){circle(p.x,p.y,17,'#000')}else{const gap=Math.min(W*.12,85);ctx.fillStyle='#000';ctx.beginPath();ctx.rect(p.x-gap*.42,p.y-14,gap*.84,28);ctx.fill()}}
 if(flashLife>0){ctx.textAlign='center';ctx.font='bold 18px Arial';ctx.fillStyle='#000';ctx.fillText(flash,W*.5,H*.32)}}
-function frame(t){const dt=Math.min((t-last)/1000||0,.05);last=t;if(state==='play'){elapsed+=dt;spawn+=dt;beat+=dt;if(mode==='megamix'&&Math.floor(elapsed/8)!==megamixSection){megamixSection=Math.floor(elapsed/8);nextMegamixStyle();notes=[];particles=[];spawn=0;flash='';flashLife=0;if(activeStyle()==='osu'){osuSequence=0;demoCursor=0;demoSection=-1}update()}if((mode==='megamix'?activeStyle():mode)==='osu'){spawnOsuDemo();spawn=0}else if(spawn>.48){if(makeNote())spawn-=.48;else spawn=.48}if((mode==='megamix'?activeStyle():mode)==='catch'){if(keys.has('ArrowLeft')||keys.has('KeyA'))catchX-=dt*.8;if(keys.has('ArrowRight')||keys.has('KeyD'))catchX+=dt*.8;catchX=Math.max(.06,Math.min(.94,catchX))}for(const n of notes){if(n.dead)continue;if(noteStyle(n)==='catch'&&elapsed>=n.at){judge(n,Math.abs(n.x-catchX)<.09?0:1)}else if(elapsed>n.at+.22)judge(n,1)}notes=notes.filter(n=>!n.dead);flashLife=Math.max(0,flashLife-dt);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}particles=particles.filter(p=>p.life>0)}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+function frame(t){sampleMic(t);const dt=Math.min((t-last)/1000||0,.05);last=t;if(state==='play'){elapsed+=dt;spawn+=dt;beat+=dt;if(mode==='megamix'&&Math.floor(elapsed/8)!==megamixSection){megamixSection=Math.floor(elapsed/8);nextMegamixStyle();notes=[];particles=[];spawn=0;flash='';flashLife=0;if(activeStyle()==='osu'){osuSequence=0;demoCursor=0;demoSection=-1}update()}if((mode==='megamix'?activeStyle():mode)==='osu'){spawnOsuDemo();spawn=0}else if(spawn>.48){if(makeNote())spawn-=.48;else spawn=.48}if((mode==='megamix'?activeStyle():mode)==='catch'){if(keys.has('ArrowLeft')||keys.has('KeyA'))catchX-=dt*.8;if(keys.has('ArrowRight')||keys.has('KeyD'))catchX+=dt*.8;catchX=Math.max(.06,Math.min(.94,catchX))}for(const n of notes){if(n.dead)continue;if(noteStyle(n)==='catch'&&elapsed>=n.at){judge(n,Math.abs(n.x-catchX)<.09?0:1)}else if(elapsed>n.at+.22)judge(n,1)}notes=notes.filter(n=>!n.dead);flashLife=Math.max(0,flashLife-dt);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}particles=particles.filter(p=>p.life>0)}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 })();
 </script></body></html>
