@@ -37,23 +37,55 @@ function show(title,msg,button){state='menu';document.body.classList.remove('pla
 function pause(){if(state==='play'){state='pause';$('overlay').hidden=false;$('overlay').querySelector('h1').textContent='PAUSED';$('message').textContent='Your rhythm is waiting.';$('start').textContent='▶ RESUME';$('status').textContent='PAUSED'}else if(state==='pause'){state='play';$('overlay').hidden=true;$('status').textContent='NOW PLAYING'}}
 $('start').onclick=()=>state==='pause'?pause():start();$('pause').onclick=pause;$('sound').onclick=()=>{sound=!sound;$('sound').textContent=sound?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(sound))};
 $('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;for(const x of document.querySelectorAll('[data-mode]'))x.setAttribute('aria-pressed',String(x===b));$('help').textContent=({osu:'Z / X / Space or click circles • Esc pauses',taiko:'F / J or tap the drum when notes reach the ring',catch:'Move pointer or ← / → to catch falling fruit',mania:'D F J K or tap the matching lane',megamix:'Random mode every 8 seconds • osu!: Z / X / Space'})[mode];update()};
-function osuField(){const scale=Math.min(W/512,H/384);return{scale,left:(W-512*scale)/2,top:(H-384*scale)/2}}function osuRadius(){return 38*osuField().scale}// Authored demonstration beatmap in osu!standard 512x384 coordinates.
-// Hit times are relative to the start of each osu! section (seconds).
-const demoMap=[
- [1.65,122,190],[2.12,205,147],[2.59,286,128],[3.06,373,172],
- [3.53,322,256],[4.00,235,275],[4.47,150,246],[4.94,109,151],
- [5.41,194,105],[5.88,283,171],[6.35,377,235],[6.82,275,291],
- [7.29,185,225]
-];
-let demoCursor=0,demoSection=-1;
+function osuField(){const scale=Math.min(W/512,H/384);return{scale,left:(W-512*scale)/2,top:(H-384*scale)/2}}function osuRadius(){return 38*osuField().scale}// Procedural osu!standard patterns: random phrases, readable spacing, no grid.
+const osuBeatTimes=[1.65,2.12,2.59,3.06,3.53,4,4.47,4.94,5.41,5.88,6.35,6.82,7.29];
+let demoCursor=0,demoSection=-1,demoMap=[];
+function generateOsuPhrase(){
+ const result=[],marginX=54,marginY=54;
+ let prev={x:90+Math.random()*332,y:75+Math.random()*234};
+ let heading=Math.random()*Math.PI*2;
+ for(let i=0;i<osuBeatTimes.length;i++){
+  if(i===0){result.push([osuBeatTimes[i],prev.x,prev.y]);continue}
+  let best=null,bestScore=-Infinity;
+  // Choose from many candidates, scoring movement and visibility.
+  for(let j=0;j<90;j++){
+   const angle=Math.random()*Math.PI*2;
+   const distance=105+Math.random()*110;
+   const x=prev.x+Math.cos(angle)*distance,y=prev.y+Math.sin(angle)*distance;
+   if(x<marginX||x>512-marginX||y<marginY||y>384-marginY)continue;
+   // Three recent objects can be on screen simultaneously; keep them apart.
+   if(result.slice(-3).some(p=>Math.hypot(x-p[1],y-p[2])<91))continue;
+   const turn=Math.atan2(Math.sin(angle-heading),Math.cos(angle-heading));
+   const target=i%5===4?190:145;
+   const score=-Math.abs(distance-target)/90-Math.abs(turn)/Math.PI*.24+Math.random()*.7;
+   if(score>bestScore){best={x,y,angle};bestScore=score}
+  }
+  if(!best){
+   // Rare fallback: choose the most separated valid point.
+   for(let j=0;j<100;j++){
+    const x=marginX+Math.random()*(512-2*marginX),y=marginY+Math.random()*(384-2*marginY);
+    const separation=Math.min(...result.slice(-3).map(p=>Math.hypot(x-p[1],y-p[2])));
+    const travel=Math.hypot(x-prev.x,y-prev.y);
+    if(separation>=83&&travel>=95&&travel<=260){best={x,y,angle:Math.atan2(y-prev.y,x-prev.x)};break}
+   }
+  }
+  if(!best){ // Always progress, even if candidate sampling is unlucky.
+   const options=[[70,70],[442,70],[70,314],[442,314],[256,192]];
+   const point=options.sort((a,b)=>Math.min(...result.slice(-3).map(p=>Math.hypot(b[0]-p[1],b[1]-p[2])))-Math.min(...result.slice(-3).map(p=>Math.hypot(a[0]-p[1],a[1]-p[2]))))[0];
+   best={x:point[0],y:point[1],angle:Math.atan2(point[1]-prev.y,point[0]-prev.x)};
+  }
+  prev={x:best.x,y:best.y};heading=best.angle;
+  result.push([osuBeatTimes[i],prev.x,prev.y]);
+ }
+ return result;
+}
 function spawnOsuDemo(){
  const section=mode==='megamix'?megamixSection:Math.floor(elapsed/8);
- const sectionStart=mode==='megamix'?megamixSection*8:section*8;
- if(section!==demoSection){demoSection=section;demoCursor=0;osuSequence=0}
+ const sectionStart=section*8;
+ if(section!==demoSection){demoSection=section;demoCursor=0;osuSequence=0;demoMap=generateOsuPhrase()}
  while(demoCursor<demoMap.length){
   const [time,x,y]=demoMap[demoCursor],at=sectionStart+time;
   if(at-elapsed>1.35)break;
-  // Never schedule objects whose hit time already passed.
   demoCursor++;if(at<elapsed-.19)continue;
   const id=nextId++,number=(osuSequence++%9)+1;
   notes.push({id,lane:0,number,x,y,born:elapsed,at,kind:'osu',dead:false,color:colors[(demoCursor-1)%colors.length]});
