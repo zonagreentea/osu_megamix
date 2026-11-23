@@ -32,33 +32,55 @@ const colors=['#000','#fff'];
 let micStream=null,micContext=null,micSource=null,micAnalyser=null,micSamples=null,micSpectrum=null,micPreviousSpectrum=null,micFluxHistory=[];
 let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity,micArmed=true;
 function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;micArmed=true;micFluxHistory=[];if(micPreviousSpectrum)micPreviousSpectrum.fill(0);$('micBpm').textContent='-- BPM';$('micBeat').textContent='BEAT -'}
+let micRequestId=0;
+function micButton(on,label){
+ $('mic').textContent=label|| (on?'Mic on':'Mic off');
+ $('mic').setAttribute('aria-pressed',String(on));
+}
 function stopMic(){
- if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
+ // Invalidate any in-flight permission request before releasing resources.
+ micRequestId++;
+ if(micStream){const stream=micStream;micStream=null;stream.getTracks().forEach(t=>t.stop())}
  if(micSource){try{micSource.disconnect()}catch(e){}micSource=null}
  micAnalyser=null;micSamples=null;micSpectrum=null;micPreviousSpectrum=null;
  if(micContext){const old=micContext;micContext=null;old.close().catch(()=>{})}
- resetMicDetection();$('mic').textContent='Mic off';$('mic').setAttribute('aria-pressed','false');
+ resetMicDetection();micButton(false);
 }
 async function toggleMic(){
- if(micStarting)return;
+ if(micStarting){ // Let the user cancel while permission is pending.
+  micRequestId++;micStarting=false;micButton(false);$('micBpm').textContent='-- BPM';return;
+ }
  if(micStream){stopMic();return}
- if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('micBpm').textContent='Mic unavailable (use HTTPS or localhost)';return}
- micStarting=true;$('mic').textContent='Connecting';
+ if(!navigator.mediaDevices?.getUserMedia){$('micBpm').textContent='Mic requires HTTPS or localhost';return}
+ const request=++micRequestId;
+ micStarting=true;micButton(false,'Cancel mic');$('micBpm').textContent='Connecting';
  let stream=null,context=null;
  try{
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false},video:false});
+  if(request!==micRequestId)return;
   context=new(window.AudioContext||window.webkitAudioContext)();
   const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser();
   analyser.fftSize=2048;analyser.smoothingTimeConstant=0;
-  source.connect(analyser);await context.resume();
-  micStream=stream;micContext=context;micSource=source;micAnalyser=analyser;micSamples=new Float32Array(analyser.fftSize);micSpectrum=new Float32Array(analyser.frequencyBinCount);micPreviousSpectrum=new Float32Array(analyser.frequencyBinCount);
-  resetMicDetection();$('mic').textContent='Mic on';$('mic').setAttribute('aria-pressed','true');$('micBpm').textContent='Listening';
-  stream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(micStream===stream)stopMic()}));
+  source.connect(analyser);
+  await context.resume();
+  if(request!==micRequestId)return;
+  micStream=stream;micContext=context;micSource=source;micAnalyser=analyser;
+  micSamples=new Float32Array(analyser.fftSize);
+  micSpectrum=new Float32Array(analyser.frequencyBinCount);
+  micPreviousSpectrum=new Float32Array(analyser.frequencyBinCount);
+  stream=null;context=null; // Ownership transferred to the live microphone.
+  resetMicDetection();micButton(true);$('micBpm').textContent='Listening';
+  micStream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(micStream&&micStream.getAudioTracks().includes(track))stopMic()}));
  }catch(e){
+  if(request===micRequestId){
+   micButton(false);
+   $('micBpm').textContent=e.name==='NotAllowedError'?'Mic denied':e.name==='NotFoundError'?'No microphone':'Mic error';
+  }
+ }finally{
   if(stream)stream.getTracks().forEach(t=>t.stop());
   if(context)context.close().catch(()=>{});
-  $('mic').textContent='Mic off';$('micBpm').textContent=e.name==='NotAllowedError'?'Mic denied':'Mic error';
- }finally{micStarting=false}
+  if(request===micRequestId)micStarting=false;
+ }
 }
 $('mic').onclick=toggleMic;
 function sampleMic(now){
