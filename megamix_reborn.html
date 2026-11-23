@@ -23,19 +23,19 @@ p{margin:0 0 10px}.modes{display:flex;justify-content:center;flex-wrap:wrap;gap:
 .help{font-size:11px;margin-top:10px}
 footer{display:none}#pause{display:none}body.playing #pause{display:inline-block}
 @media(max-width:500px){header{font-size:12px}.actions{gap:3px}.actions button{padding:3px}.brand{font-size:12px}.score{font-size:14px}}
-</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
+</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><span id="micBeat" class="tiny" aria-label="Detected beat">BEAT -</span><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('field'),ctx=canvas.getContext('2d');let W=0,H=0,dpr=1,mode='osu',state='menu',sound=true,audio=null,last=0,elapsed=0,spawn=0,notes=[],particles=[],score=0,combo=0,hp=100,hits=0,judged=0,accuracy=100,flash='',flashLife=0,beat=0,catchX=.5,keys=new Set(),nextId=0;
 const colors=['#000','#fff'];
 // Microphone analysis is local-only; audio is never recorded or uploaded.
-let micStream=null,micContext=null,micSource=null,micAnalyser=null,micSamples=null;
-let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity;
-function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;$('micBpm').textContent='-- BPM'}
+let micStream=null,micContext=null,micSource=null,micAnalyser=null,micSamples=null,micSpectrum=null,micPreviousSpectrum=null,micFluxHistory=[];
+let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity,micArmed=true;
+function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;micArmed=true;micFluxHistory=[];if(micPreviousSpectrum)micPreviousSpectrum.fill(0);$('micBpm').textContent='-- BPM';$('micBeat').textContent='BEAT -'}
 function stopMic(){
  if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null}
  if(micSource){try{micSource.disconnect()}catch(e){}micSource=null}
- micAnalyser=null;micSamples=null;
+ micAnalyser=null;micSamples=null;micSpectrum=null;micPreviousSpectrum=null;
  if(micContext){const old=micContext;micContext=null;old.close().catch(()=>{})}
  resetMicDetection();$('mic').textContent='Mic off';$('mic').setAttribute('aria-pressed','false');
 }
@@ -51,7 +51,7 @@ async function toggleMic(){
   const source=context.createMediaStreamSource(stream),analyser=context.createAnalyser();
   analyser.fftSize=2048;analyser.smoothingTimeConstant=0;
   source.connect(analyser);await context.resume();
-  micStream=stream;micContext=context;micSource=source;micAnalyser=analyser;micSamples=new Float32Array(analyser.fftSize);
+  micStream=stream;micContext=context;micSource=source;micAnalyser=analyser;micSamples=new Float32Array(analyser.fftSize);micSpectrum=new Float32Array(analyser.frequencyBinCount);micPreviousSpectrum=new Float32Array(analyser.frequencyBinCount);
   resetMicDetection();$('mic').textContent='Mic on';$('mic').setAttribute('aria-pressed','true');$('micBpm').textContent='Listening';
   stream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(micStream===stream)stopMic()}));
  }catch(e){
@@ -63,30 +63,51 @@ async function toggleMic(){
 $('mic').onclick=toggleMic;
 function sampleMic(now){
  if(!micAnalyser||now-micLastSample<25)return;
- micLastSample=now;micAnalyser.getFloatTimeDomainData(micSamples);
+ micLastSample=now;
+ micAnalyser.getFloatTimeDomainData(micSamples);
+ micAnalyser.getFloatFrequencyData(micSpectrum);
  let sum=0;for(let i=0;i<micSamples.length;i++)sum+=micSamples[i]*micSamples[i];
  const rms=Math.sqrt(sum/micSamples.length);
- // Adaptive envelope emphasizes rhythmic attacks rather than constant sound.
- micEnergy=micEnergy*.65+rms*.35;
- micBaseline=micBaseline*.97+micEnergy*.03;
- const attack=micEnergy>Math.max(.012,micBaseline*1.55)&&micEnergy>micBaseline+.008;
- if(attack&&now-micLastOnset>220){
-  micLastOnset=now;micOnsets.push(now);while(micOnsets.length>24)micOnsets.shift();
+ // Positive spectral flux measures new sound energy, not sustained notes.
+ let flux=0;
+ for(let i=2;i<micSpectrum.length*.75;i++){
+  const current=Math.pow(10,Math.max(-100,micSpectrum[i])/20);
+  const previous=micPreviousSpectrum[i];
+  flux+=Math.max(0,current-previous);
+  micPreviousSpectrum[i]=current;
+ }
+ const history=micFluxHistory;
+ history.push(flux);if(history.length>48)history.shift();
+ const sorted=[...history].sort((a,b)=>a-b);
+ const median=sorted[Math.floor(sorted.length/2)]||0;
+ const deviation=sorted.reduce((sum,v)=>sum+Math.abs(v-median),0)/sorted.length;
+ const threshold=median+Math.max(deviation*2.4,.025);
+ const attack=rms>.009&&flux>threshold&&flux>.05;
+ if(!attack)micArmed=true;
+ if(attack&&micArmed&&now-micLastOnset>230){
+  micArmed=false;micLastOnset=now;micLastBeat=now;
+  $('micBeat').textContent='BEAT ●';
+  micOnsets.push(now);while(micOnsets.length>24)micOnsets.shift();
   const intervals=[];
   for(let i=1;i<micOnsets.length;i++){
    const gap=micOnsets[i]-micOnsets[i-1];
    if(gap>=250&&gap<=1200)intervals.push(gap);
   }
-  if(intervals.length>=4){
-   const sorted=[...intervals].sort((a,b)=>a-b),median=sorted[Math.floor(sorted.length/2)];
-   const close=intervals.filter(x=>Math.abs(x-median)<median*.17);
+  if(intervals.length>=3){
+   const ordered=[...intervals].sort((a,b)=>a-b),candidate=ordered[Math.floor(ordered.length/2)];
+   const close=intervals.filter(gap=>Math.abs(gap-candidate)<candidate*.16);
    if(close.length>=Math.max(3,Math.ceil(intervals.length*.6))){
-    micBpm=Math.round(60000/median);micLastBeat=now;
+    const stable=close.sort((a,b)=>a-b)[Math.floor(close.length/2)];
+    const estimate=Math.round(60000/stable);
+    micBpm=micBpm?Math.round(micBpm*.35+estimate*.65):estimate;
     $('micBpm').textContent=micBpm+' BPM';
    }
   }
  }
- if(now-micLastOnset>3500){micOnsets=[];micBpm=0;$('micBpm').textContent='Listening'}
+ if(now-micLastBeat>140)$('micBeat').textContent='BEAT -';
+ if(now-micLastOnset>3500){
+  micOnsets=[];micBpm=0;$('micBpm').textContent='Listening';
+ }
 }
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
 function tone(freq=440){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.045,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.12);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.13)}catch(e){}}
