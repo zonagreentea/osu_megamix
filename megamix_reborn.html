@@ -4,9 +4,9 @@
 html,body{margin:0;width:100%;height:100%;font:14px Arial,sans-serif;background:white;color:black}
 *{box-sizing:border-box}
 #app{height:100dvh;display:flex;flex-direction:column}
-header{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px;border-bottom:1px solid #000}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 14px;border-bottom:2px solid #000;min-height:58px}
 .brand{font-weight:bold}.brand b{font-weight:normal}.sub,.eyebrow{display:none}
-.actions{display:flex;gap:5px;align-items:center}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.mic-group{display:flex;gap:7px;align-items:center;flex-wrap:wrap;border:1px solid #000;padding:5px 7px}.mic-readout{display:flex;align-items:center;gap:7px;min-width:145px;justify-content:space-between;font-variant-numeric:tabular-nums}#micBpm{font-size:13px;font-weight:bold}#micBeat{min-width:55px;text-align:center}#micBeat[data-active=true]{background:#000;color:#fff}.mic-status{font-size:11px;min-width:65px}button[aria-pressed=true]{background:#000;color:#fff}button{min-height:32px}#micSync:disabled{opacity:.45;cursor:not-allowed}
 button{font:inherit;cursor:pointer;border:1px solid #000;border-radius:0;background:#fff;color:#000;padding:3px 8px}
 button:hover{background:#000;color:#fff}button:focus-visible,a:focus-visible{outline:2px solid black;outline-offset:2px}
 a{color:black;font:inherit}.link{padding:2px}
@@ -16,22 +16,22 @@ canvas{width:100%;height:100%;display:block;touch-action:none}
 .score{font-size:17px;font-weight:bold}.tiny{font-size:11px}.right{text-align:right}
 .meter{height:5px;width:100px;border:1px solid black;margin-top:3px}.meter>div{height:100%;background:#000}
 .overlay{position:absolute;inset:0;display:grid;place-items:center;background:white;z-index:2}
-.overlay[hidden]{display:none}.panel{text-align:center;width:min(460px,100%);padding:12px}
+.overlay[hidden]{display:none}.panel{text-align:center;width:min(460px,100%);padding:20px;border:2px solid #000;background:#fff}
 h1{font-size:20px;font-weight:normal;margin:0 0 12px}h1 span{color:inherit}
 p{margin:0 0 10px}.modes{display:flex;justify-content:center;flex-wrap:wrap;gap:4px;margin:10px 0}
 .mode[aria-pressed=true]{background:#000;color:#fff;border-color:#000}.primary{font-weight:bold}
 .help{font-size:11px;margin-top:10px}
 footer{display:none}#pause{display:none}body.playing #pause{display:inline-block}
-@media(max-width:500px){header{font-size:12px}.actions{gap:3px}.actions button{padding:3px}.brand{font-size:12px}.score{font-size:14px}}
-</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><span id="micBeat" class="tiny" aria-label="Detected beat">BEAT -</span><button id="micSync" aria-pressed="false">Sync off</button><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
+@media(max-width:600px){header{padding:7px;align-items:flex-start}.actions{width:100%;justify-content:flex-start;gap:5px}.mic-group{flex:1;gap:5px}.mic-readout{min-width:110px}.score{font-size:14px}.panel{border-left:0;border-right:0}}
+</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><div class="mic-group"><button id="mic" aria-pressed="false">Mic off</button><div class="mic-readout"><span id="micBpm" role="status" aria-live="polite">-- BPM</span><span id="micBeat" class="tiny" aria-label="Detected beat">BEAT -</span></div><button id="micSync" aria-pressed="false" disabled>Sync off</button><span id="micStatus" class="mic-status" role="status">Mic idle</span></div><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('field'),ctx=canvas.getContext('2d');let W=0,H=0,dpr=1,mode='osu',state='menu',sound=true,audio=null,last=0,elapsed=0,spawn=0,notes=[],particles=[],score=0,combo=0,hp=100,hits=0,judged=0,accuracy=100,flash='',flashLife=0,beat=0,catchX=.5,keys=new Set(),nextId=0;
 const colors=['#000','#fff'];
 // Microphone analysis is local-only; audio is never recorded or uploaded.
 let micStream=null,micContext=null,micSource=null,micAnalyser=null,micSamples=null,micSpectrum=null,micPreviousSpectrum=null,micFluxHistory=[];
-let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity,micArmed=true;
-function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;micArmed=true;micFluxHistory=[];if(micPreviousSpectrum)micPreviousSpectrum.fill(0);$('micBpm').textContent='-- BPM';$('micBeat').textContent='BEAT -'}
+let micStarting=false,micLastSample=0,micEnergy=0,micBaseline=0,micLastOnset=-Infinity,micOnsets=[],micBpm=0,micLastBeat=-Infinity,micArmed=true,micPrevFlux=0,micNoise=0,micStableIntervals=[];
+function resetMicDetection(){micLastSample=0;micEnergy=0;micBaseline=0;micLastOnset=-Infinity;micOnsets=[];micBpm=0;micLastBeat=-Infinity;micArmed=true;micPrevFlux=0;micNoise=0;micStableIntervals=[];micFluxHistory=[];if(micPreviousSpectrum)micPreviousSpectrum.fill(0);$('micBpm').textContent='-- BPM';$('micBeat').textContent='BEAT -';$('micBeat').dataset.active='false'}
 let micRequestId=0;
 function micButton(on,label){
  $('mic').textContent=label|| (on?'Mic on':'Mic off');
@@ -44,16 +44,16 @@ function stopMic(){
  if(micSource){try{micSource.disconnect()}catch(e){}micSource=null}
  micAnalyser=null;micSamples=null;micSpectrum=null;micPreviousSpectrum=null;
  if(micContext){const old=micContext;micContext=null;old.close().catch(()=>{})}
- resetMicDetection();micButton(false);
+ resetMicDetection();micButton(false);$('micStatus').textContent='Mic idle';$('micSync').disabled=true;syncToMic=false;$('micSync').textContent='Sync off';$('micSync').setAttribute('aria-pressed','false');
 }
 async function toggleMic(){
  if(micStarting){ // Let the user cancel while permission is pending.
-  micRequestId++;micStarting=false;micButton(false);$('micBpm').textContent='-- BPM';return;
+  micRequestId++;micStarting=false;micButton(false);$('micBpm').textContent='-- BPM';$('micStatus').textContent='Cancelled';return;
  }
  if(micStream){stopMic();return}
- if(!navigator.mediaDevices?.getUserMedia){$('micBpm').textContent='Mic requires HTTPS or localhost';return}
+ if(!navigator.mediaDevices?.getUserMedia){$('micStatus').textContent='Use localhost';return}
  const request=++micRequestId;
- micStarting=true;micButton(false,'Cancel mic');$('micBpm').textContent='Connecting';
+ micStarting=true;micButton(false,'Cancel mic');$('micBpm').textContent='-- BPM';$('micStatus').textContent='Connecting';
  let stream=null,context=null;
  try{
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:false,autoGainControl:false},video:false});
@@ -69,12 +69,12 @@ async function toggleMic(){
   micSpectrum=new Float32Array(analyser.frequencyBinCount);
   micPreviousSpectrum=new Float32Array(analyser.frequencyBinCount);
   stream=null;context=null; // Ownership transferred to the live microphone.
-  resetMicDetection();micButton(true);$('micBpm').textContent='Listening';
+  resetMicDetection();micButton(true);$('micBpm').textContent='-- BPM';$('micStatus').textContent='Listening';$('micSync').disabled=false;
   micStream.getAudioTracks().forEach(track=>track.addEventListener('ended',()=>{if(micStream&&micStream.getAudioTracks().includes(track))stopMic()}));
  }catch(e){
   if(request===micRequestId){
    micButton(false);
-   $('micBpm').textContent=e.name==='NotAllowedError'?'Mic denied':e.name==='NotFoundError'?'No microphone':'Mic error';
+   $('micStatus').textContent=e.name==='NotAllowedError'?'Mic denied':e.name==='NotFoundError'?'No microphone':'Mic error';
   }
  }finally{
   if(stream)stream.getTracks().forEach(t=>t.stop());
@@ -88,47 +88,69 @@ function sampleMic(now){
  micLastSample=now;
  micAnalyser.getFloatTimeDomainData(micSamples);
  micAnalyser.getFloatFrequencyData(micSpectrum);
- let sum=0;for(let i=0;i<micSamples.length;i++)sum+=micSamples[i]*micSamples[i];
+ let sum=0;
+ for(let i=0;i<micSamples.length;i++)sum+=micSamples[i]*micSamples[i];
  const rms=Math.sqrt(sum/micSamples.length);
- // Positive spectral flux measures new sound energy, not sustained notes.
+ // Frequency changes emphasize attacks; logarithmic bands prevent high bins dominating.
+ const sampleRate=micContext.sampleRate,binHz=sampleRate/micAnalyser.fftSize;
  let flux=0;
- for(let i=2;i<micSpectrum.length*.75;i++){
+ for(let i=2;i<Math.min(micSpectrum.length,Math.floor(5000/binHz));i++){
   const current=Math.pow(10,Math.max(-100,micSpectrum[i])/20);
-  const previous=micPreviousSpectrum[i];
-  flux+=Math.max(0,current-previous);
+  const diff=Math.max(0,current-micPreviousSpectrum[i]);
+  flux+=diff/Math.sqrt(i);
   micPreviousSpectrum[i]=current;
  }
- const history=micFluxHistory;
- history.push(flux);if(history.length>48)history.shift();
- const sorted=[...history].sort((a,b)=>a-b);
+ micFluxHistory.push(flux);if(micFluxHistory.length>64)micFluxHistory.shift();
+ const sorted=[...micFluxHistory].sort((a,b)=>a-b);
  const median=sorted[Math.floor(sorted.length/2)]||0;
- const deviation=sorted.reduce((sum,v)=>sum+Math.abs(v-median),0)/sorted.length;
- const threshold=median+Math.max(deviation*2.4,.025);
- const attack=rms>.009&&flux>threshold&&flux>.05;
- if(!attack)micArmed=true;
- if(attack&&micArmed&&now-micLastOnset>230){
-  micArmed=false;micLastOnset=now;micLastBeat=now;
-  $('micBeat').textContent='BEAT ●';
-  micOnsets.push(now);while(micOnsets.length>24)micOnsets.shift();
-  const intervals=[];
+ const mad=sorted.reduce((total,v)=>total+Math.abs(v-median),0)/sorted.length;
+ // Require a local peak above the adaptive noise floor.
+ const threshold=median+Math.max(mad*1.7,.004);
+ const peak=micPrevFlux>threshold&&micPrevFlux>=flux&&micPrevFlux>micNoise*1.5;
+ micNoise=micNoise*.97+flux*.03;
+ micPrevFlux=flux;
+ if(peak&&rms>.006&&now-micLastOnset>260){
+  const onset=now-25;
+  micLastOnset=onset;micLastBeat=now;
+  $('micBeat').textContent='BEAT ●';$('micBeat').dataset.active='true';
+  micOnsets.push(onset);while(micOnsets.length>20)micOnsets.shift();
+  // Look for a consistent pulse across multiple recent intervals, including
+  // occasional missed beats (2x) or extra subdivisions (0.5x).
+  const gaps=[];
   for(let i=1;i<micOnsets.length;i++){
    const gap=micOnsets[i]-micOnsets[i-1];
-   if(gap>=250&&gap<=1200)intervals.push(gap);
+   if(gap>=260&&gap<=1500)gaps.push(gap);
   }
-  if(intervals.length>=3){
-   const ordered=[...intervals].sort((a,b)=>a-b),candidate=ordered[Math.floor(ordered.length/2)];
-   const close=intervals.filter(gap=>Math.abs(gap-candidate)<candidate*.16);
-   if(close.length>=Math.max(3,Math.ceil(intervals.length*.6))){
-    const stable=close.sort((a,b)=>a-b)[Math.floor(close.length/2)];
-    const estimate=Math.round(60000/stable);
-    micBpm=micBpm?Math.round(micBpm*.35+estimate*.65):estimate;
-    $('micBpm').textContent=micBpm+' BPM';
+  let best=null;
+  for(const gap of gaps.slice(-12)){
+   for(const factor of [1,.5,2]){
+    const period=gap*factor;
+    if(period<300||period>1000)continue;
+    const matches=gaps.filter(g=>{
+     const ratio=g/period,nearest=Math.round(ratio*2)/2;
+     return nearest>=.5&&nearest<=3&&Math.abs(ratio-nearest)<.13;
+    });
+    if(matches.length>=4&&(!best||matches.length>best.matches.length))best={period,matches};
    }
   }
+  if(best){
+   const periods=best.matches.map(g=>{
+    const multiple=Math.max(.5,Math.round(g/best.period*2)/2);
+    return g/multiple;
+   }).sort((a,b)=>a-b);
+   const period=periods[Math.floor(periods.length/2)];
+   const estimate=Math.round(60000/period);
+   if(!micBpm||Math.abs(estimate-micBpm)<micBpm*.2){
+    micBpm=micBpm?Math.round(micBpm*.75+estimate*.25):estimate;
+    $('micBpm').textContent=micBpm+' BPM';
+    $('micStatus').textContent='Tempo locked';
+   }else $('micStatus').textContent='Finding tempo';
+  }else $('micStatus').textContent='Finding tempo';
  }
- if(now-micLastBeat>140)$('micBeat').textContent='BEAT -';
- if(now-micLastOnset>3500){
-  micOnsets=[];micBpm=0;$('micBpm').textContent='Listening';
+ if(now-micLastBeat>170){$('micBeat').textContent='BEAT -';$('micBeat').dataset.active='false'}
+ if(now-micLastOnset>2800){
+  micOnsets=[];micBpm=0;$('micBpm').textContent='-- BPM';
+  $('micStatus').textContent='Listening';
  }
 }
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
@@ -137,7 +159,7 @@ function tone(freq=440){if(!sound)return;try{audio??=new(window.AudioContext||wi
 const defaultBpm=128;
 let syncToMic=false,clockBeats=-2.35,clockBpm=defaultBpm,clockLastOnset=-Infinity;
 let nextScheduledBeat=0;
-function effectiveBpm(){return syncToMic&&micStream&&micBpm&&performance.now()-micLastOnset<3500?Math.max(60,Math.min(220,micBpm)):defaultBpm}
+function effectiveBpm(){return syncToMic&&micStream&&micBpm&&performance.now()-micLastOnset<2800?Math.max(60,Math.min(220,micBpm)):defaultBpm}
 function syncClock(dt){
  const target=effectiveBpm();
  // Follow changing tempo without abrupt note bursts.
@@ -151,6 +173,7 @@ function syncClock(dt){
  }
 }
 $('micSync').onclick=()=>{
+ if(!micStream)return;
  syncToMic=!syncToMic;$('micSync').textContent=syncToMic?'Sync on':'Sync off';
  $('micSync').setAttribute('aria-pressed',String(syncToMic));
  // Discard unplayed notes and rebuild at the new tempo.
