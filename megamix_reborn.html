@@ -23,7 +23,7 @@ p{margin:0 0 10px}.modes{display:flex;justify-content:center;flex-wrap:wrap;gap:
 .help{font-size:11px;margin-top:10px}
 footer{display:none}#pause{display:none}body.playing #pause{display:inline-block}
 @media(max-width:500px){header{font-size:12px}.actions{gap:3px}.actions button{padding:3px}.brand{font-size:12px}.score{font-size:14px}}
-</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><span id="micBeat" class="tiny" aria-label="Detected beat">BEAT -</span><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
+</style></head><body><div id="app"><header><div><div class="brand">osu_megamix</div><div class="sub"></div></div><div class="actions"><button id="sound" aria-pressed="true">Sound on</button><button id="mic" aria-pressed="false">Mic off</button><span id="micBpm" class="tiny" role="status" aria-live="polite">-- BPM</span><span id="micBeat" class="tiny" aria-label="Detected beat">BEAT -</span><button id="micSync" aria-pressed="false">Sync off</button><button id="pause">Pause</button></div></header><main><canvas id="field" aria-label="Rhythm game playfield"></canvas><div id="hud"><div><div class="tiny">SCORE</div><div class="score" id="score">0000000</div><div class="tiny" id="combo">0 COMBO</div></div><div class="right"><div class="tiny" id="modeLabel">OSU! MIX</div><div class="tiny" id="accuracy">100.00% ACC</div><div class="meter"><div id="health"></div></div></div></div><div class="overlay" id="overlay"><section class="panel"><div class="eyebrow"></div><h1>osu_megamix</h1><p id="message"></p><div class="modes" id="modes"><button class="mode" data-mode="osu" aria-pressed="true">osu!</button><button class="mode" data-mode="taiko" aria-pressed="false">taiko</button><button class="mode" data-mode="catch" aria-pressed="false">catch</button><button class="mode" data-mode="mania" aria-pressed="false">mania</button><button class="mode" data-mode="megamix" aria-pressed="false">megamix</button></div><button class="primary" id="start">Play</button><div class="help" id="help">osu!: Z / X / Space or click. Esc pauses.</div></section></div></main><footer><span>osu_megamix</span><span id="status">READY</span></footer></div>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id),canvas=$('field'),ctx=canvas.getContext('2d');let W=0,H=0,dpr=1,mode='osu',state='menu',sound=true,audio=null,last=0,elapsed=0,spawn=0,notes=[],particles=[],score=0,combo=0,hp=100,hits=0,judged=0,accuracy=100,flash='',flashLife=0,beat=0,catchX=.5,keys=new Set(),nextId=0;
@@ -111,13 +111,36 @@ function sampleMic(now){
 }
 function resize(){const r=canvas.getBoundingClientRect();W=r.width;H=r.height;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}addEventListener('resize',resize);resize();
 function tone(freq=440){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=freq;g.gain.setValueAtTime(.045,audio.currentTime);g.gain.exponentialRampToValueAtTime(.0001,audio.currentTime+.12);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.13)}catch(e){}}
-const styles=['osu','taiko','catch','mania'];let megamixStyle='osu',megamixSection=0;function nextMegamixStyle(){const choices=styles.filter(style=>style!==megamixStyle);megamixStyle=choices[Math.floor(Math.random()*choices.length)]}function activeStyle(){return megamixStyle}function noteStyle(n){return n.kind||mode}let osuSequence=0;function reset(){osuSequence=0;demoCursor=0;demoSection=-1;demoMap=[];megamixSection=0;megamixStyle=styles[Math.floor(Math.random()*styles.length)];notes=[];particles=[];score=combo=hits=judged=elapsed=spawn=beat=0;hp=100;accuracy=100;flash='';catchX=.5;nextId=0;update()}
+// Shared virtual beat clock. Microphone sync is opt-in and never required to play.
+const defaultBpm=128;
+let syncToMic=false,clockBeats=-2.35,clockBpm=defaultBpm,clockLastOnset=-Infinity;
+let nextScheduledBeat=0;
+function effectiveBpm(){return syncToMic&&micStream&&micBpm&&performance.now()-micLastOnset<3500?Math.max(60,Math.min(220,micBpm)):defaultBpm}
+function syncClock(dt){
+ const target=effectiveBpm();
+ // Follow changing tempo without abrupt note bursts.
+ clockBpm+=(target-clockBpm)*Math.min(1,dt*3);
+ clockBeats+=dt*clockBpm/60;
+ if(syncToMic&&micStream&&micBpm&&micLastOnset!==clockLastOnset){
+  clockLastOnset=micLastOnset;
+  const nearest=Math.round(clockBeats);
+  const error=nearest-clockBeats;
+  if(Math.abs(error)<.4)clockBeats+=error*.18;
+ }
+}
+$('micSync').onclick=()=>{
+ syncToMic=!syncToMic;$('micSync').textContent=syncToMic?'Sync on':'Sync off';
+ $('micSync').setAttribute('aria-pressed',String(syncToMic));
+ // Discard unplayed notes and rebuild at the new tempo.
+ notes=[];nextScheduledBeat=Math.max(0,Math.ceil(clockBeats+1));
+};
+const styles=['osu','taiko','catch','mania'];let megamixStyle='osu',megamixSection=0;function nextMegamixStyle(){const choices=styles.filter(style=>style!==megamixStyle);megamixStyle=choices[Math.floor(Math.random()*choices.length)]}function activeStyle(){return megamixStyle}function noteStyle(n){return n.kind||mode}let osuSequence=0;function reset(){osuSequence=0;demoCursor=0;demoSection=-1;demoMap=[];megamixSection=0;megamixStyle=styles[Math.floor(Math.random()*styles.length)];clockBeats=-2.35;clockBpm=effectiveBpm();clockLastOnset=-Infinity;nextScheduledBeat=0;notes=[];particles=[];score=combo=hits=judged=elapsed=spawn=beat=0;hp=100;accuracy=100;flash='';catchX=.5;nextId=0;update()}
 function update(){ $('score').textContent=String(score).padStart(7,'0');$('combo').textContent=combo+' COMBO';$('health').style.width=hp+'%';$('accuracy').textContent=accuracy.toFixed(2)+'% ACC';$('modeLabel').textContent=mode==='megamix'?'✦ MEGAMIX / '+activeStyle().toUpperCase():({osu:'OSU!',taiko:'TAIKO',catch:'CATCH',mania:'MANIA'})[mode];}
 function start(){reset();state='play';document.body.classList.add('playing');$('overlay').hidden=true;$('pause').textContent='Ⅱ Pause';$('status').textContent='NOW PLAYING';tone(660)}
 function show(title,msg,button){state='menu';document.body.classList.remove('playing');$('overlay').hidden=false;$('overlay').querySelector('h1').innerHTML=title;$('message').textContent=msg;$('start').textContent=button;$('status').textContent='READY TO PLAY'}
 function pause(){if(state==='play'){state='pause';$('overlay').hidden=false;$('overlay').querySelector('h1').textContent='PAUSED';$('message').textContent='Your rhythm is waiting.';$('start').textContent='▶ RESUME';$('status').textContent='PAUSED'}else if(state==='pause'){state='play';$('overlay').hidden=true;$('status').textContent='NOW PLAYING'}}
 $('start').onclick=()=>state==='pause'?pause():start();$('pause').onclick=pause;$('sound').onclick=()=>{sound=!sound;$('sound').textContent=sound?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(sound))};
-$('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;for(const x of document.querySelectorAll('[data-mode]'))x.setAttribute('aria-pressed',String(x===b));$('help').textContent=({osu:'Z / X / Space or click circles • Esc pauses',taiko:'F / J or tap the drum when notes reach the ring',catch:'Move pointer or ← / → to catch falling fruit',mania:'D F J K or tap the matching lane',megamix:'Random mode every 8 seconds • osu!: Z / X / Space'})[mode];update()};
+$('modes').onclick=e=>{const b=e.target.closest('[data-mode]');if(!b)return;mode=b.dataset.mode;for(const x of document.querySelectorAll('[data-mode]'))x.setAttribute('aria-pressed',String(x===b));$('help').textContent=({osu:'Z / X / Space or click circles • Esc pauses',taiko:'F / J or tap the drum when notes reach the ring',catch:'Move pointer or ← / → to catch falling fruit',mania:'D F J K or tap the matching lane',megamix:'Random mode every 8 beats • osu!: Z / X / Space'})[mode];update()};
 function osuField(){const scale=Math.min(W/512,H/384);return{scale,left:(W-512*scale)/2,top:(H-384*scale)/2}}function osuRadius(){return 38*osuField().scale}// Continuous osu! beat stream: no pauses between randomized phrases.
 const osuInterval=.47,osuLead=1.1;
 let demoCursor=0,demoSection=-1,demoMap=[],osuHeading=Math.random()*Math.PI*2;
@@ -149,27 +172,34 @@ function nextOsuPosition(){
  }
  osuHeading=best.angle;return{x:best.x,y:best.y};
 }
-function spawnOsuDemo(){
+function spawnOsuBeat(at){
  const section=mode==='megamix'?megamixSection:0;
- if(section!==demoSection){
-  demoSection=section;demoCursor=0;osuSequence=0;demoMap=[];
-  osuHeading=Math.random()*Math.PI*2;
- }
- // Solo osu! runs indefinitely at a steady .47s cadence.
- // MEGAMIX gets the same cadence, limited to its eight-second segment.
- const start=mode==='megamix'?section*8+.45:osuLead;
- while(true){
-  const at=start+demoCursor*osuInterval;
-  if(at-elapsed>1.35||mode==='megamix'&&at>=section*8+7.85)break;
-  const p=nextOsuPosition();
-  demoMap.push(p);if(demoMap.length>3)demoMap.shift();
-  demoCursor++;if(at<elapsed-.19)continue;
-  const id=nextId++,number=(osuSequence++%9)+1;
-  notes.push({id,lane:0,number,x:p.x,y:p.y,born:elapsed,at,kind:'osu',dead:false,color:'#000'});
+ if(section!==demoSection){demoSection=section;demoMap=[];osuSequence=0;osuHeading=Math.random()*Math.PI*2}
+ const p=nextOsuPosition();
+ demoMap.push(p);if(demoMap.length>3)demoMap.shift();
+ const id=nextId++,number=(osuSequence++%9)+1;
+ notes.push({id,lane:0,number,x:p.x,y:p.y,born:elapsed,at,kind:'osu',dead:false,color:'#000'});
+}
+function makeNote(at){
+ const kind=mode==='megamix'?activeStyle():mode;if(kind==='osu')return false;
+ const id=nextId++,lane=id%4;
+ notes.push({id,lane,x:.18+Math.random()*.64,y:.23+Math.random()*.49,born:elapsed,at,kind,dead:false,color:'#000'});
+ return true;
+}
+function scheduleBeats(){
+ const period=60/clockBpm;
+ const horizon=clockBeats+1.35/period;
+ while(nextScheduledBeat<=horizon){
+  const index=nextScheduledBeat++;
+  if(index<0||index<clockBeats-.25)continue;
+  const at=elapsed+(index-clockBeats)*period;
+  const section=Math.floor(index/8);
+  // Never schedule into the next MEGAMIX mode early.
+  if(mode==='megamix'&&section!==megamixSection)continue;
+  if((mode==='megamix'?activeStyle():mode)==='osu')spawnOsuBeat(at);
+  else makeNote(at);
  }
 }
-function makeNote(){const kind=mode==='megamix'?activeStyle():mode;if(kind==='osu')return false;
- const id=nextId++,lane=id%4;notes.push({id,lane,x:.18+Math.random()*.64,y:.23+Math.random()*.49,born:elapsed,at:elapsed+1.55,kind,dead:false,color:colors[id%4]});return true}
 function burst(x,y,c){for(let i=0;i<12;i++){const a=Math.random()*Math.PI*2,s=40+Math.random()*140;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.5,color:c})}}
 function judge(n,delta){if(n.dead)return;n.dead=true;judged++;const ok=Math.abs(delta)<.19;if(ok){const quality=Math.abs(delta)<.075?300:100;hits++;combo++;score+=quality+combo*5;hp=Math.min(100,hp+2);flash=quality===300?'PERFECT':'GOOD';tone(520+combo%10*40);const p=pos(n);burst(p.x,p.y,n.color)}else{combo=0;hp=Math.max(0,hp-9);flash='MISS'}flashLife=.35;accuracy=judged?hits/judged*100:100;update();if(hp===0)show('GAME <span>OVER.</span>','Score '+score.toLocaleString()+' • '+accuracy.toFixed(1)+'% accuracy','↻ RETRY')}
 function pos(n){if(noteStyle(n)==='osu'){const f=osuField();return{x:f.left+n.x*f.scale,y:f.top+n.y*f.scale}};if(noteStyle(n)==='taiko')return{x:W*.26+(n.at-elapsed)*W*.36,y:H*.52};if(noteStyle(n)==='catch')return{x:n.x*W,y:H*.82-(n.at-elapsed)*H*.45};return{x:W*.5+(n.lane-1.5)*Math.min(W*.12,85),y:H*.79-(n.at-elapsed)*H*.42}}
@@ -191,6 +221,18 @@ for(const n of notes){if(n.dead||(mode==='megamix'&&noteStyle(n)!==activeStyle()
  const label=String(n.number),metrics=ctx.measureText(label),offset=(metrics.actualBoundingBoxAscent-metrics.actualBoundingBoxDescent)/2;
  ctx.fillText(label,p.x,p.y+offset)}else if(noteStyle(n)==='taiko'){circle(p.x,p.y,27,'#000')}else if(noteStyle(n)==='catch'){circle(p.x,p.y,17,'#000')}else{const gap=Math.min(W*.12,85);ctx.fillStyle='#000';ctx.beginPath();ctx.rect(p.x-gap*.42,p.y-14,gap*.84,28);ctx.fill()}}
 if(flashLife>0){ctx.textAlign='center';ctx.font='bold 18px Arial';ctx.fillStyle='#000';ctx.fillText(flash,W*.5,H*.32)}}
-function frame(t){sampleMic(t);const dt=Math.min((t-last)/1000||0,.05);last=t;if(state==='play'){elapsed+=dt;spawn+=dt;beat+=dt;if(mode==='megamix'&&Math.floor(elapsed/8)!==megamixSection){megamixSection=Math.floor(elapsed/8);nextMegamixStyle();notes=[];particles=[];spawn=0;flash='';flashLife=0;if(activeStyle()==='osu'){osuSequence=0;demoCursor=0;demoSection=-1}update()}if((mode==='megamix'?activeStyle():mode)==='osu'){spawnOsuDemo();spawn=0}else if(spawn>.48){if(makeNote())spawn-=.48;else spawn=.48}if((mode==='megamix'?activeStyle():mode)==='catch'){if(keys.has('ArrowLeft')||keys.has('KeyA'))catchX-=dt*.8;if(keys.has('ArrowRight')||keys.has('KeyD'))catchX+=dt*.8;catchX=Math.max(.06,Math.min(.94,catchX))}for(const n of notes){if(n.dead)continue;if(noteStyle(n)==='catch'&&elapsed>=n.at){judge(n,Math.abs(n.x-catchX)<.09?0:1)}else if(elapsed>n.at+.22)judge(n,1)}notes=notes.filter(n=>!n.dead);flashLife=Math.max(0,flashLife-dt);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}particles=particles.filter(p=>p.life>0)}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+function frame(t){
+ sampleMic(t);
+ const dt=Math.min((t-last)/1000||0,.05);last=t;
+ if(state==='play'){
+  elapsed+=dt;spawn+=dt;beat+=dt;
+  syncClock(dt);
+  if(mode==='megamix'&&Math.floor(Math.max(0,clockBeats)/8)!==megamixSection){
+   megamixSection=Math.floor(Math.max(0,clockBeats)/8);
+   nextMegamixStyle();notes=[];particles=[];flash='';flashLife=0;
+   demoSection=-1;demoMap=[];osuSequence=0;update();
+  }
+  scheduleBeats();
+  if((mode==='megamix'?activeStyle():mode)==='catch'){if(keys.has('ArrowLeft')||keys.has('KeyA'))catchX-=dt*.8;if(keys.has('ArrowRight')||keys.has('KeyD'))catchX+=dt*.8;catchX=Math.max(.06,Math.min(.94,catchX))}for(const n of notes){if(n.dead)continue;if(noteStyle(n)==='catch'&&elapsed>=n.at){judge(n,Math.abs(n.x-catchX)<.09?0:1)}else if(elapsed>n.at+.22)judge(n,1)}notes=notes.filter(n=>!n.dead);flashLife=Math.max(0,flashLife-dt);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}particles=particles.filter(p=>p.life>0)}draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
 })();
 </script></body></html>
