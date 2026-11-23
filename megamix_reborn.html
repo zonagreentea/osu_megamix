@@ -190,12 +190,13 @@ function scheduleBeats(){
  const period=60/clockBpm;
  const horizon=clockBeats+1.35/period;
  while(nextScheduledBeat<=horizon){
-  const index=nextScheduledBeat++;
+  const index=nextScheduledBeat;
+  const section=Math.floor(index/8);
+  // Hold future-mode beats until the actual eight-beat boundary.
+  if(mode==='megamix'&&section>megamixSection)break;
+  nextScheduledBeat++;
   if(index<0||index<clockBeats-.25)continue;
   const at=elapsed+(index-clockBeats)*period;
-  const section=Math.floor(index/8);
-  // Never schedule into the next MEGAMIX mode early.
-  if(mode==='megamix'&&section!==megamixSection)continue;
   if((mode==='megamix'?activeStyle():mode)==='osu')spawnOsuBeat(at);
   else makeNote(at);
  }
