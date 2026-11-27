@@ -1,0 +1,70 @@
+name: Build Kintoki PS1 ISO
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-kintoki-ps1
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build PS1 ISO
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out the project
+        uses: actions/checkout@v4
+
+      - name: Install build prerequisites
+        run: sudo apt-get update && sudo apt-get install --yes cmake make unzip
+
+      - name: Install PSn00bSDK
+        run: |
+          curl --fail --location --silent --show-error \
+            --output /tmp/PSn00bSDK.zip \
+            https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/PSn00bSDK-0.24-Linux.zip
+          mkdir -p "$RUNNER_TEMP/psn00bsdk"
+          unzip -q /tmp/PSn00bSDK.zip -d "$RUNNER_TEMP/psn00bsdk"
+          SDK_ROOT=$(find "$RUNNER_TEMP/psn00bsdk" -type f -name mipsel-none-elf-gcc -print -quit | xargs -r dirname | xargs -r dirname)
+          test -n "$SDK_ROOT"
+          echo "$SDK_ROOT/bin" >> "$GITHUB_PATH"
+          echo "PSN00BSDK_LIBS=$SDK_ROOT/lib/libpsn00b" >> "$GITHUB_ENV"
+
+      - name: Verify the PS1 toolchain
+        run: |
+          command -v mipsel-none-elf-gcc
+          command -v mkpsxiso
+
+      - name: Require the Kintoki PS1 project
+        run: |
+          if [ ! -f ps1/Makefile ]; then
+            echo 'The GitHub build is ready, but ps1/Makefile is not present yet.' >&2
+            echo 'Add the Kintoki PS1 source project before running this workflow.' >&2
+            exit 1
+          fi
+
+      - name: Build the PS1 ISO
+        run: make --directory=ps1
+
+      - name: Locate the generated PS1 disc image
+        id: disc
+        run: |
+          BIN=$(find ps1 -type f -iname 'kintoki.bin' -print -quit)
+          CUE=$(find ps1 -type f -iname 'kintoki.cue' -print -quit)
+          test -n "$BIN"
+          test -n "$CUE"
+          echo "bin=$BIN" >> "$GITHUB_OUTPUT"
+          echo "cue=$CUE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the PS1 disc image
+        uses: actions/upload-artifact@v4
+        with:
+          name: kintoki-ps1-disc
+          path: |
+            ${{ steps.disc.outputs.bin }}
+            ${{ steps.disc.outputs.cue }}
+          if-no-files-found: error

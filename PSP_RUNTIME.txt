@@ -1,0 +1,55 @@
+OSU!MEGAMIX — KINTOKI PSP RUNTIME
+==================================
+
+Status
+------
+Working title: Kintoki
+Purpose: a standalone Kintoki Sakata dance showcase for PSP homebrew.
+Gameplay: none. No arrows, scoring, combo meter, or rhythm input.
+Presentation: hush-hush, high-energy, secret-character showcase.
+Current state: specification recorded; no PSP binary or ISO has been generated.
+
+Runtime target
+--------------
+- Native PlayStation Portable homebrew.
+- 480x272 display target.
+- Looping low-poly 3D Kintoki dance animation.
+- Gold/black lighting and restrained “classified” boot/menu treatment.
+- Camera sweeps, pose changes, and visual impact timed to the dance loop.
+- Start and exit controls only; no gameplay system.
+
+Build outputs
+-------------
+1. Primary PSP homebrew output: EBOOT.PBP.
+2. Optional distribution wrapper: KINTOKI_PSP.zip containing EBOOT.PBP,
+   install instructions, and license/provenance notes.
+3. A bootable UMD-style ISO is a separate packaging step and must be built
+   only after a PSP ISO packager is available and verified on hardware or an
+   emulator. Renaming a ZIP or EBOOT.PBP to .iso is not valid.
+
+Required toolchain
+------------------
+- PSPDEV / PSPSDK cross-compiler.
+- GNU Make and PSP graphics/input/audio libraries.
+- A containerized PSPDEV environment is preferred for reproducibility.
+- The current Intel macOS host has no PSPDEV tools and Docker Desktop failed
+  to install; Podman is arm64-only in the available Homebrew package.
+
+Repository integration
+----------------------
+- Add a self-contained psp/ project with its own Makefile.
+- Keep the browser game and existing desktop build unchanged.
+- Add a deterministic dance-pose module that can be host-tested without the
+  PSP headers.
+- Add a PSPDEV build command that emits EBOOT.PBP.
+- Add ISO packaging only after a real PSP ISO tool is present.
+- Do not bundle commercial Gintama/PSP ROMs or copyrighted third-party media.
+
+Acceptance checks
+-----------------
+- Host pose tests pass without the PSP SDK.
+- PSPDEV build emits EBOOT.PBP without warnings treated as errors.
+- The runtime starts at 480x272, loops the dance, and exits cleanly.
+- The release bundle contains only the project’s own code/assets and notes.
+- No PSP artifact is claimed as an ISO until it is structurally valid and
+  launch-tested.

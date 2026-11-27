@@ -36,6 +36,9 @@
 - **私以外私じゃないの** — Gesu No Kiwami Otome, PARKGOLF
 - **Dramaturgy** — Eve
 
+## kintoki (working title)
+- Successor to **osu!black** (formerly **ball**).
+
 ## .mix
 - **LOST IN PARADISE** — ALI, AKLO
 

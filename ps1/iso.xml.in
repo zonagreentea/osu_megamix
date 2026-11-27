@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<iso_project image_name="kintoki.bin" cue_sheet="kintoki.cue">
+    <track type="data">
+        <identifiers
+            system="PLAYSTATION"
+            application="PLAYSTATION"
+            volume="KINTOKI"
+            volume_set="KINTOKI"
+            publisher="OSU MEGAMIX"
+            data_preparer="MKPSXISO"
+        />
+        <directory_tree>
+            <file name="SYSTEM.CNF" type="data" source="@PROJECT_BINARY_DIR@/system.cnf" />
+            <file name="KINTOKI.EXE" type="data" source="@PROJECT_BINARY_DIR@/kintoki.exe" />
+            <dummy sectors="128" />
+        </directory_tree>
+    </track>
+</iso_project>
