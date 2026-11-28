@@ -9,7 +9,7 @@ from pathlib import Path
 
 CHAPTERS: tuple[tuple[str, str, str, str], ...] = (
     ("1a", "visual", "1a-visual", "access gift, premades, love, and the original vision"),
-    ("1b", "Kintoki", "1b-ball", "collab art, skill, and composition"),
+    ("1b", "ball", "1b-ball", "collab art, skill, and composition"),
     ("1c", "pet", "1c-pet", "fun time, creativity, and care"),
     ("1d", "tease", "1d-tease", "meta awareness, reliability, and kindness"),
     ("1e", "gromp", "1e-gromp", "referential status, morality, and virtue"),

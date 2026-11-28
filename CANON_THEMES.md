@@ -31,7 +31,7 @@
 ## osu!megamix 3a (revenge)
 - **ないものねだり (Revenge – THE FIRST TAKE)** — KANA-BOON, もっさ
 
-## Kintoki (formerly osu!black / ball)
+## osu!megamix 1b — ball
 - **オトナチック** — Gesu No Kiwami Otome
 - **私以外私じゃないの** — Gesu No Kiwami Otome, PARKGOLF
 - **Dramaturgy** — Eve
