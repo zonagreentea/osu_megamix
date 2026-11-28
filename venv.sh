@@ -1,5 +1,5 @@
 # venv (bash) — opt-in, never blocks
-VENV="${HUB:-$HOME/osu_megamix}/.venv"
+VENV="${HUB:-$HOME/work/osu_megamix}/.venvs/runtime"
 
 venv_on() {
   if [ -f "$VENV/bin/activate" ]; then

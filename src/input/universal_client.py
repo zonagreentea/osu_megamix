@@ -6,9 +6,10 @@ from enum import Enum
 from pathlib import Path
 from time import monotonic_ns, sleep
 from typing import Callable
-from typing import Any, Dict, FrozenSet, Optional
+from typing import Any, Dict, FrozenSet, Mapping, Optional
 
 from src.core.events import Event, EventHandler
+from src.input.bit_assignment import BitAssignments, BitComparison
 
 
 class ClientState(str, Enum):
@@ -31,6 +32,9 @@ class UniversalClient:
         self.state = ClientState.READY
         self.events = EventHandler()
         self.attachments: Dict[str, ClientAttachment] = {}
+        self.bit_assignments = BitAssignments()
+        self._last_bit_tick: Optional[int] = None
+        self._last_bit_timestamp_ns: Optional[int] = None
         self.plan: Optional[Dict[str, Any]] = None
         self.dispatched: list[Event] = []
 
@@ -53,9 +57,21 @@ class UniversalClient:
             metadata=dict(metadata or {}),
         )
         self.attachments[name] = attachment
+        if "input" in attachment.capabilities:
+            self.bit_assignments.register(name)
         return attachment
 
     def detach(self, name: str) -> Optional[ClientAttachment]:
+        attachment = self.attachments.get(name)
+        if (
+            attachment is not None
+            and "input" in attachment.capabilities
+            and self.bit_assignments.state(name)
+        ):
+            tick = self.bit_assignments.last_tick
+            if tick is None:
+                raise RuntimeError("active bit has no recorded tick")
+            self.capture_bits({name: 0}, tick=tick + 1)
         return self.attachments.pop(name, None)
 
     def sources(self, capability: str) -> tuple[ClientAttachment, ...]:
@@ -131,6 +147,75 @@ class UniversalClient:
         if "input" not in attachment.capabilities:
             raise ValueError(f"Attachment cannot provide input: {source}")
         return self.events.capture(value, time=time)
+
+    def capture_bits(
+        self,
+        values: Mapping[str, int | bool],
+        tick: int,
+        timestamp_ns: Optional[int] = None,
+    ) -> tuple[Event, ...]:
+        """Capture bit transitions on a shared logical clock tick.
+
+        Multiple sources in one call change atomically. Separate calls on the
+        same tick reuse one event timestamp and dispatch as a coincident batch.
+        Unchanged bit levels do not create edge events.
+        """
+        if not isinstance(values, Mapping):
+            raise TypeError("bit input must map attached source names to 0/1")
+        if isinstance(tick, bool) or not isinstance(tick, int) or tick < 0:
+            raise TypeError("tick must be a non-negative integer")
+        if timestamp_ns is not None:
+            if isinstance(timestamp_ns, bool) or not isinstance(timestamp_ns, int):
+                raise TypeError("timestamp_ns must be an integer")
+            if timestamp_ns < 0:
+                raise ValueError("timestamp_ns cannot be negative")
+        for source in values:
+            attachment = self.attachments.get(source)
+            if attachment is None:
+                raise ValueError(f"Unknown attachment: {source}")
+            if "input" not in attachment.capabilities:
+                raise ValueError(f"Attachment cannot provide input: {source}")
+
+        if self._last_bit_tick is not None and tick < self._last_bit_tick:
+            raise ValueError("bit ticks must be non-decreasing")
+        if tick == self._last_bit_tick:
+            if timestamp_ns is not None and timestamp_ns != self._last_bit_timestamp_ns:
+                raise ValueError("all assignments on one tick must share a timestamp")
+            timestamp = self._last_bit_timestamp_ns
+        else:
+            timestamp = monotonic_ns() if timestamp_ns is None else timestamp_ns
+            if (
+                self._last_bit_timestamp_ns is not None
+                and timestamp <= self._last_bit_timestamp_ns
+            ):
+                if timestamp_ns is not None:
+                    raise ValueError("timestamps must increase when the tick advances")
+                timestamp = self._last_bit_timestamp_ns + 1
+
+        assert timestamp is not None
+        transitions = self.bit_assignments.assign(values, tick, timestamp)
+        captured = tuple(
+            Event(time=transition.timestamp_ns, value=transition)
+            for transition in transitions
+        )
+        self._last_bit_tick = tick
+        self._last_bit_timestamp_ns = timestamp
+        for event in captured:
+            self.events.submit(event)
+        return captured
+
+    def compare_bits(self, left_source: str, right_source: str) -> BitComparison:
+        """Compare two attached input bits at their current sampled state."""
+        for source in (left_source, right_source):
+            attachment = self.attachments.get(source)
+            if attachment is None or "input" not in attachment.capabilities:
+                raise ValueError(f"Unknown input source: {source}")
+        return self.bit_assignments.compare(left_source, right_source)
+
+    @property
+    def bit_mask(self) -> int:
+        """Current on/off states packed into stable source bit positions."""
+        return self.bit_assignments.mask
 
     def dispatch_next(self) -> tuple[Event, ...]:
         """Dispatch the earliest timestamp and retain coincident event order."""

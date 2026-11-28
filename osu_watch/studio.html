@@ -9,6 +9,8 @@
 .studio-grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 .studio-panel{background:#101827;padding:20px;border-radius:16px;margin-bottom:16px}
 .studio-panel button,.studio-panel input,.studio-panel select{margin:5px;padding:8px}
+.studio-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.studio-controls button{margin:0}
 #program{width:100%;aspect-ratio:16/9;background:#080c1a}
 .preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .preview-grid video{width:100%;background:#080c1a}
@@ -27,7 +29,7 @@
 <section class="studio-panel">
 <h2>Program output</h2>
 <canvas id="program" width="1280" height="720"></canvas>
-<div>
+<div class="studio-controls">
 <button id="prepare">Prepare Studio</button>
 <button id="go" disabled>Go Live</button>
 <button id="stop" disabled>Stop Broadcast</button>
@@ -37,7 +39,7 @@
 </section>
 <section class="studio-panel">
 <h2>Sources</h2>
-<div>
+<div class="studio-controls">
 <button id="camera">Camera</button>
 <button id="screen">Share Screen</button>
 <button id="pip">Screen + Camera</button>
@@ -51,9 +53,12 @@
 </div>
 <div>
 <section class="studio-panel">
-<h2>Devices</h2>
+<h2>Capture</h2>
 <label>Camera <select id="cameraDevice"><option value="">System default</option></select></label>
 <label>Microphone <select id="micDevice"><option value="">System default</option></select></label>
+<label><input id="muteMic" type="checkbox">Mute mic</label>
+<label><input id="systemAudio" type="checkbox">Include system audio</label>
+<meter id="level" min="0" max="1" value="0" aria-label="Microphone level"></meter>
 <label>Quality <select id="quality">
 <option value="720">720p 30fps</option>
 <option value="1080">1080p 30fps</option>
@@ -61,18 +66,11 @@
 </select></label>
 </section>
 <section class="studio-panel">
-<h2>Audio Mixer</h2>
-<label>Gain <input id="gain" type="range" min="0" max="200" value="100"><span id="gainValue">100%</span></label>
-<label>Compression <input id="threshold" type="range" min="-60" max="0" value="-24"><span id="thresholdValue">-24 dB</span></label>
-<label><input id="mute" type="checkbox">Mute microphone</label>
-<meter id="level" min="0" max="1" value="0"></meter>
-</section>
-<section class="studio-panel">
 <h2>Broadcast Settings</h2>
 <label>Title <input id="title" value="osu!watch LIVE" maxlength="80"></label>
 <label><input id="overlay" type="checkbox" checked>Show title overlay</label>
 <label>Studio token <input id="token" type="password" autocomplete="off" placeholder="Optional local token"></label>
-<p>Screen sharing starts only after you grant browser permission. Going live is a separate action.</p>
+<p>For system audio, select a screen or tab and enable “Share audio” in the browser prompt.</p>
 </section>
 </div>
 </div>

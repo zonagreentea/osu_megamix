@@ -31,13 +31,10 @@
 ## osu!megamix 3a (revenge)
 - **ないものねだり (Revenge – THE FIRST TAKE)** — KANA-BOON, もっさ
 
-## osu!black
+## Kintoki (formerly osu!black / ball)
 - **オトナチック** — Gesu No Kiwami Otome
 - **私以外私じゃないの** — Gesu No Kiwami Otome, PARKGOLF
 - **Dramaturgy** — Eve
-
-## kintoki (working title)
-- Successor to **osu!black** (formerly **ball**).
 
 ## .mix
 - **LOST IN PARADISE** — ALI, AKLO

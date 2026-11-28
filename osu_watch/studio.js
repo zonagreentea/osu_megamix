@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let camera=null,screen=null,microphone=null,audio=null,output=null,canvasStream=null;
+let systemAudioEnabled=false;
 let scene='camera',broadcastId=null,viewerPoll=null,inboxPoll=null,drawHandle=null,meterHandle=null;
 const peers=new Map();
 const canvas=$('program'),ctx=canvas.getContext('2d');
@@ -31,19 +32,26 @@ async function captureMic(){
  const context=new AudioContext({sampleRate:48000});await context.resume();
  const source=context.createMediaStreamSource(microphone);
  const gain=context.createGain(),compressor=context.createDynamicsCompressor(),limiter=context.createDynamicsCompressor(),analyser=context.createAnalyser(),destination=context.createMediaStreamDestination();
- compressor.threshold.value=Number($('threshold').value);compressor.ratio.value=3;compressor.attack.value=.003;compressor.release.value=.2;
+ compressor.threshold.value=-24;compressor.ratio.value=3;compressor.attack.value=.003;compressor.release.value=.2;
  limiter.threshold.value=-3;limiter.ratio.value=20;limiter.attack.value=.001;limiter.release.value=.08;
  analyser.fftSize=1024;
  source.connect(gain);gain.connect(compressor);compressor.connect(limiter);limiter.connect(analyser);analyser.connect(destination);
- audio={context,gain,compressor,analyser,destination};
+ audio={context,gain,compressor,analyser,destination,systemSource:null};
  updateMixer();meter();
 }
 function updateMixer(){
- $('gainValue').textContent=$('gain').value+'%';
- $('thresholdValue').textContent=$('threshold').value+' dB';
  if(!audio)return;
- audio.gain.gain.value=$('mute').checked?0:Number($('gain').value)/100;
- audio.compressor.threshold.value=Number($('threshold').value);
+ audio.gain.gain.value=$('muteMic').checked?0:1;
+}
+function clearSystemAudio(){
+ if(audio?.systemSource){audio.systemSource.disconnect();audio.systemSource=null}
+}
+function mixSystemAudio(){
+ clearSystemAudio();
+ if(!systemAudioEnabled||!screen||!audio||!screen.getAudioTracks().length)return false;
+ audio.systemSource=audio.context.createMediaStreamSource(screen);
+ audio.systemSource.connect(audio.compressor);
+ return true;
 }
 function meter(){
  if(!audio)return;
@@ -55,8 +63,11 @@ function meter(){
 }
 async function captureScreen(){
  stopTracks(screen);
- screen=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:quality().fps}},audio:false});
+ clearSystemAudio();
+ screen=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:{ideal:quality().fps}},audio:systemAudioEnabled});
  $('screenPreview').srcObject=screen;await $('screenPreview').play();
+  if(systemAudioEnabled&&!mixSystemAudio())status('Screen captured — choose “Share audio” to include system sound');
+  else if(systemAudioEnabled)status('Screen and system audio ready');
  screen.getVideoTracks()[0].addEventListener('ended',()=>{screen=null;if(scene!=='camera')scene='camera';status('Screen sharing stopped')},{once:true});
 }
 function drawVideo(video,x,y,w,h){
@@ -135,11 +146,14 @@ async function prepare(){
  $('prepare').disabled=true;status('Preparing devices…');
  try{
   if(!navigator.mediaDevices||!canvas.captureStream)throw Error('Secure browser context and canvas capture required');
-  await captureCamera();await captureMic();streamOutput();
+  systemAudioEnabled=$('systemAudio').checked;
+  await captureCamera();await captureMic();
+  if(screen&&systemAudioEnabled)mixSystemAudio();
+  streamOutput();
   if(!drawHandle)render();
   $('go').disabled=false;status('READY — preview only, not broadcasting');
   const v=camera.getVideoTracks()[0].getSettings();
-  $('stats').textContent='Camera '+(v.width||'?')+'×'+(v.height||'?')+' @ '+(v.frameRate||'?')+' fps; audio '+audio.context.sampleRate+' Hz';
+  $('stats').textContent='Camera '+(v.width||'?')+'×'+(v.height||'?')+' @ '+(v.frameRate||'?')+' fps';
  }catch(e){status('Preparation failed: '+e.message);$('prepare').disabled=false;await releaseMedia()}
 }
 async function goLive(){
@@ -160,17 +174,18 @@ async function stopBroadcast(){
  $('go').disabled=!output;$('stop').disabled=true;status('OFF AIR — preview remains ready');
 }
 async function releaseMedia(){
- stopTracks(camera);stopTracks(screen);stopTracks(microphone);stopTracks(canvasStream);
+ clearSystemAudio();stopTracks(camera);stopTracks(screen);stopTracks(microphone);stopTracks(canvasStream);
  camera=screen=microphone=canvasStream=output=null;
  cancelAnimationFrame(meterHandle);cancelAnimationFrame(drawHandle);meterHandle=drawHandle=null;
  if(audio){await audio.context.close();audio=null}
 }
 $('prepare').onclick=prepare;$('go').onclick=goLive;$('stop').onclick=stopBroadcast;
+$('systemAudio').onchange=()=>{systemAudioEnabled=$('systemAudio').checked;if(screen){status('Re-share the screen to change system audio') }};
 $('camera').onclick=async()=>{try{if(!camera)await captureCamera();scene='camera'}catch(e){status(e.message)}};
 $('screen').onclick=async()=>{try{if(!screen)await captureScreen();scene='screen'}catch(e){status(e.message)}};
 $('pip').onclick=async()=>{try{if(!screen)await captureScreen();if(!camera)await captureCamera();scene='pip'}catch(e){status(e.message)}};
 $('slate').onclick=()=>{scene='slate'};
-for(const id of ['gain','threshold','mute'])$(id).oninput=updateMixer;
+$('muteMic').oninput=updateMixer;
 $('quality').onchange=()=>{if(output)status('Quality change requires refreshing and preparing studio again')};
 window.addEventListener('pagehide',()=>{clearInterval(viewerPoll);clearInterval(inboxPoll);peers.forEach(pc=>pc.close());stopTracks(camera);stopTracks(screen);stopTracks(microphone);stopTracks(canvasStream)});
 if(navigator.mediaDevices)devices().catch(()=>{});

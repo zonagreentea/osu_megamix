@@ -37,6 +37,19 @@ class StudioTests(unittest.TestCase):
                         'RTCPeerConnection', 'api/live/register', 'stopBroadcast'):
             self.assertIn(feature, script)
 
+    def test_studio_captures_optional_system_audio(self):
+        root = Path(__file__).resolve().parent
+        script = (root/'studio.js').read_text()
+        page = (root/'studio.html').read_text()
+        self.assertIn('audio:systemAudioEnabled', script)
+        self.assertIn('createMediaStreamSource(screen)', script)
+        self.assertIn('id="systemAudio"', page)
+
+    def test_studio_ui_keeps_only_primary_controls(self):
+        page = (Path(__file__).resolve().parent/'studio.html').read_text()
+        self.assertIn('class="studio-controls"', page)
+        self.assertNotIn('Hear myself', page)
+
 
 if __name__ == '__main__':
     unittest.main()

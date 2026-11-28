@@ -22,6 +22,6 @@ Edit `schedule.json`. Each entry needs `id`, `kind`, `title`, `subtitle`, `durat
 
 This is a broadcast scheduler and placeholder visuals, not yet a 24/7 video encoder or live gameplay feed.
 
-## Microphone studio
+## Live studio
 
-Open http://127.0.0.1:8765 and click **Enable microphone**. Grant browser permission. The level meter previews local audio. Optionally check **Hear myself** with headphones to avoid feedback. **Disconnect** releases the microphone. This version does not transmit, record, or inject microphone audio into the public broadcast. Live transmission requires an authenticated broadcaster-to-server audio pipeline and viewer audio playback.
+Open `http://127.0.0.1:8765/studio`, prepare the studio, choose a camera or screen source, and go live. Enable **Include system audio** before sharing a screen or tab; in the browser permission prompt, select **Share audio**. The selected screen video and system audio are mixed with the microphone and sent to viewers through the existing WebRTC broadcast path. Browser and operating-system support for system-audio capture varies, so the studio reports when only screen video was received.

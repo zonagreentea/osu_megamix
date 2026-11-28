@@ -18,6 +18,7 @@
   <main>
     <h1>Kintoki LTM</h1>
     <p>PSP edition — dance showcase only. No arrows. No score. Just Kintoki.</p>
+    <p>He loved dancing as a kid. Now the music never has to end.</p>
     <canvas id="stage" width="640" height="360" aria-label="Kintoki dancing preview"></canvas>
     <div class="status">PS1 runtime hidden in build files · PSP package follows the console build</div>
   </main>
@@ -44,6 +45,11 @@
       ctx.beginPath();
       ctx.arc(0, -42, 30, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#3a2419';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, -38, 11, 0.2, Math.PI - 0.2);
+      ctx.stroke();
       ctx.strokeStyle = '#e9e4dc';
       ctx.beginPath();
       ctx.moveTo(0, -10); ctx.lineTo(0, 100);

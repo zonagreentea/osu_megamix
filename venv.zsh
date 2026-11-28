@@ -1,6 +1,6 @@
 # venv lives inside HUB and is opt-in only
-: "${HUB:=$HOME/osu_megamix}"
-VENV="$HUB/.venv"
+: "${HUB:=$HOME/work/osu_megamix}"
+VENV="$HUB/.venvs/runtime"
 
 _venv_on(){
   if [[ -f "$VENV/bin/activate" ]]; then source "$VENV/bin/activate"; return 0; fi

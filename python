@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Combined Python pointer: all normal runtime dependencies belong in this one
+# isolated environment for the fastest startup and simplest imports.
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RUNTIME_PYTHON="${PROJECT_DIR}/.venvs/runtime/bin/python"
+
+[[ -x "${RUNTIME_PYTHON}" ]] || {
+  echo "Runtime venv is missing: ${RUNTIME_PYTHON}" >&2
+  exit 1
+}
+exec "${RUNTIME_PYTHON}" "$@"
