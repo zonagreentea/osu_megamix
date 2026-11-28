@@ -5,63 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kintoki LTM — PSP Edition</title>
   <style>
-    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    :root { color-scheme: dark; font-family: Calibri, Arial, sans-serif; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #09070d; color: #f4d77b; }
     main { width: min(92vw, 760px); text-align: center; }
     h1 { letter-spacing: .12em; text-transform: uppercase; }
-    p { color: #d7cbd9; }
-    canvas { width: 100%; max-width: 640px; aspect-ratio: 16 / 9; border: 1px solid #806a2c; background: #120d19; box-shadow: 0 0 32px #251834; }
-    .status { margin-top: 1rem; font-size: .85rem; letter-spacing: .08em; text-transform: uppercase; color: #a995b5; }
   </style>
 </head>
 <body>
   <main>
     <h1>Kintoki LTM</h1>
-    <p>PSP edition — dance showcase only. No arrows. No score. Just Kintoki.</p>
-    <p>He loved dancing as a kid. Now the music never has to end.</p>
-    <canvas id="stage" width="640" height="360" aria-label="Kintoki dancing preview"></canvas>
-    <div class="status">PS1 runtime hidden in build files · PSP package follows the console build</div>
   </main>
-  <script>
-    const canvas = document.getElementById('stage');
-    const ctx = canvas.getContext('2d');
-    const start = performance.now();
-
-    function draw(now) {
-      const t = (now - start) / 1000;
-      const sway = Math.sin(t * 3.1) * 18;
-      const bounce = Math.abs(Math.sin(t * 3.1)) * 8;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#120d19';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#6b5120';
-      ctx.fillRect(80, 286, 480, 3);
-      ctx.save();
-      ctx.translate(320 + sway, 120 - bounce);
-      ctx.strokeStyle = '#d9b951';
-      ctx.fillStyle = '#d9b951';
-      ctx.lineWidth = 12;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(0, -42, 30, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#3a2419';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(0, -38, 11, 0.2, Math.PI - 0.2);
-      ctx.stroke();
-      ctx.strokeStyle = '#e9e4dc';
-      ctx.beginPath();
-      ctx.moveTo(0, -10); ctx.lineTo(0, 100);
-      ctx.moveTo(0, 20); ctx.lineTo(-82 + sway / 2, 58);
-      ctx.moveTo(0, 20); ctx.lineTo(82 - sway / 2, 0);
-      ctx.moveTo(0, 100); ctx.lineTo(-55 - sway / 2, 178);
-      ctx.moveTo(0, 100); ctx.lineTo(55 + sway / 2, 178);
-      ctx.stroke();
-      ctx.restore();
-      requestAnimationFrame(draw);
-    }
-    requestAnimationFrame(draw);
-  </script>
 </body>
 </html>
